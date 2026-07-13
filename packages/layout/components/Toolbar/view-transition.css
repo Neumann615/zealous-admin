@@ -1,0 +1,24 @@
+/*全局过度*/
+::view-transition-image-pair(root) {
+    isolation: auto;
+}
+
+::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+/* 深色在上层 - 用于深色→浅色的收缩动画 */
+.dark-on-top::view-transition-old(root) {
+    z-index: 1;
+}
+
+/* 浅色在上层 - 用于浅色→深色的扩散动画 */
+.light-on-top::view-transition-new(root) {
+    z-index: 1;
+}

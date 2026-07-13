@@ -1,0 +1,49 @@
+.ant-drawer-body {
+    overflow-x: hidden !important;
+}
+
+.ant-menu {
+    border-inline-end: none !important;
+}
+
+.rc-slider-captcha-panel {
+    z-index: 9999;
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.infinite-rotate {
+    animation: rotate 2s linear infinite;
+}
+
+.text-ellipsis {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.flex-sb {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-start {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

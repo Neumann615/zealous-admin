@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/reset.css" />
+    <title>Zealous-admin</title>
+  </head>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    :root {
+      --loading-bg: #f5f5f5;
+      --loading-z-stroke: #2C2C38;
+      --loading-bar-track: #e8e8e8;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --loading-bg: #141414;
+        --loading-z-stroke: #2C2C38;
+        --loading-bar-track: #333333;
+      }
+    }
+
+    [data-theme-mode="dark"] {
+      --loading-bg: #141414;
+      --loading-z-stroke: #2C2C38;
+      --loading-bar-track: #333333;
+    }
+
+    [data-theme-mode="light"] {
+      --loading-bg: #f5f5f5;
+      --loading-z-stroke: #2C2C38;
+      --loading-bar-track: #e8e8e8;
+    }
+
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+
+    .loading-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      width: 100%;
+      gap: 24px;
+      overflow: hidden;
+      user-select: none;
+      background: var(--loading-bg);
+      transition: opacity 1.5s ease;
+    }
+
+    .loading-logo {
+      width: 68px;
+      height: 68px;
+      animation: logo-breathing 2s ease-in-out infinite;
+    }
+
+    .loading-logo svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .loading-bar {
+      width: 120px;
+      height: 4px;
+      background: var(--loading-bar-track);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .loading-bar-inner {
+      height: 100%;
+      width: 30%;
+      background: #1677ff;
+      border-radius: 99px;
+      animation: bar-slide 2s ease-in-out infinite;
+    }
+
+    @keyframes logo-breathing {
+      0%, 100% {
+        opacity: 0.6;
+        transform: scale(0.95);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+    }
+
+    @keyframes bar-slide {
+      0% {
+        transform: translateX(-100%);
+      }
+      100% {
+        transform: translateX(400%);
+      }
+    }
+  </style>
+  <body>
+    <script>
+      try {
+        const themeStorage = localStorage.getItem('zealous-admin-theme');
+        if (themeStorage) {
+          const themeConfig = JSON.parse(themeStorage);
+          if (themeConfig.state.darkMode === '1') {
+            document.documentElement.setAttribute('data-theme-mode', 'dark');
+          } else if (themeConfig.state.darkMode === '0') {
+            document.documentElement.setAttribute('data-theme-mode', 'light');
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to read theme config from localStorage');
+      }
+    </script>
+    <div id="root"></div>
+    <div class="loading-container" id="app-loading">
+        <div class="loading-logo">
+          <svg viewBox="105 90 380 400" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 150 130 L 440 130 M 440 130 L 150 450 M 150 450 L 440 450" stroke="var(--loading-z-stroke)" stroke-width="60" stroke-linejoin="round" stroke-linecap="round" fill="none" />
+            <path d="M 300 135 L 170 430 L 430 430 Z M 235 285 L 365 285 L 300 398 Z" fill="#1677ff" stroke="#1677ff" stroke-width="10" stroke-linejoin="round" fill-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="loading-bar">
+          <div class="loading-bar-inner"></div>
+        </div>
+      </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

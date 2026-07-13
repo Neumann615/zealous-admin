@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/admin/(.*)", "destination": "/api/admin/$1" }
+  ]
+}

@@ -1,0 +1,348 @@
+/* ================================================================
+   Zealous-admin VitePress Custom Theme — 炫酷全屏样式
+   复刻 @zealous-admin/components 中的动效：SparklesText / ShinyText / Marquee
+   ================================================================ */
+
+/* ---------- CSS Variables ---------- */
+:root {
+  --z-primary: #1677ff;
+  --z-primary-light: #4096ff;
+  --z-accent: #61DAFB;
+  --z-glow: rgba(22, 119, 255, 0.4);
+  --z-card-bg: rgba(255, 255, 255, 0.7);
+  --z-card-border: rgba(22, 119, 255, 0.1);
+}
+
+html.dark {
+  --z-card-bg: rgba(30, 30, 40, 0.7);
+  --z-card-border: rgba(64, 150, 255, 0.15);
+  --z-glow: rgba(64, 150, 255, 0.5);
+}
+
+/* ================================================================
+   Full-Screen Sparkle Particles (ZSparklesText effect)
+   ================================================================ */
+
+@keyframes drift-up {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(var(--size));
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(var(--drift-x), var(--drift-y)) rotate(360deg) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes twinkle-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* Fixed overlay covering the entire viewport */
+.fullscreen-sparkles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.sparkle-particle {
+  position: absolute;
+  display: block;
+  /* Start from random position set via inline CSS vars */
+  top: var(--start-y);
+  left: var(--start-x);
+  animation: drift-up var(--duration) var(--delay) ease-out infinite;
+}
+
+/* ---- Star (glowing dot with 4-point cross) ---- */
+.sparkle-particle.star {
+  width: 8px; height: 8px;
+}
+.sparkle-particle.star::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  background: var(--z-accent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 6px var(--z-accent),
+    0 0 14px var(--z-accent),
+    0 0 28px var(--z-glow);
+}
+.sparkle-particle.star::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 2px; height: 10px;
+  background: var(--z-accent);
+  transform: translate(-50%, -50%);
+  box-shadow:
+    7px 0 0 var(--z-accent),
+    -7px 0 0 var(--z-accent),
+    0 7px 0 var(--z-accent),
+    0 -7px 0 var(--z-accent);
+}
+
+/* ---- Diamond (rotated square) ---- */
+.sparkle-particle.diamond::before {
+  content: '';
+  position: absolute;
+  width: 7px; height: 7px;
+  background: var(--z-primary-light);
+  transform: rotate(45deg);
+  box-shadow: 0 0 10px var(--z-glow), 0 0 20px var(--z-glow);
+}
+
+/* ---- Dot (simple glowing circle) ---- */
+.sparkle-particle.dot {
+  width: 5px; height: 5px;
+  background: var(--z-accent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 4px var(--z-accent),
+    0 0 10px var(--z-accent);
+  animation:
+    drift-up var(--duration) var(--delay) ease-out infinite,
+    twinkle-pulse 1.5s calc(var(--delay) + 0.5s) ease-in-out infinite;
+}
+
+/* ---- Flower (cross-rotated star) ---- */
+.sparkle-particle.flower::before {
+  content: '';
+  position: absolute;
+  width: 10px; height: 10px;
+  background: transparent;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow:
+    0 0 6px var(--z-accent),
+    0 0 16px var(--z-glow),
+    inset 0 0 2px var(--z-accent);
+}
+.sparkle-particle.flower::after {
+  content: '';
+  position: absolute;
+  top: 1px; left: 1px;
+  width: 8px; height: 8px;
+  background: transparent;
+  border-radius: 2px;
+  box-shadow:
+    0 0 4px rgba(255,255,255,0.6),
+    inset 0 0 2px rgba(255,255,255,0.4);
+}
+
+/* ================================================================
+   Hero Section Enhancements
+   ================================================================ */
+
+.VPHero {
+  position: relative;
+  overflow: hidden;
+}
+
+
+/* ================================================================
+   Shimmer text effect (ZShinyText)
+   ================================================================ */
+
+.VPHero .name {
+  background: linear-gradient(
+    135deg,
+    var(--vp-c-brand-1) 0%,
+    #61DAFB 25%,
+    var(--vp-c-brand-2) 50%,
+    #61DAFB 75%,
+    var(--vp-c-brand-1) 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 6s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.VPHero .text {
+  background: linear-gradient(90deg, var(--vp-c-text-1), var(--vp-c-brand-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ================================================================
+   Glowing CTA Button
+   ================================================================ */
+
+@keyframes btn-glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(22, 119, 255, 0.3), 0 0 60px rgba(22, 119, 255, 0.1); }
+  50% { box-shadow: 0 0 30px rgba(22, 119, 255, 0.5), 0 0 80px rgba(22, 119, 255, 0.2); }
+}
+
+.VPHero .VPButton.brand {
+  animation: btn-glow-pulse 2.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.VPHero .VPButton.brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(255,255,255,0.18) 50%,
+    transparent 70%
+  );
+  animation: btn-shine 3s ease-in-out infinite;
+}
+
+@keyframes btn-shine {
+  0%, 100% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+}
+
+/* ================================================================
+   Feature Cards — Glassmorphism
+   ================================================================ */
+
+.VPFeature {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--z-card-border) !important;
+  background: var(--z-card-bg) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.VPFeature::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 0%, var(--z-glow), transparent 70%);
+  transition: opacity 0.4s ease;
+}
+
+.VPFeature:hover {
+  transform: translateY(-6px);
+  border-color: var(--z-primary-light) !important;
+  box-shadow: 0 12px 40px rgba(22, 119, 255, 0.15);
+}
+
+.VPFeature:hover::before {
+  opacity: 1;
+}
+
+.VPFeature .icon {
+  transition: transform 0.4s ease;
+}
+
+.VPFeature:hover .icon {
+  transform: scale(1.15) rotate(-5deg);
+}
+
+/* ================================================================
+   React ZMarquee container
+   ================================================================ */
+
+.tech-marquee-react {
+  margin: 24px 0 8px;
+}
+
+.feedback-panel-react {
+  margin: 48px auto;
+}
+
+/* ================================================================
+   Stats Section
+   ================================================================ */
+
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  margin-top: 40px;
+  padding: 24px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 36px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--vp-c-brand-1), var(--z-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+  margin-top: 4px;
+}
+
+/* ================================================================
+   Dark Mode
+   ================================================================ */
+
+html.dark .VPFeature {
+  background: var(--z-card-bg) !important;
+}
+
+html.dark .tech-marquee-item {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ================================================================
+   Responsive
+   ================================================================ */
+
+@media (max-width: 768px) {
+  .hero-stats {
+    gap: 24px;
+  }
+  .stat-number {
+    font-size: 28px;
+  }
+  .tech-marquee-track {
+    gap: 24px;
+  }
+}
+
+/* Ensure content stays above sparkles */
+.VPContent,
+.VPFooter,
+.VPNav {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tighten home page and footer spacing */
+.VPHome {
+  margin-bottom: 42px !important;
+}
+
+.VPFooter {
+  padding: 16px 0 !important;
+}

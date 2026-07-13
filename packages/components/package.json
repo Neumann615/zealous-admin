@@ -1,0 +1,19 @@
+{
+  "name": "@zealous-admin/components",
+  "type": "module",
+  "version": "1.0.0",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "peerDependencies": {
+    "antd": "catalog:",
+    "antd-style": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-icons": "catalog:"
+  }
+}

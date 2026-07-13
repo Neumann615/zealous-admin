@@ -1,0 +1,54 @@
+﻿# 布局总览
+
+`@zealous-admin/layout` 是 zealous-admin 的布局核心，提供完整的后台管理界面框架。
+
+## 核心组成
+
+| 模块 | 说明 |
+|------|------|
+| `LayoutProvider` | 上下文提供者，初始化主题、菜单、页面等状态 |
+| `Layout` | 布局外壳组件，渲染完整的页面结构 |
+| `LayoutConfig` | 完整的 TypeScript 配置接口（50+ 选项） |
+
+## 导出列表
+
+```tsx
+import {
+  createMenuIconMap, // SVG 图标映射工具
+  Layout, // 布局外壳组件
+  LayoutConfig, // TypeScript 配置类型
+  LayoutProvider, // 布局上下文提供者
+} from '@zealous-admin/layout'
+```
+
+## 特性一览
+
+- **5 种布局模式** — side / only-side / head / only-head / simple
+- **菜单系统** — 支持多级嵌套、图标映射、4 种激活风格
+- **多标签页** — default / card / block 三种样式，拖拽排序
+- **面包屑** — default / modern 两种样式
+- **工具栏** — 可配置工具项、拖拽排序
+- **布局居中显示** — outside（全局）/ inside（内容区）两种作用范围，自定义宽度
+- **设置面板** — 可视化配置所有选项，实时预览
+- **状态持久化** — 基于 Zustand + localStorage/sessionStorage
+- **响应式** — 支持移动端访问
+
+## 安装使用
+
+```bash
+pnpm add @zealous-admin/layout
+```
+
+```tsx
+import { Layout, LayoutProvider } from '@zealous-admin/layout'
+
+function App() {
+  return (
+    <LayoutProvider menuData={[]} defaultSetting={{}}>
+      <Layout />
+    </LayoutProvider>
+  )
+}
+```
+
+详细了解请查看各模块文档。

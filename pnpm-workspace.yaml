@@ -1,0 +1,49 @@
+autoInstallPeers: true
+catalogMode: prefer
+cleanupUnusedCatalogs: true
+engineStrict: true
+ignoreWorkspaceRootCheck: true
+minimumReleaseAge: 0
+
+shamefullyHoist: true
+shellEmulator: true
+verifyDepsBeforeRun: prompt
+packages:
+  - packages/*
+  - service
+
+catalog:
+  '@ant-design/colors': ^8.0.1
+  '@ant-design/happy-work-theme': ^1.0.0
+  '@ant-design/icons': ^6.2.5
+  '@antv/g6': ^5.1.1
+  '@codemirror/lang-javascript': ^6.2.1
+  '@hello-pangea/dnd': ^18.0.1
+  '@icon-park/react': ^1.4.2
+  '@tanem/react-nprogress': ^5.0.51
+  ahooks: ^3.9.7
+  animate.css: ^4.1.1
+  antd: ^6.4.4
+  antd-style: ^3.6.2
+  axios: ^1.6.8
+  classnames: ^2.5.1
+  create-puzzle: ^2.0.0
+  rc-slider-captcha: ^1.2.2
+  react: ^19.2.7
+  react-dom: ^19.2.7
+  react-grid-layout: ^1.4.4
+  react-icons: ^5.6.0
+  react-markdown: ^9.0.1
+  react-router: ^7.16.0
+  react-router-dom: ^7.16.0
+  react-spinners: ^0.13.8
+  react-syntax-highlighter: ^15.5.0
+  react-transition-group: ^4.4.5
+  remark-gfm: ^4.0.0
+  typescript: ^5.6.0
+  vite-plugin-svgr: ^5.2.0
+  zustand: ^5.0.14
+
+allowBuilds:
+  '@swc/core': true
+  esbuild: true

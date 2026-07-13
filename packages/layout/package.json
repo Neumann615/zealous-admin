@@ -1,0 +1,33 @@
+{
+  "name": "@zealous-admin/layout",
+  "type": "module",
+  "version": "1.0.0",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./index": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "peerDependencies": {
+    "@ant-design/colors": "catalog:",
+    "@ant-design/happy-work-theme": "catalog:",
+    "@ant-design/icons": "catalog:",
+    "@hello-pangea/dnd": "catalog:",
+    "@tanem/react-nprogress": "catalog:",
+    "ahooks": "catalog:",
+    "animate.css": "catalog:",
+    "antd": "catalog:",
+    "antd-style": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router": "catalog:",
+    "react-router-dom": "catalog:",
+    "react-transition-group": "catalog:",
+    "zustand": "catalog:"
+  }
+}
