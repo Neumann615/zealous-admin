@@ -18,6 +18,7 @@ import { flushSync } from 'react-dom'
 import { useThemeStore } from '../../store/theme'
 import { useTopBarStore } from '../../store/topBar'
 import { Breadcrumb } from '../Breadcrumb/Breadcrumb'
+import { Search } from '../Search/Search'
 import './view-transition.css'
 
 const useStyles = createStyles(({ token, css }) => ({
@@ -265,6 +266,9 @@ export function Toolbar() {
       </Col>
       <Col span={12}>
         <div className={styles.Toolbar}>
+          {topBarStore.toolbar.isEnableSearch
+            ? <Search />
+            : null}
           {topBarStore.toolbar.isEnableFullscreen
             ? (
                 <div className={styles.ToolbarItem} onClick={toggleFullscreen}>

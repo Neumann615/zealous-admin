@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-14
+
+- ✨ **路由搜索功能**（`Search.tsx`、`Toolbar.tsx`）：工具栏新增搜索按钮；弹窗无标题三区域（搜索框 + 结果列表 + 操作提示），支持标题/URL模糊匹配；↑↓ 切换选中（循环滚动）+ 鼠标悬停切换，Enter/点击跳转，ESC关闭；空状态 SmileOutlined"输入你要搜索的导航"，无结果 FrownOutlined"没有找到你想要的"
+
 ## 2026-07-13
 
 - 📝 **README.md 全面更新**：组件 7→9（补充 ZIcon/ZMarkdown/ZPatternBg），技术栈新增图表/图标分类，pnpm 命令 `run` 统一简写，Git 分支 master→main，国际化描述修正
