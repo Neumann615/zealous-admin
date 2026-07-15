@@ -1,6 +1,21 @@
 import type React from 'react'
 import { ZIcon } from '@zealous-admin/components/index'
+import { createStyles } from 'antd-style'
 import { memo, useMemo } from 'react'
+
+const useStyles = createStyles(({ css }) => ({
+  wrapper: css`
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease-in-out;
+
+    .ant-menu-item:hover &,
+    .ant-menu-submenu-title:hover & {
+      transform: scale(1.25);
+    }
+  `,
+}))
 
 interface MenuIconProps {
   icon: string
@@ -8,9 +23,13 @@ interface MenuIconProps {
   style?: React.CSSProperties
   size?: number | string
   color?: string
+  /** 右侧间距，用于拉开图标与文本的距离 */
+  gap?: number
 }
 
 export const MenuIcon = memo((props: MenuIconProps) => {
+  const { styles } = useStyles()
+
   if (!props.icon) {
     return null
   }
@@ -26,5 +45,16 @@ export const MenuIcon = memo((props: MenuIconProps) => {
     return Object.keys(s).length > 0 ? s : undefined
   }, [props.style, props.size, props.color])
 
-  return <ZIcon value={props.icon} className={props.className} style={mergedStyle} />
+  const wrapperStyle = useMemo<React.CSSProperties | undefined>(() => {
+    if (props.gap) {
+      return { marginRight: props.gap }
+    }
+    return undefined
+  }, [props.gap])
+
+  return (
+    <span className={styles.wrapper} style={wrapperStyle}>
+      <ZIcon value={props.icon} className={props.className} style={mergedStyle} />
+    </span>
+  )
 })

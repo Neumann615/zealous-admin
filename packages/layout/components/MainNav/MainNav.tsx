@@ -183,7 +183,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
         return {
           key: item.key,
           label: item.label,
-          icon: item.icon ? <MenuIcon icon={item.icon} color={isActive ? theme.colorWhite : ''}></MenuIcon> : null,
+          icon: item.icon ? <MenuIcon icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
           children: _generatorMenuItem(item.children),
         }
       }
@@ -191,7 +191,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
         return {
           key: item.key,
           label: item.label,
-          icon: item.icon ? <MenuIcon icon={item.icon} color={isActive ? theme.colorWhite : ''}></MenuIcon> : null,
+          icon: item.icon ? <MenuIcon icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
           onClick: () => openTab(item),
         }
       }

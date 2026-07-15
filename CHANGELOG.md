@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-15
+
+- ✨ **动态网站标题**（`Layout.tsx`）：切换路由时 `document.title` 自动更新为 `菜单名称 - app.name`
+- ✨ **菜单图标悬停放大**（`MenuIcon.tsx`）：悬停菜单条目时图标 `scale(1.25)` 过渡放大，移走恢复；新增 `gap` prop 控制右侧间距
+- 🔧 **菜单图标间距**（`Menu.tsx`、`MainNav.tsx`）：MenuIcon 传入 `gap={theme.marginSM}` 防止放大后遮盖文本
+
 ## 2026-07-14
 
 - ✨ **路由搜索功能**（`Search.tsx`、`Toolbar.tsx`）：工具栏新增搜索按钮；弹窗无标题三区域（搜索框 + 结果列表 + 操作提示），支持标题/URL模糊匹配；↑↓ 切换选中（循环滚动）+ 鼠标悬停切换，Enter/点击跳转，ESC关闭；空状态 SmileOutlined"输入你要搜索的导航"，无结果 FrownOutlined"没有找到你想要的"

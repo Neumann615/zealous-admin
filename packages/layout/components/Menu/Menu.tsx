@@ -133,6 +133,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
                   : ''
               }
               icon={v[i].icon}
+              gap={theme.marginSM}
             >
             </MenuIcon>
           )

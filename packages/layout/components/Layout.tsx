@@ -4,7 +4,7 @@ import { createStyles } from 'antd-style'
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useControlTab } from '../hooks/useControlTab'
-import { useAppStore, useMenuStore, usePageStore } from '../store/index'
+import { useAppStore, useMenuStore, usePageStore, useTopBarStore } from '../store/index'
 import { Content } from './Content/Content'
 import { Footer } from './Footer/Footer'
 import { GlobalProgress } from './GlobalProgress/GlobalProgress'
@@ -113,7 +113,8 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
   const { theme, styles } = useStyles()
   const { menuType, menuCurrentKeys, openKeys, mainNavCurrentKeys } = useMenuStore()
   const globalProgressLoading = usePageStore(state => state.globalProgressLoading)
-  const { layout: layoutConfig } = useAppStore()
+  const { layout: layoutConfig, name: appName } = useAppStore()
+  const { nowTab } = useTopBarStore()
   const { syncTabFromUrl } = useControlTab()
   const location = useLocation()
 
@@ -121,6 +122,16 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
   useEffect(() => {
     syncTabFromUrl(location.pathname)
   }, [location.pathname])
+
+  // 动态网站标题：切换路由时映射到菜单名称
+  useEffect(() => {
+    if (nowTab?.title) {
+      document.title = `${nowTab.title} - ${appName}`
+    }
+    else {
+      document.title = appName
+    }
+  }, [nowTab?.title])
 
   function renderLayout() {
     if (menuType === 'side') {
