@@ -70,6 +70,7 @@ export function Content() {
     startGlobalProgressLoading,
     stopGlobalProgressLoading,
     globalProgressLoading,
+    refreshKey,
   } = usePageStore()
   const { layout: layoutConfig } = useAppStore()
 
@@ -82,7 +83,7 @@ export function Content() {
         unmountOnExit
         onEntered={stopGlobalProgressLoading}
         onExit={startGlobalProgressLoading}
-        key={location.key}
+        key={`${location.key}-${refreshKey}`}
         timeout={500}
         classNames={transitionTypeSet[transitionType]}
       >

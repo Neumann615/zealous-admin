@@ -75,8 +75,6 @@ export function useLayoutSetting() {
     // ===== theme 主题 =====
     const randomColor = pickRandom(themeColorList)
     const randomDarkMode: DarkMode = pickRandom(['0', '1', 'auto'])
-    const randomCompactMode = Math.random() > 0.5
-    const randomHappyEffect = Math.random() > 0.7
 
     // ===== menu 菜单 =====
     const randomMenuType = pickRandomValue(menuTypeList)
@@ -129,8 +127,6 @@ export function useLayoutSetting() {
       theme: {
         themeColor: randomColor,
         darkMode: randomDarkMode,
-        compactMode: randomCompactMode,
-        happyEffect: randomHappyEffect,
       },
       menu: {
         menuType: randomMenuType as any,

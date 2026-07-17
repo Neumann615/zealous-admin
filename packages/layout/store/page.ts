@@ -18,6 +18,10 @@ export const usePageStore = create(
         set((state: any) => ({ isMaximize: !state.isMaximize })),
       enterMaximize: () => set(() => ({ isMaximize: true })),
       exitMaximize: () => set(() => ({ isMaximize: false })),
+      /* 页面刷新 */
+      refreshKey: 0,
+      refreshPage: () =>
+        set((state: any) => ({ refreshKey: state.refreshKey + 1 })),
     }),
     {
       name: `${defaultSetting.app.storagePrefix}page`,

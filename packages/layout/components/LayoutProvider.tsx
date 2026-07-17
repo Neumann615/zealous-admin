@@ -1,9 +1,7 @@
 import type { LayoutConfig, MenuData } from '../types/config'
 import type { UserInfoData } from './UserInfo/UserInfo'
-import { HappyProvider } from '@ant-design/happy-work-theme'
 import { theme as antdTheme, App, ConfigProvider } from 'antd'
 import { StyleProvider } from 'antd-style'
-// import enUS from 'antd/locale/en_US'
 import zhCN from 'antd/locale/zh_CN'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import {
@@ -45,11 +43,8 @@ export function LayoutProvider({
     ) {
       algorithmData.push(antdTheme.darkAlgorithm)
     }
-    if (themeStore.compactMode) {
-      algorithmData.push(antdTheme.compactAlgorithm)
-    }
     return algorithmData
-  }, [themeStore.darkMode, themeStore.compactMode, systemDarkMode])
+  }, [themeStore.darkMode, systemDarkMode])
 
   // 哀悼模式 色弱模式
   useEffect(() => {
@@ -104,11 +99,9 @@ export function LayoutProvider({
           token: { colorPrimary: themeStore.themeColor },
         }}
       >
-        <HappyProvider disabled={!themeStore.happyEffect}>
-          <App>
-            <Suspense fallback={<p>Loading...</p>}>{children}</Suspense>
-          </App>
-        </HappyProvider>
+        <App>
+          <Suspense fallback={<p>Loading...</p>}>{children}</Suspense>
+        </App>
       </ConfigProvider>
     </StyleProvider>
   )

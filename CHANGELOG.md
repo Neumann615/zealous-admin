@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-17
+
+- 🗑️ **移除快乐模式和紧凑模式**（`LayoutProvider.tsx`、`Toolbar.tsx`、`ConfigPanel.tsx`、`useLayoutSetting.ts`）：移除 `HappyProvider`、`compactAlgorithm`、下拉菜单项、配置面板开关和随机样式生成，配置项保留
+- ✨ **工具栏页面刷新功能**（`page.ts`、`Content.tsx`、`Toolbar.tsx`）：点击刷新图标触发内容区域页面重新渲染初始化，整体页面不刷新
+
 ## 2026-07-15
 
 - ✨ **动态网站标题**（`Layout.tsx`）：切换路由时 `document.title` 自动更新为 `菜单名称 - app.name`

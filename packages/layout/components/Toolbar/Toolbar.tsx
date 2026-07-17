@@ -1,12 +1,10 @@
 import type { DarkMode } from '../../types/config'
 import {
   BgColorsOutlined,
-  CompressOutlined,
   EyeOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
   MoonOutlined,
-  SmileOutlined,
   SunOutlined,
   SyncOutlined,
 } from '@ant-design/icons'
@@ -15,6 +13,7 @@ import { Col, Dropdown, Row } from 'antd'
 import { createStyles } from 'antd-style'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
+import { usePageStore } from '../../store/page'
 import { useThemeStore } from '../../store/theme'
 import { useTopBarStore } from '../../store/topBar'
 import { Breadcrumb } from '../Breadcrumb/Breadcrumb'
@@ -218,33 +217,6 @@ export function Toolbar() {
         type: 'divider',
       },
       {
-        icon: <CompressOutlined />,
-        label: (
-          <div className={styles.themeSetting}>
-            <div>紧凑主题</div>
-            {themeStore.compactMode ? <div className={styles.themeSettingSpot}></div> : null}
-          </div>
-        ),
-        onClick: () => {
-          useThemeStore.setState({ compactMode: !themeStore.compactMode })
-        },
-      },
-      {
-        icon: <SmileOutlined />,
-        label: (
-          <div className={styles.themeSetting}>
-            <div>快乐工作特效</div>
-            {themeStore.happyEffect ? <div className={styles.themeSettingSpot}></div> : null}
-          </div>
-        ),
-        onClick: () => {
-          useThemeStore.setState({ happyEffect: !themeStore.happyEffect })
-        },
-      },
-      {
-        type: 'divider',
-      },
-      {
         icon: <EyeOutlined />,
         label: (
           <div className={styles.themeSetting}>
@@ -295,7 +267,7 @@ export function Toolbar() {
             : null}
           {topBarStore.toolbar.isEnablePageReload
             ? (
-                <div className={styles.ToolbarItem}>
+                <div className={styles.ToolbarItem} onClick={() => usePageStore.getState().refreshPage()}>
                   <SyncOutlined />
                 </div>
               )

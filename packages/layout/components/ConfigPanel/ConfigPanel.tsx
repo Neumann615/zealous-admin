@@ -558,40 +558,7 @@ export default defaultSetting`
             }}
           />
         </Row>
-        <Row align="middle" className={styles.configItem}>
-          <Col flex={1} className={styles.moduleLable}>
-            快乐模式
-          </Col>
-          <Col>
-            <Switch
-              defaultChecked={defaultSetting.theme.happyEffect}
-              onChange={(v: boolean) => {
-                setDefaultSetting({
-                  ...defaultSetting,
-                  theme: { ...defaultSetting.theme, happyEffect: v },
-                })
-              }}
-            >
-            </Switch>
-          </Col>
-        </Row>
-        <Row align="middle" className={styles.configItem}>
-          <Col flex={1} className={styles.moduleLable}>
-            紧凑模式
-          </Col>
-          <Col>
-            <Switch
-              defaultChecked={defaultSetting.theme.compactMode}
-              onChange={(v: boolean) => {
-                setDefaultSetting({
-                  ...defaultSetting,
-                  theme: { ...defaultSetting.theme, compactMode: v },
-                })
-              }}
-            >
-            </Switch>
-          </Col>
-        </Row>
+        
         <Row align="middle" className={styles.configItem}>
           <Col flex={1} className={styles.moduleLable}>
             色弱模式
