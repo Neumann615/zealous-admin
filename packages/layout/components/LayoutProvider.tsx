@@ -11,6 +11,7 @@ import {
   useThemeStore,
   useTopBarStore,
 } from '../store/index'
+import { AppMessageProvider } from './AppMessageProvider'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -100,7 +101,9 @@ export function LayoutProvider({
         }}
       >
         <App>
-          <Suspense fallback={<p>Loading...</p>}>{children}</Suspense>
+          <AppMessageProvider>
+            <Suspense fallback={<p>Loading...</p>}>{children}</Suspense>
+          </AppMessageProvider>
         </App>
       </ConfigProvider>
     </StyleProvider>

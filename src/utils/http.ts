@@ -46,7 +46,7 @@ http.interceptors.response.use(
           },
         })
       }
-      return Promise.reject('error')
+      return Promise.reject(new Error(res.message))
     }
     else {
       // 返回响应JSON中的data属性，不包括message和code
@@ -55,7 +55,6 @@ http.interceptors.response.use(
   },
   (error) => {
     // 全局处理异常请求
-    console.log(`error${error}`)
     getGlobalMessage()?.error(error.message, 3)
     return Promise.reject(error)
   },

@@ -2,7 +2,6 @@
 import { useEffect, useMemo } from 'react'
 import { Navigate, useRoutes } from 'react-router'
 import routes from '~react-pages'
-import { AppMessageInit } from '@/components/AppMessageInit'
 import { useMallUserStore } from '@/store/mall/user'
 import './App.css'
 
@@ -19,7 +18,7 @@ function RouteGuard(props: { children: React.ReactNode }) {
 }
 // 为需要权限的路由添加守卫
 for (let i = 0; i < routes.length; i++) {
-  if (routes[i].meta?.auth) {
+  if ((routes[i] as any).meta?.auth) {
     routes[i].element = <RouteGuard>{routes[i].element}</RouteGuard>
   }
 }
@@ -53,9 +52,7 @@ export default function App() {
       menuData={menuData}
       // defaultSetting={defaultSetting as LayoutConfig}
     >
-      <AppMessageInit>
-        {useRoutes(routes)}
-      </AppMessageInit>
+      {useRoutes(routes)}
     </LayoutProvider>
   )
 }

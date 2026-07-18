@@ -1,4 +1,11 @@
-﻿# Changelog
+# Changelog
+
+## 2026-07-19
+
+- ✨ **AppMessageProvider 组件**（`layout` 包）：新增独立组件统一注入 antd 的 message/modal 实例，在 `LayoutProvider` 中应用扩大影响范围
+- 📦 **全局消息工具迁移至 layout 包**：`useAppMessage`、`getGlobalMessage`、`getGlobalModal` 从 `@zealous-admin/layout` 导出
+- 🗑️ **删除 AppMessageInit 组件**：移除 `src/components/AppMessageInit.tsx`，用户无需手动初始化
+- 🔧 **http.ts 错误处理优化**：错误信息改为 `new Error(res.message)`，移除冗余 console.log
 
 ## 2026-07-18
 
