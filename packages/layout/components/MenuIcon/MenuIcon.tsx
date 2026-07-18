@@ -1,5 +1,5 @@
-import type React from 'react'
-import { ZIcon } from '@zealous-admin/components/index'
+﻿import type React from 'react'
+import { ZaIcon } from '@zealous-admin/components/index'
 import { createStyles } from 'antd-style'
 import { memo, useMemo } from 'react'
 
@@ -54,7 +54,7 @@ export const MenuIcon = memo((props: MenuIconProps) => {
 
   return (
     <span className={styles.wrapper} style={wrapperStyle}>
-      <ZIcon value={props.icon} className={props.className} style={mergedStyle} />
+      <ZaIcon value={props.icon} className={props.className} style={mergedStyle} />
     </span>
   )
 })

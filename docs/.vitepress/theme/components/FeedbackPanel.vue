@@ -1,6 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { Root } from 'react-dom/client'
-import { ZMarquee } from '@zealous-admin/components/index'
+import { ZaMarquee } from '@zealous-admin/components/index'
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
@@ -96,7 +96,7 @@ const reactEl = createElement(
     null,
     ...rows.map((row, i) =>
       createElement(
-        ZMarquee,
+        ZaMarquee,
         {
           key: i,
           pauseOnHover: false,

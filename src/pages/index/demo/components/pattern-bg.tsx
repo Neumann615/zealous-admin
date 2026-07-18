@@ -1,3 +1,3 @@
-﻿import { ZPatternBgDemo } from '@zealous-admin/components/index'
+﻿import { ZaPatternBgDemo } from '@zealous-admin/components/index'
 
-export default ZPatternBgDemo
+export default ZaPatternBgDemo

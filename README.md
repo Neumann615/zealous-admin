@@ -147,15 +147,15 @@ zealous-admin/
 
 提供丰富的自定义 UI 组件：
 
-- **ZIcon** - 动态图标渲染器，支持 32+ 个主流图标库
-- **ZIconPicker** - 图标选择器，带侧边栏搜索和网格浏览
-- **ZLinkPreview** - 链接悬停预览卡片
-- **ZMarkdown** - Markdown 渲染组件
-- **ZMarquee** - 跑马灯/无限滚动
-- **ZPatternBg** - 图案背景（grid/dot 两种图案）
-- **ZShinyText** - 流光文字动效
-- **ZSliderCaptcha** - 滑块验证码（3 种模式）
-- **ZSparklesText** - 闪烁粒子文字动效
+- **ZaIcon** - 动态图标渲染器，支持 32+ 个主流图标库
+- **ZaIconPicker** - 图标选择器，带侧边栏搜索和网格浏览
+- **ZaLinkPreview** - 链接悬停预览卡片
+- **ZaMarkdown** - Markdown 渲染组件
+- **ZaMarquee** - 跑马灯/无限滚动
+- **ZaPatternBg** - 图案背景（grid/dot 两种图案）
+- **ZaShinyText** - 流光文字动效
+- **ZaSliderCaptcha** - 滑块验证码（3 种模式）
+- **ZaSparklesText** - 闪烁粒子文字动效
 
 ### @zealous-admin/layout
 

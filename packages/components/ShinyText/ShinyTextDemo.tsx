@@ -1,4 +1,4 @@
-import { Card, Col, ColorPicker, Form, Input, InputNumber, Row, Select } from 'antd'
+﻿import { Card, Col, ColorPicker, Form, Input, InputNumber, Row, Select } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'
 import { ShinyText } from './ShinyText'
@@ -15,11 +15,10 @@ const useStyles = createStyles(({ token }) => ({
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: token.colorBgBase,
+    backgroundColor: token.colorBgLayout,
   },
   header: {
-    'backgroundColor': token.colorBgBase,
-    'borderBottom': `1px solid ${token.colorBorderSecondary}`,
+    'backgroundColor': token.colorBgContainer,
     'padding': `${token.paddingLG}px`,
     '& h2': {
       margin: 0,
@@ -37,9 +36,6 @@ const useStyles = createStyles(({ token }) => ({
     flex: 1,
     padding: `${token.paddingLG}px`,
     overflow: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: token.paddingLG,
   },
   demoArea: {
     flex: 1,
@@ -69,7 +65,7 @@ export function ShinyTextDemo() {
     <div className={styles.wrapper}>
       <div className={styles.header}>
         <h2>流光文字</h2>
-        <p>ZShinyText</p>
+        <p>ZaShinyText</p>
       </div>
 
       <div className={styles.content}>

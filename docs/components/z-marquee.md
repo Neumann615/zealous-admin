@@ -1,4 +1,4 @@
-﻿# ZMarquee 跑马灯
+﻿# ZaMarquee 跑马灯
 
 基于 CSS 关键帧动画实现的无限滚动跑马灯组件，支持水平和垂直方向。
 
@@ -7,27 +7,27 @@
 ### 基础用法
 
 ```tsx
-import { ZMarquee } from '@zealous-admin/components'
+import { ZaMarquee } from '@zealous-admin/components'
 
-<ZMarquee>
+<ZaMarquee>
   <span>重要通知：系统将于今晚 22:00 进行维护升级，届时服务将暂停约 30 分钟。</span>
-</ZMarquee>
+</ZaMarquee>
 ```
 
 ### 垂直滚动
 
 ```tsx
-<ZMarquee direction="vertical" duration={15}>
+<ZaMarquee direction="vertical" duration={15}>
   <div>公告 1：系统升级通知</div>
   <div>公告 2：新功能上线</div>
   <div>公告 3：假期值班安排</div>
-</ZMarquee>
+</ZaMarquee>
 ```
 
 ### 自定义配置
 
 ```tsx
-<ZMarquee
+<ZaMarquee
   pauseOnHover
   reverse
   duration={20}
@@ -35,12 +35,12 @@ import { ZMarquee } from '@zealous-admin/components'
   gradient={false}
 >
   <span>悬停时暂停 · 反向滚动 · 无渐变遮罩</span>
-</ZMarquee>
+</ZaMarquee>
 ```
 
 ## API
 
-### ZMarquee Props
+### ZaMarquee Props
 
 | 属性 | 说明 | 类型 | 默认值 |
 |------|------|------|--------|
@@ -57,10 +57,10 @@ import { ZMarquee } from '@zealous-admin/components'
 
 ## 演示组件
 
-`ZMarqueeDemo` 提供了一个交互式演示，包含所有可调参数的控制面板。
+`ZaMarqueeDemo` 提供了一个交互式演示，包含所有可调参数的控制面板。
 
 ```tsx
-import { ZMarqueeDemo } from '@zealous-admin/components'
+import { ZaMarqueeDemo } from '@zealous-admin/components'
 
-<ZMarqueeDemo />
+<ZaMarqueeDemo />
 ```

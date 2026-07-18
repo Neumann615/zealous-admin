@@ -1,7 +1,7 @@
 ﻿import type { MenuItem } from '../../types/config'
 import type { UserInfoData } from '../UserInfo/UserInfo'
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
-import { ZShinyText } from '@zealous-admin/components/index'
+import { ZaShinyText } from '@zealous-admin/components/index'
 import { Menu as AntdMenu, Flex } from 'antd'
 import { createStyles } from 'antd-style'
 import { useMemo } from 'react'
@@ -183,7 +183,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
                           <>
                             <Logo size={26} />
                             <div className="text-ellipsis">
-                              <ZShinyText text={`${name}`} />
+                              <ZaShinyText text={`${name}`} />
                             </div>
                           </>
                         )
@@ -191,7 +191,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
                     {['side', 'only-side'].includes(menuType)
                       ? (
                           <div className={`${styles.asideMenuTitle} text-ellipsis`}>
-                            <ZShinyText text={name} />
+                            <ZaShinyText text={name} />
                           </div>
                         )
                       : null}

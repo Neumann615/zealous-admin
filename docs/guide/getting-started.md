@@ -78,18 +78,18 @@ function App() {
 ### 使用组件
 
 ```tsx
-import { ZMarquee, ZShinyText, ZSparklesText } from '@zealous-admin/components'
+import { ZaMarquee, ZaShinyText, ZaSparklesText } from '@zealous-admin/components'
 
 // 跑马灯
-<ZMarquee pauseOnHover gradient>
+<ZaMarquee pauseOnHover gradient>
   <span>重要通知：系统将于今晚进行维护升级</span>
-</ZMarquee>
+</ZaMarquee>
 
 // 流光文字
-<ZShinyText text="zealous-admin" speed="fast" />
+<ZaShinyText text="zealous-admin" speed="fast" />
 
 // 闪烁文字
-<ZSparklesText text="欢迎回来" shapes={['star', 'four-point-star']} />
+<ZaSparklesText text="欢迎回来" shapes={['star', 'four-point-star']} />
 ```
 
 ### 使用主题

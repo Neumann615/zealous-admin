@@ -1,4 +1,4 @@
-import { Card, Input } from 'antd'
+﻿import { Card, Input } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'
 import { Markdown } from './Markdown'
@@ -9,11 +9,10 @@ const useStyles = createStyles(({ token, css }) => ({
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: token.colorBgBase,
+    backgroundColor: token.colorBgLayout,
   },
   header: {
-    'backgroundColor': token.colorBgBase,
-    'borderBottom': `1px solid ${token.colorBorderSecondary}`,
+    'backgroundColor': token.colorBgContainer,
     'padding': `${token.paddingLG}px`,
     '& h2': {
       margin: 0,
@@ -125,7 +124,7 @@ export function MarkdownDemo() {
     <div className={styles.wrapper}>
       <div className={styles.header}>
         <h2>Markdown</h2>
-        <p>ZMarkdown</p>
+        <p>ZaMarkdown</p>
       </div>
       <div className={styles.content}>
         <Card>

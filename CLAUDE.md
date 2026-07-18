@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -31,7 +31,7 @@ packages/
   layout/               # Layout framework (5 modes: side/only-side/head/only-head/simple)
     store/              # Zustand stores (menu, topBar, app, theme, page) — persist to localStorage
     hooks/              # useControlTab (open/close/swap tabs, breadcrumb, navigation)
-  components/           # Shared UI (ZIcon, ZMarquee, ZShinyText, ZSliderCaptcha, PatternBg, etc.)
+  components/           # Shared UI (ZaIcon, ZaMarquee, ZaShinyText, ZaSliderCaptcha, PatternBg, etc.)
   theme/                # Theme hooks (useBootstrapTheme, useGlassTheme, etc.)
 
 service/                # Backend: Hono + Drizzle ORM + mysql2

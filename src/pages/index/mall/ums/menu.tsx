@@ -1,7 +1,7 @@
-import type { PageParam } from '@/types/common'
+﻿import type { PageParam } from '@/types/common'
 import type { UmsMenu } from '@/types/menu'
 import { PlusOutlined } from '@ant-design/icons'
-import { ZIcon, ZIconPicker } from '@zealous-admin/components/index'
+import { ZaIcon, ZaIconPicker } from '@zealous-admin/components/index'
 import {
   Button,
   Card,
@@ -284,7 +284,7 @@ export default function Menu() {
       align: 'center' as const,
       render: (icon: string) => (
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          {icon ? <ZIcon value={icon} /> : '-'}
+          {icon ? <ZaIcon value={icon} /> : '-'}
         </div>
       ),
     },
@@ -421,7 +421,7 @@ export default function Menu() {
               { required: true, message: '请选择前端图标' },
             ]}
           >
-            <ZIconPicker placeholder="请选择图标" />
+            <ZaIconPicker placeholder="请选择图标" />
           </Form.Item>
           <Form.Item label="是否显示：" name="hidden">
             <Radio.Group>

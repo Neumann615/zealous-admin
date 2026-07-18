@@ -1,4 +1,4 @@
-import path from 'node:path'
+﻿import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitepress'
 
@@ -69,13 +69,13 @@ export default defineConfig({
           text: '基础组件',
           collapsed: false,
           items: [
-            { text: 'ZIcon 图标', link: '/components/z-icon' },
-            { text: 'ZIconPicker 图标选择器', link: '/components/z-icon' },
-            { text: 'ZLinkPreview 链接预览', link: '/components/z-link-preview' },
-            { text: 'ZMarquee 跑马灯', link: '/components/z-marquee' },
-            { text: 'ZShinyText 流光文字', link: '/components/z-shiny-text' },
-            { text: 'ZSliderCaptcha 滑块验证码', link: '/components/z-slider-captcha' },
-            { text: 'ZSparklesText 闪烁文字', link: '/components/z-sparkles-text' },
+            { text: 'ZaIcon 图标', link: '/components/z-icon' },
+            { text: 'ZaIconPicker 图标选择器', link: '/components/z-icon' },
+            { text: 'ZaLinkPreview 链接预览', link: '/components/z-link-preview' },
+            { text: 'ZaMarquee 跑马灯', link: '/components/z-marquee' },
+            { text: 'ZaShinyText 流光文字', link: '/components/z-shiny-text' },
+            { text: 'ZaSliderCaptcha 滑块验证码', link: '/components/z-slider-captcha' },
+            { text: 'ZaSparklesText 闪烁文字', link: '/components/z-sparkles-text' },
           ],
         },
       ],

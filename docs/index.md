@@ -107,7 +107,7 @@ features:
 </ClientOnly>
 
 
-<!-- Tech Stack Marquee (powered by @zealous-admin/components ZMarquee) -->
+<!-- Tech Stack Marquee (powered by @zealous-admin/components ZaMarquee) -->
 <ClientOnly>
   <TechMarquee />
 </ClientOnly>

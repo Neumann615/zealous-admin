@@ -1,40 +1,40 @@
-﻿# ZIcon / ZIconPicker 图标
+﻿# ZaIcon / ZaIconPicker 图标
 
-**ZIcon** 是一个动态图标渲染器，通过 `"libKey:iconName"` 格式的字符串即可渲染任意图标库中的图标。
+**ZaIcon** 是一个动态图标渲染器，通过 `"libKey:iconName"` 格式的字符串即可渲染任意图标库中的图标。
 
-**ZIconPicker** 是一个完整的图标选择器组件，提供侧边栏切换图标库、搜索过滤、网格浏览等功能。
+**ZaIconPicker** 是一个完整的图标选择器组件，提供侧边栏切换图标库、搜索过滤、网格浏览等功能。
 
 ## 代码演示
 
-### ZIcon 基础用法
+### ZaIcon 基础用法
 
 ```tsx
-import { ZIcon } from '@zealous-admin/components'
+import { ZaIcon } from '@zealous-admin/components'
 
 // 渲染 Ant Design 的 HomeOutlined 图标
-<ZIcon value="ai:HomeOutlined" />
+<ZaIcon value="ai:HomeOutlined" />
 
 // 渲染 Font Awesome 的 user 图标
-<ZIcon value="fa:FaUser" />
+<ZaIcon value="fa:FaUser" />
 
 // 渲染 Material Design 的 home 图标
-<ZIcon value="md:MdHome" />
+<ZaIcon value="md:MdHome" />
 
 // 带自定义样式
-<ZIcon value="ai:SettingOutlined" className="custom-icon" />
+<ZaIcon value="ai:SettingOutlined" className="custom-icon" />
 ```
 
-### ZIconPicker 基础用法
+### ZaIconPicker 基础用法
 
 ```tsx
-import { ZIconPicker } from '@zealous-admin/components'
+import { ZaIconPicker } from '@zealous-admin/components'
 import { useState } from 'react'
 
 function IconSelector() {
   const [icon, setIcon] = useState('')
 
   return (
-    <ZIconPicker
+    <ZaIconPicker
       value={icon}
       onChange={setIcon}
       placeholder="请选择图标"
@@ -48,27 +48,27 @@ function IconSelector() {
 
 ```tsx
 // 仅显示 Ant Design 和 Material Design 图标
-<ZIconPicker library={['ai', 'md']} />
+<ZaIconPicker library={['ai', 'md']} />
 ```
 
 ### 自定义触发器
 
 ```tsx
-<ZIconPicker value={icon} onChange={setIcon}>
+<ZaIconPicker value={icon} onChange={setIcon}>
   <button>选择图标</button>
-</ZIconPicker>
+</ZaIconPicker>
 ```
 
 ## API
 
-### ZIcon Props
+### ZaIcon Props
 
 | 属性 | 说明 | 类型 | 默认值 |
 |------|------|------|--------|
 | value | 图标标识符，格式为 `"libKey:iconName"` | `string` | - |
 | className | 自定义 CSS 类名 | `string` | - |
 
-### ZIconPicker Props
+### ZaIconPicker Props
 
 | 属性 | 说明 | 类型 | 默认值 |
 |------|------|------|--------|

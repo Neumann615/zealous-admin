@@ -1,8 +1,10 @@
-# Changelog
+﻿# Changelog
 
 ## 2026-07-18
 
-- ✨ **MobileBlock 组件**（`Layout.tsx`）：新增 `MobileBlock` 包裹布局内容，支持移动端适配
+- 🔧 **组件命名统一改为 Za 前缀**（约 40 个文件）：`ZIcon`→`ZaIcon`、`ZIconPicker`→`ZaIconPicker`、`ZLinkPreview`→`ZaLinkPreview`、`ZMarquee`→`ZaMarquee`、`ZPatternBg`→`ZaPatternBg` 等所有组件
+- 📝 **文档同步更新**（10 个文件）：README.md、docs/ 下所有组件文档、配置文件
+- ✨ **MobileBlock 组件**：新增移动端访问控制，不支持时显示图案背景提示页
 - 🗑️ **删除 createMenuIconMap 函数**（`utils/index.ts`）：移除约 38 行的 SVG 图标映射工具函数
 
 ## 2026-07-17
@@ -22,8 +24,8 @@
 
 ## 2026-07-13
 
-- 📝 **README.md 全面更新**：组件 7→9（补充 ZIcon/ZMarkdown/ZPatternBg），技术栈新增图表/图标分类，pnpm 命令 `run` 统一简写，Git 分支 master→main，国际化描述修正
-- 📝 **docs/ 文档整理**（6 个文件）：guide/index.md 移除后端引用（Hono/Drizzle/service）；components/index.md 组件 7→9 补全 ZMarkdown/ZPatternBg；index.md 首页同步；layout/index.md 新增居中布局特性
+- 📝 **README.md 全面更新**：组件 7→9（补充 ZaIcon/ZaMarkdown/ZaPatternBg），技术栈新增图表/图标分类，pnpm 命令 `run` 统一简写，Git 分支 master→main，国际化描述修正
+- 📝 **docs/ 文档整理**（6 个文件）：guide/index.md 移除后端引用（Hono/Drizzle/service）；components/index.md 组件 7→9 补全 ZaMarkdown/ZaPatternBg；index.md 首页同步；layout/index.md 新增居中布局特性
 - 🐛 **layout-config.md 类型修正**：`ToolBar`→`Toolbar`（与 `TopBarOrder` 定义一致）
 - 🐛 **layout-modes.md width 类型修正**：`"1200px"`→`1200`（string→number）
 
@@ -92,12 +94,12 @@
 
 ## 2026-07-05
 
-- ✨ **菜单弹窗化**（`menu.tsx`）：添加/编辑改用 `Modal`+`Form`，集成 `ZIconPicker`，表格 `ZIcon` 回显，删除 `addMenu.tsx`(141行) 和 `updateMenu.tsx`(146行)
-- ✨ **图标系统重构**：`MenuIcon` 改为 `ZIcon` 渲染，`size`/`color` 转 `style` 透传，两组件均 `React.memo` 包裹，移除 `menuIconMap`/`createMenuIconMap`/`svgModules`
+- ✨ **菜单弹窗化**（`menu.tsx`）：添加/编辑改用 `Modal`+`Form`，集成 `ZaIconPicker`，表格 `ZaIcon` 回显，删除 `addMenu.tsx`(141行) 和 `updateMenu.tsx`(146行)
+- ✨ **图标系统重构**：`MenuIcon` 改为 `ZaIcon` 渲染，`size`/`color` 转 `style` 透传，两组件均 `React.memo` 包裹，移除 `menuIconMap`/`createMenuIconMap`/`svgModules`
 - ✨ **登录优化**（`login.tsx`）：`message.success` 提示后延时 1.5s 跳转首页
 - 🐛 **`convertMenus` 空数组**（`App.tsx`）：`Number()` 包裹 `parentId`/`id`/`hidden`/`sort`，解决字符串 `"0"` 与数字 `0` 的 Map 匹配失败
 - 🐛 **路径双重 `/mall` 前缀**（`App.tsx`）：移除硬编码，由 `menu.name` 驱动
-- 🐛 **`ZIcon` 样式不更新**（`Icon.tsx`）：`style` 补入 `useMemo` 依赖数组
+- 🐛 **`ZaIcon` 样式不更新**（`Icon.tsx`）：`style` 补入 `useMemo` 依赖数组
 - 🐛 **"查看下级"误禁用**（`menu.tsx`）：`level !== 0` → `level >= 2`
 - 🔧 **`LayoutProvider` 响应式菜单**：`menuData` 加入 effect 依赖，登录后自动刷新
 - 🔧 **启动同步数据**（`App.tsx`）：mount 时有 token 则调用 `getUserInfo()`
@@ -153,7 +155,7 @@
 
 - ✨ **新增** **`useLayoutSetting`** **Hook**：封装布局配置的读取、更新与随机风格切换能力，并从 `@zealous-admin/layout` 导出。
 - ✨ **新增「风格实验室」页面**（`style.tsx`）：一键随机切换框架的所有视觉风格组合，并接入主菜单路由。
-- 🔄 **Markdown 组件库化迁移**：将 `src/components/Markdown` 下的本地实现迁移至 `packages/components/Markdown`，以 `ZMarkdown` / `ZMarkdownDemo` 形式从组件库统一导出。
+- 🔄 **Markdown 组件库化迁移**：将 `src/components/Markdown` 下的本地实现迁移至 `packages/components/Markdown`，以 `ZaMarkdown` / `ZaMarkdownDemo` 形式从组件库统一导出。
 - 🗑️ **清理** **`src/components`** **旧组件**：移除 `Icon`、`PluginsDemo`、`Result` 及 6 个插件演示页面，减少冗余代码。
 - 🔧 **Setting 面包屑配置重构**：将独立的「面包屑配置卡片」合并进「工具栏功能配置」区域；同时修复菜单 store 持久化逻辑。
 - 🎨 **全局代码风格统一**：文档与源码中的 import 排序、对齐空格、自闭合标签等大规模格式化。

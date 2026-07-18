@@ -1,6 +1,6 @@
 ﻿import type { MenuData, MenuItem } from '../../types/config'
 import type { UserInfoData } from '../UserInfo/UserInfo'
-import { ZShinyText } from '@zealous-admin/components/index'
+import { ZaShinyText } from '@zealous-admin/components/index'
 import { Menu } from 'antd'
 import { createStyles } from 'antd-style'
 import { useShallow } from 'zustand/react/shallow'
@@ -330,7 +330,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
                 <div className={styles.logoContainer}>
                   <Logo />
                 </div>
-                <ZShinyText text={name} />
+                <ZaShinyText text={name} />
               </div>
               <Menu
                 styles={{
@@ -373,7 +373,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
                 <div className={styles.logoContainer}>
                   <Logo />
                 </div>
-                <ZShinyText text={name} />
+                <ZaShinyText text={name} />
               </div>
               <Menu
                 styles={{

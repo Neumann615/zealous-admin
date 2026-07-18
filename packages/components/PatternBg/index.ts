@@ -1,2 +1,2 @@
-export { PatternBg as ZPatternBg } from './PatternBg'
-export { PatternBgDemo as ZPatternBgDemo } from './PatternBgDemo'
+﻿export { PatternBg } from './PatternBg'
+export { PatternBgDemo } from './PatternBgDemo'

@@ -1,3 +1,3 @@
-﻿import { ZShinyTextDemo } from '@zealous-admin/components/index'
+﻿import { ZaShinyTextDemo } from '@zealous-admin/components/index'
 
-export default ZShinyTextDemo
+export default ZaShinyTextDemo

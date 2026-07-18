@@ -1,6 +1,6 @@
-import type React from 'react'
+﻿import type React from 'react'
 import { StopOutlined } from '@ant-design/icons'
-import { ZPatternBg } from '@zealous-admin/components'
+import { ZaPatternBg } from '@zealous-admin/components/index'
 import { createStyles } from 'antd-style'
 import { useMobileDetect } from '../../hooks/useMobileDetect'
 import { useAppStore } from '../../store/index'
@@ -43,7 +43,7 @@ export function MobileBlock({ children }: MobileBlockProps) {
   // 移动端禁止访问：展示提示页面
   if (!isEnableMobileAccess && isMobile) {
     return (
-      <ZPatternBg
+      <ZaPatternBg
         pattern="grid"
         size={26}
         animationDirection="up"
@@ -56,7 +56,7 @@ export function MobileBlock({ children }: MobileBlockProps) {
             抱歉，本网站不支持移动设备访问，请切换到桌面设备
           </span>
         </div>
-      </ZPatternBg>
+      </ZaPatternBg>
     )
   }
 

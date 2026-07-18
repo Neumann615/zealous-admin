@@ -1,4 +1,4 @@
-﻿# ZShinyText 流光文字
+﻿# ZaShinyText 流光文字
 
 为文字添加流动光泽效果的组件，类似 Apple 产品页面的"shimmer"效果。
 
@@ -7,23 +7,23 @@
 ### 基础用法
 
 ```tsx
-import { ZShinyText } from '@zealous-admin/components'
+import { ZaShinyText } from '@zealous-admin/components'
 
-<ZShinyText text="Hello zealous-admin" />
+<ZaShinyText text="Hello zealous-admin" />
 ```
 
 ### 调节速度
 
 ```tsx
-<ZShinyText text="极速流光" speed="fast" />
-<ZShinyText text="中速流光" speed="medium" />
-<ZShinyText text="慢速流光" speed="slow" />
+<ZaShinyText text="极速流光" speed="fast" />
+<ZaShinyText text="中速流光" speed="medium" />
+<ZaShinyText text="慢速流光" speed="slow" />
 ```
 
 ### 自定义颜色
 
 ```tsx
-<ZShinyText
+<ZaShinyText
   text="自定义色彩"
   shinyColor="#ff4d4f"
   textColor="#ffffff"
@@ -33,7 +33,7 @@ import { ZShinyText } from '@zealous-admin/components'
 
 ## API
 
-### ZShinyText Props
+### ZaShinyText Props
 
 | 属性 | 说明 | 类型 | 默认值 |
 |------|------|------|--------|
@@ -45,10 +45,10 @@ import { ZShinyText } from '@zealous-admin/components'
 
 ## 演示组件
 
-`ZShinyTextDemo` 提供了一个交互式演示，可实时调节文字内容、速度、颜色等参数。
+`ZaShinyTextDemo` 提供了一个交互式演示，可实时调节文字内容、速度、颜色等参数。
 
 ```tsx
-import { ZShinyTextDemo } from '@zealous-admin/components'
+import { ZaShinyTextDemo } from '@zealous-admin/components'
 
-<ZShinyTextDemo />
+<ZaShinyTextDemo />
 ```

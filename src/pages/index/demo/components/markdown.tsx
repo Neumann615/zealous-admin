@@ -1,3 +1,3 @@
-﻿import { ZMarkdownDemo } from '@zealous-admin/components/index'
+﻿import { ZaMarkdownDemo } from '@zealous-admin/components/index'
 
-export default ZMarkdownDemo
+export default ZaMarkdownDemo

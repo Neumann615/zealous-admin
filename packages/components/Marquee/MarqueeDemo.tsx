@@ -1,4 +1,4 @@
-import { Avatar, Card, Col, Form, InputNumber, Row, Select, Switch } from 'antd'
+﻿import { Avatar, Card, Col, Form, InputNumber, Row, Select, Switch } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'
 import { Marquee } from './Marquee'
@@ -14,11 +14,10 @@ const useStyles = createStyles(({ token, css }) => ({
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: token.colorBgBase,
+    backgroundColor: token.colorBgLayout,
   },
   header: {
-    'backgroundColor': token.colorBgBase,
-    'borderBottom': `1px solid ${token.colorBorderSecondary}`,
+    'backgroundColor': token.colorBgContainer,
     'padding': `${token.paddingLG}px`,
     '& h2': {
       margin: 0,
@@ -125,7 +124,7 @@ export function MarqueeDemo() {
     <div className={styles.wrapper}>
       <div className={styles.header}>
         <h2>跑马灯</h2>
-        <p>ZMarquee</p>
+        <p>ZaMarquee</p>
       </div>
 
       <div className={styles.content}>

@@ -6,15 +6,15 @@
 
 | 组件 | 说明 | Demo 组件 |
 |------|------|-----------|
-| [ZIcon](/components/z-icon) | 动态图标渲染器，支持 32 个图标库 | - |
-| [ZIconPicker](/components/z-icon) | 图标选择器，带侧边栏、搜索、网格浏览 | ZIconPickerDemo |
-| [ZLinkPreview](/components/z-link-preview) | 链接预览悬浮卡片 | ZLinkPreviewDemo |
-| ZMarkdown | Markdown 渲染组件 | ZMarkdownDemo |
-| [ZMarquee](/components/z-marquee) | 跑马灯/无限滚动 | ZMarqueeDemo |
-| ZPatternBg | 图案背景（grid/dot 两种图案） | ZPatternBgDemo |
-| [ZShinyText](/components/z-shiny-text) | 流光/光泽文字动效 | ZShinyTextDemo |
-| [ZSliderCaptcha](/components/z-slider-captcha) | 滑块验证码（3 种模式） | ZSliderCaptchaDemo |
-| [ZSparklesText](/components/z-sparkles-text) | 闪烁粒子文字动效 | ZSparklesTextDemo |
+| [ZaIcon](/components/z-icon) | 动态图标渲染器，支持 32 个图标库 | - |
+| [ZaIconPicker](/components/z-icon) | 图标选择器，带侧边栏、搜索、网格浏览 | ZaIconPickerDemo |
+| [ZaLinkPreview](/components/z-link-preview) | 链接预览悬浮卡片 | ZaLinkPreviewDemo |
+| ZaMarkdown | Markdown 渲染组件 | ZaMarkdownDemo |
+| [ZaMarquee](/components/z-marquee) | 跑马灯/无限滚动 | ZaMarqueeDemo |
+| ZaPatternBg | 图案背景（grid/dot 两种图案） | ZaPatternBgDemo |
+| [ZaShinyText](/components/z-shiny-text) | 流光/光泽文字动效 | ZaShinyTextDemo |
+| [ZaSliderCaptcha](/components/z-slider-captcha) | 滑块验证码（3 种模式） | ZaSliderCaptchaDemo |
+| [ZaSparklesText](/components/z-sparkles-text) | 闪烁粒子文字动效 | ZaSparklesTextDemo |
 
 每个组件都附带一个 `*Demo` 变体，它是对应组件的交互式演示版本，内置了可调参数面板，方便你在开发时快速体验组件效果。
 
@@ -25,7 +25,7 @@ pnpm add @zealous-admin/components
 ```
 
 ```tsx
-import { ZMarquee, ZShinyText } from '@zealous-admin/components'
+import { ZaMarquee, ZaShinyText } from '@zealous-admin/components'
 ```
 
 所有组件都依赖 `react`、`react-dom`、`antd`、`antd-style` 作为 peer dependencies。

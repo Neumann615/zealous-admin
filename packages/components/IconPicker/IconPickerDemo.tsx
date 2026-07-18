@@ -1,4 +1,4 @@
-import type { IconLibraryKey } from './IconPicker'
+﻿import type { IconLibraryKey } from './IconPicker'
 import { Button, Card, Checkbox, Col, Form, Input, Row, Select } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'
@@ -106,7 +106,7 @@ export function IconPickerDemo() {
     <div className={styles.wrapper}>
       <div className={styles.header}>
         <h2>图标选择器</h2>
-        <p>ZIconPicker</p>
+        <p>ZaIconPicker</p>
       </div>
 
       <div className={styles.content}>

@@ -1,3 +1,3 @@
-﻿import { ZIconPickerDemo } from '@zealous-admin/components/index'
+﻿import { ZaIconPickerDemo } from '@zealous-admin/components/index'
 
-export default ZIconPickerDemo
+export default ZaIconPickerDemo

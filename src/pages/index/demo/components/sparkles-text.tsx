@@ -1,3 +1,3 @@
-﻿import { ZSparklesTextDemo } from '@zealous-admin/components/index'
+﻿import { ZaSparklesTextDemo } from '@zealous-admin/components/index'
 
-export default ZSparklesTextDemo
+export default ZaSparklesTextDemo

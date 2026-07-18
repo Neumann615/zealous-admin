@@ -1,3 +1,3 @@
-﻿import { ZMarqueeDemo } from '@zealous-admin/components/index'
+﻿import { ZaMarqueeDemo } from '@zealous-admin/components/index'
 
-export default ZMarqueeDemo
+export default ZaMarqueeDemo

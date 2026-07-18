@@ -1,4 +1,4 @@
-﻿# ZSliderCaptcha 滑块验证码
+﻿# ZaSliderCaptcha 滑块验证码
 
 基于 `rc-slider-captcha` 实现的滑块拼图验证码组件，支持三种交互模式。
 
@@ -9,9 +9,9 @@
 最经典的滑块验证方式，拖动滑块到缺口位置完成验证。
 
 ```tsx
-import { ZSliderCaptcha } from '@zealous-admin/components'
+import { ZaSliderCaptcha } from '@zealous-admin/components'
 
-<ZSliderCaptcha
+<ZaSliderCaptcha
   type="slider"
   onVerify={(success) => {
     if (success) {
@@ -26,7 +26,7 @@ import { ZSliderCaptcha } from '@zealous-admin/components'
 将拼图直接嵌入到页面中显示。
 
 ```tsx
-<ZSliderCaptcha type="embed" onVerify={success => console.log(success)} />
+<ZaSliderCaptcha type="embed" onVerify={success => console.log(success)} />
 ```
 
 ### 浮动模式（float）
@@ -34,13 +34,13 @@ import { ZSliderCaptcha } from '@zealous-admin/components'
 拼图块浮动显示，不占据固定位置。
 
 ```tsx
-<ZSliderCaptcha type="float" onVerify={success => console.log(success)} />
+<ZaSliderCaptcha type="float" onVerify={success => console.log(success)} />
 ```
 
 ### 自定义文案
 
 ```tsx
-<ZSliderCaptcha
+<ZaSliderCaptcha
   type="slider"
   tipText={{
     default: '向右滑动完成验证',
@@ -55,7 +55,7 @@ import { ZSliderCaptcha } from '@zealous-admin/components'
 ### 自定义背景图
 
 ```tsx
-<ZSliderCaptcha
+<ZaSliderCaptcha
   bgImages={['/captcha-bg-1.jpg', '/captcha-bg-2.jpg']}
   bgSize={{ width: 384, height: 216 }}
   onVerify={success => console.log(success)}
@@ -64,7 +64,7 @@ import { ZSliderCaptcha } from '@zealous-admin/components'
 
 ## API
 
-### ZSliderCaptcha Props
+### ZaSliderCaptcha Props
 
 | 属性 | 说明 | 类型 | 默认值 |
 |------|------|------|--------|
@@ -77,10 +77,10 @@ import { ZSliderCaptcha } from '@zealous-admin/components'
 
 ## 演示组件
 
-`ZSliderCaptchaDemo` 提供了三种模式的切换演示，可直接体验不同模式的效果。
+`ZaSliderCaptchaDemo` 提供了三种模式的切换演示，可直接体验不同模式的效果。
 
 ```tsx
-import { ZSliderCaptchaDemo } from '@zealous-admin/components'
+import { ZaSliderCaptchaDemo } from '@zealous-admin/components'
 
-<ZSliderCaptchaDemo />
+<ZaSliderCaptchaDemo />
 ```

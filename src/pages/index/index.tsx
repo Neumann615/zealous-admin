@@ -1,4 +1,4 @@
-﻿import { ZSparklesText } from '@zealous-admin/components/index'
+﻿import { ZaSparklesText } from '@zealous-admin/components/index'
 import { BorderBeam, Button, Card, Col, Row, Space, Typography } from 'antd'
 
 const { Title, Paragraph, Text } = Typography
@@ -33,7 +33,7 @@ export default function HomePage() {
           <Title level={2} style={{ marginTop: 8, marginBottom: 0, lineHeight: 1.3 }}>
             欢迎使用
           </Title>
-          <ZSparklesText text="Zealous-admin" fontSize={60}></ZSparklesText>
+          <ZaSparklesText text="Zealous-admin" fontSize={60}></ZaSparklesText>
           <Paragraph style={{ marginBottom: 16 }}>
             这是一款开箱即用的 React 管理系统框架，为中后台项目开发提供完整解决方案。
           </Paragraph>

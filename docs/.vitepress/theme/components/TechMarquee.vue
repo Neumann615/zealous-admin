@@ -1,6 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { Root } from 'react-dom/client'
-import { ZMarquee } from '@zealous-admin/components/index'
+import { ZaMarquee } from '@zealous-admin/components/index'
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
@@ -29,7 +29,7 @@ const techItems = [
 ]
 
 const reactEl = createElement(
-  ZMarquee,
+  ZaMarquee,
   { gap: 32, duration: 25, gradient: false, repeat: 2 },
   ...techItems.map(item =>
     createElement(

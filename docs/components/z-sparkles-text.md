@@ -1,4 +1,4 @@
-﻿# ZSparklesText 闪烁文字
+﻿# ZaSparklesText 闪烁文字
 
 在文字周围生成随机分布的闪烁粒子（星星），为标题或重点文字添加灵动视觉效果的组件。
 
@@ -7,38 +7,38 @@
 ### 基础用法
 
 ```tsx
-import { ZSparklesText } from '@zealous-admin/components'
+import { ZaSparklesText } from '@zealous-admin/components'
 
-<ZSparklesText text="欢迎回来" />
+<ZaSparklesText text="欢迎回来" />
 ```
 
 ### 指定闪烁形状
 
 ```tsx
 // 仅使用星形
-<ZSparklesText text="Star Only" shapes={['star']} />
+<ZaSparklesText text="Star Only" shapes={['star']} />
 
 // 混合使用
-<ZSparklesText text="Mixed Shapes" shapes={['star', 'four-point-star', 'flower']} />
+<ZaSparklesText text="Mixed Shapes" shapes={['star', 'four-point-star', 'flower']} />
 ```
 
 ### 调节粒子数量
 
 ```tsx
-<ZSparklesText text="密集粒子" shapeCount={30} />
-<ZSparklesText text="稀疏粒子" shapeCount={5} />
+<ZaSparklesText text="密集粒子" shapeCount={30} />
+<ZaSparklesText text="稀疏粒子" shapeCount={5} />
 ```
 
 ### 调节动画速度
 
 ```tsx
-<ZSparklesText text="快速闪烁" animationSpeed="fast" fontSize={36} />
-<ZSparklesText text="慢速闪烁" animationSpeed="slow" fontSize={24} />
+<ZaSparklesText text="快速闪烁" animationSpeed="fast" fontSize={36} />
+<ZaSparklesText text="慢速闪烁" animationSpeed="slow" fontSize={24} />
 ```
 
 ## API
 
-### ZSparklesText Props
+### ZaSparklesText Props
 
 | 属性 | 说明 | 类型 | 默认值 |
 |------|------|------|--------|
@@ -54,10 +54,10 @@ import { ZSparklesText } from '@zealous-admin/components'
 
 ## 演示组件
 
-`ZSparklesTextDemo` 提供了一个交互式演示，可实时调节文字内容、粒子数量、形状类型等参数。
+`ZaSparklesTextDemo` 提供了一个交互式演示，可实时调节文字内容、粒子数量、形状类型等参数。
 
 ```tsx
-import { ZSparklesTextDemo } from '@zealous-admin/components'
+import { ZaSparklesTextDemo } from '@zealous-admin/components'
 
-<ZSparklesTextDemo />
+<ZaSparklesTextDemo />
 ```
