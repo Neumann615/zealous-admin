@@ -11,6 +11,7 @@ import { GlobalProgress } from './GlobalProgress/GlobalProgress'
 import { Header } from './Header/Header'
 import { MainNav } from './MainNav/MainNav'
 import { Menu } from './Menu/Menu'
+import { MobileBlock } from './MobileBlock/MobileBlock'
 import { Setting } from './Setting/Setting'
 import 'animate.css'
 import './reset.css'
@@ -239,24 +240,26 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
         },
       }}
     >
-      {isOutsideCenter
-        ? (
-            <div className={styles.outsideCenterBg}>
-              <div
-                className={styles.outsideCenterWrapper}
-                style={{ maxWidth: layoutConfig.width, width: '100%' }}
-              >
-                {layoutContent}
+      <MobileBlock>
+        {isOutsideCenter
+          ? (
+              <div className={styles.outsideCenterBg}>
+                <div
+                  className={styles.outsideCenterWrapper}
+                  style={{ maxWidth: layoutConfig.width, width: '100%' }}
+                >
+                  {layoutContent}
+                </div>
               </div>
-            </div>
-          )
-        : layoutContent}
-      <Setting></Setting>
-      <GlobalProgress
-        isAnimating={globalProgressLoading}
-        key={location.key}
-      >
-      </GlobalProgress>
+            )
+          : layoutContent}
+        <Setting></Setting>
+        <GlobalProgress
+          isAnimating={globalProgressLoading}
+          key={location.key}
+        >
+        </GlobalProgress>
+      </MobileBlock>
     </ConfigProvider>
   )
 }
