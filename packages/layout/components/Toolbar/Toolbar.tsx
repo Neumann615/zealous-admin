@@ -4,6 +4,8 @@ import {
   EyeOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   MoonOutlined,
   SunOutlined,
   SyncOutlined,
@@ -13,6 +15,8 @@ import { Col, Dropdown, Row } from 'antd'
 import { createStyles } from 'antd-style'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
+import { useMobileDetect } from '../../hooks/useMobileDetect'
+import { useMenuStore } from '../../store/menu'
 import { usePageStore } from '../../store/page'
 import { useThemeStore } from '../../store/theme'
 import { useTopBarStore } from '../../store/topBar'
@@ -72,6 +76,8 @@ export function Toolbar() {
   const darkBtnRef = useRef<any>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [systemDarkMode, setSystemDarkMode] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const isMobile = useMobileDetect()
+  const { mobileDrawerOpen, setMobileDrawerOpen } = useMenuStore()
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -234,7 +240,13 @@ export function Toolbar() {
   return (
     <Row align="middle" className={styles.headerModule}>
       <Col span={12}>
-        <Breadcrumb />
+        {isMobile
+          ? (
+              mobileDrawerOpen
+                ? <MenuFoldOutlined onClick={() => setMobileDrawerOpen(false)} />
+                : <MenuUnfoldOutlined onClick={() => setMobileDrawerOpen(true)} />
+            )
+          : <Breadcrumb />}
       </Col>
       <Col span={12}>
         <div className={styles.Toolbar}>

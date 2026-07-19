@@ -91,6 +91,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
     isEnableSubMenuCollapse,
     openKeys,
     setOpenKeys,
+    setMobileDrawerOpen,
   } = useMenuStore(
     useShallow((state: any) => ({
       menuData: state.menuData,
@@ -104,6 +105,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
       openKeys: state.openKeys,
       setOpenKeys: state.setOpenKeys,
       mainNavCurrentKeys: state.mainNavCurrentKeys,
+      setMobileDrawerOpen: state.setMobileDrawerOpen,
     })),
   )
   const { name } = useAppStore(
@@ -112,6 +114,12 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
     })),
   )
   const { openTab } = useControlTab()
+
+  // 移动端：菜单项点击后关闭抽屉
+  function handleMenuClick(v: any) {
+    openTab(v)
+    setMobileDrawerOpen(false)
+  }
 
   const rootSubmenuKeys = useMemo(() => {
     return menuData
@@ -208,7 +216,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
           mode="inline"
           items={renderMenuData}
           onOpenChange={onOpenChange}
-          onClick={openTab}
+          onClick={handleMenuClick}
         />
       </div>
       {isEnableSubMenuCollapse

@@ -145,13 +145,14 @@ interface MainNavProps {
 
 export function MainNav({ userInfo, onLogout }: MainNavProps) {
   const { styles, theme } = useStyles()
-  const { mainNavData, menuType, mainNavCurrentKeys, menuActiveStyle }
+  const { mainNavData, menuType, mainNavCurrentKeys, menuActiveStyle, setMobileDrawerOpen }
     = useMenuStore(
       useShallow((state: any) => ({
         mainNavData: state.mainNavData,
         menuType: state.menuType,
         mainNavCurrentKeys: state.mainNavCurrentKeys,
         menuActiveStyle: state.menuActiveStyle,
+        setMobileDrawerOpen: state.setMobileDrawerOpen,
       })),
     )
   const { name } = useAppStore(
@@ -192,7 +193,10 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
           key: item.key,
           label: item.label,
           icon: item.icon ? <MenuIcon icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
-          onClick: () => openTab(item),
+          onClick: () => {
+            openTab(item)
+            setMobileDrawerOpen(false)
+          },
         }
       }
     })
@@ -241,7 +245,10 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
         return {
           key: item.key,
           label: labelContent,
-          onClick: () => openTab(item),
+          onClick: () => {
+            openTab(item)
+            setMobileDrawerOpen(false)
+          },
         }
       }
     })

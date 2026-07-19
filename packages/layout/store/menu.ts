@@ -6,6 +6,9 @@ export const useMenuStore = create(
   persist(
     (set: any) => ({
       ...defaultSetting.menu,
+      // 运行时状态（不持久化）
+      mobileDrawerOpen: false,
+      setMobileDrawerOpen: (open: boolean) => set(() => ({ mobileDrawerOpen: open })),
       menuCurrentKeys: [],
       menuData: [],
       mainNavData: [],

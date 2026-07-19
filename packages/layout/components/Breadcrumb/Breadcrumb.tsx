@@ -1,6 +1,7 @@
 import { Breadcrumb as AntBreadcrumb } from 'antd'
 import { createStyles } from 'antd-style'
 import { useControlTab } from '../../hooks/useControlTab'
+import { useMobileDetect } from '../../hooks/useMobileDetect'
 import { useAppStore } from '../../store/index'
 import { useTopBarStore } from '../../store/topBar'
 
@@ -86,10 +87,11 @@ export function Breadcrumb() {
   const appStore = useAppStore()
   const { openTab } = useControlTab()
   const { styles } = useStyles()
+  const isMobile = useMobileDetect()
   const isEnableBreadcrumb = toolbar?.breadcrumb?.isEnableBreadcrumb ?? true
   const breadcrumbStyle = toolbar?.breadcrumb?.style ?? 'modern'
 
-  if (!isEnableBreadcrumb)
+  if (!isEnableBreadcrumb || isMobile)
     return null
 
   if (breadcrumbStyle === 'modern') {

@@ -1,9 +1,10 @@
 import type { UserInfoData } from './UserInfo/UserInfo'
-import { ConfigProvider } from 'antd'
+import { ConfigProvider, Drawer } from 'antd'
 import { createStyles } from 'antd-style'
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useControlTab } from '../hooks/useControlTab'
+import { useMobileDetect } from '../hooks/useMobileDetect'
 import { useAppStore, useMenuStore, usePageStore, useTopBarStore } from '../store/index'
 import { Content } from './Content/Content'
 import { Footer } from './Footer/Footer'
@@ -103,6 +104,19 @@ const useStyles = createStyles(({ token }) => ({
     borderLeft: `1px solid ${token.colorBorderSecondary}`,
     borderRight: `1px solid ${token.colorBorderSecondary}`,
   },
+  // 移动端响应式布局
+  mobileContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    width: '100%',
+    height: '100vh',
+  },
+  mobileContent: {
+    flex: 1,
+    height: '1px',
+    display: 'flex',
+    flexDirection: 'column',
+  },
 }))
 
 interface LayoutProps {
@@ -112,9 +126,10 @@ interface LayoutProps {
 
 export function Layout({ userInfo, onLogout }: LayoutProps) {
   const { theme, styles } = useStyles()
-  const { menuType, menuCurrentKeys, openKeys, mainNavCurrentKeys } = useMenuStore()
+  const { menuType, menuCurrentKeys, openKeys, mainNavCurrentKeys, mobileDrawerOpen, setMobileDrawerOpen } = useMenuStore()
+  const isMobile = useMobileDetect()
   const globalProgressLoading = usePageStore(state => state.globalProgressLoading)
-  const { layout: layoutConfig, name: appName } = useAppStore()
+  const { layout: layoutConfig, name: appName, isEnableMobileAccess } = useAppStore()
   const { nowTab } = useTopBarStore()
   const { syncTabFromUrl } = useControlTab()
   const location = useLocation()
@@ -135,6 +150,9 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
   }, [nowTab?.title])
 
   function renderLayout() {
+    if (isMobile && isEnableMobileAccess) {
+      return renderMobileLayout()
+    }
     if (menuType === 'side') {
       return (
         <div className={styles.layoutContainerStyle}>
@@ -211,6 +229,29 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
         </div>
       )
     }
+  }
+
+  function renderMobileLayout() {
+    return (
+      <div className={styles.mobileContainer}>
+        <div className={styles.mobileContent}>
+          <Header />
+          <Content />
+          <Footer />
+        </div>
+        <Drawer
+          open={mobileDrawerOpen}
+          onClose={() => setMobileDrawerOpen(false)}
+          width={314}
+          placement="left"
+          closable={false}
+          styles={{ body: { padding: 0, display: 'flex' }, header: { display: 'none' } }}
+        >
+          <MainNav userInfo={userInfo} onLogout={onLogout} />
+          <Menu />
+        </Drawer>
+      </div>
+    )
   }
 
   useEffect(() => {

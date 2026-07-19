@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-20
+
+- ✨ **移动端响应式布局**（`Layout.tsx`）：新增移动端专属布局，使用 Drawer 组件实现侧边菜单抽屉
+
 ## 2026-07-19
 
 - ✨ **AppMessageProvider 组件**（`layout` 包）：新增独立组件统一注入 antd 的 message/modal 实例，在 `LayoutProvider` 中应用扩大影响范围
