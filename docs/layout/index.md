@@ -14,7 +14,6 @@
 
 ```tsx
 import {
-  createMenuIconMap, // SVG 图标映射工具
   Layout, // 布局外壳组件
   LayoutConfig, // TypeScript 配置类型
   LayoutProvider, // 布局上下文提供者
@@ -31,7 +30,7 @@ import {
 - **布局居中显示** — outside（全局）/ inside（内容区）两种作用范围，自定义宽度
 - **设置面板** — 可视化配置所有选项，实时预览
 - **状态持久化** — 基于 Zustand + localStorage/sessionStorage
-- **响应式** — 支持移动端访问
+- **响应式** — 移动端自动切换 Drawer 抽屉菜单（< 700px），面包屑自动隐藏
 
 ## 安装使用
 

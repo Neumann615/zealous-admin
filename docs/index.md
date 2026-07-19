@@ -25,8 +25,8 @@ features:
     details: Bootstrap 经典 · Glass 毛玻璃 · Illustration 插画风 · MUI Material Design 3，切换主题就像换皮肤一样简单。
     link: /theme/
   - icon: 📐
-    title: 5 种布局模式
-    details: side / only-side / head / only-head / simple，每种模式适配不同业务场景，随心切换。
+    title: 5 种布局 + 移动端响应式
+    details: side / only-side / head / only-head / simple + 移动端自动 Drawer 抽屉菜单，窄屏自动切换，桌面端面包屑自动隐藏。
     link: /layout/layout-modes
   - icon: 🧩
     title: 9 个业务组件

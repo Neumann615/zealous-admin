@@ -85,6 +85,7 @@ menu.subMenuCollapse // 侧边栏是否折叠
 menu.menuCurrentKeys // 当前选中的菜单项 key 路径
 menu.mainNavCurrentKeys // 当前选中的主导航 key 路径
 menu.openKeys // 当前展开的子菜单 key
+menu.mobileDrawerOpen // 移动端抽屉是否打开（运行时状态，不持久化）
 ```
 
 ## useTopBarStore
