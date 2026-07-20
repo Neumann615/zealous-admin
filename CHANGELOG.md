@@ -4,6 +4,9 @@
 
 - ✨ **移动端响应式布局**（`Layout.tsx`）：新增移动端专属布局，使用 Drawer 组件实现侧边菜单抽屉
 - 📝 **文档更新**（5 个文件）：更新特性描述、新增移动端布局模式文档、添加 `mobileDrawerOpen` 状态说明
+- 🔧 **Service 全面重构**（`service/`）：Hono → Express 迁移，MySQL → `node:sqlite`，数据库精简为 7 张核心表，表前缀 `ums_` → `za_`
+- 🔧 **依赖集中管理**（`pnpm-workspace.yaml`）：service 依赖统一纳入 workspace catalog，移除 drizzle-orm、drizzle-kit、hono、@hono/node-server
+- 🗑️ **删除业务路由**（5 个文件，~2400 行）：移除 brand、category、product、order、marketing 路由模块
 
 ## 2026-07-19
 

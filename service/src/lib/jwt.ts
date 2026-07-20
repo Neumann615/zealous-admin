@@ -1,4 +1,4 @@
-import { SignJWT, jwtVerify } from 'jose'
+import { jwtVerify, SignJWT } from 'jose'
 
 const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'zealous-admin-secret-key-change-in-production',

@@ -1,347 +1,206 @@
-import { Hono } from 'hono'
-import { eq, like, sql, inArray } from 'drizzle-orm'
-import { db } from '../db'
-import { umsRole, umsRoleMenuRelation, umsRoleResourceRelation, umsMenu, umsResource } from '../db/schema'
-import { success, failed } from '../lib/response'
+import { Router } from 'express'
+import { getDb } from '../db'
+import { failed, success } from '../lib/response'
 import { authMiddleware } from '../middleware/auth'
 
-const router = new Hono()
+const router = Router()
+const db = getDb()
 
-// All routes protected
-router.use('/role/*', authMiddleware)
+router.use(authMiddleware)
 
-// ---------------------------------------------------------------------------
-// CRUD
-// ---------------------------------------------------------------------------
-
-/** POST /role/create */
-router.post('/role/create', async (c) => {
+router.get('/role/list', (req, res) => {
   try {
-    const body = await c.req.json()
-    const { name, description, status, sort } = body
-
-    if (!name) {
-      return c.json(failed('角色名称不能为空'))
-    }
-
-    const now = new Date()
-
-    const insertResult = await db
-      .insert(umsRole)
-      .values({
-        name,
-        description: description || null,
-        status: status !== undefined ? status : 1,
-        sort: sort !== undefined ? sort : 0,
-        adminCount: 0,
-        createTime: now,
-      })
-
-    // mysql2 驱动的 insert 返回 [ResultSetHeader, ...] 元组
-    const insertId = Number(insertResult[0].insertId)
-
-    const [role] = await db
-      .select()
-      .from(umsRole)
-      .where(eq(umsRole.id, insertId))
-
-    return c.json(success(role, '创建成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '创建角色失败'))
-  }
-})
-
-/** POST /role/update/:id */
-router.post('/role/update/:id', async (c) => {
-  try {
-    const id = Number(c.req.param('id'))
-    const body = await c.req.json()
-    const { name, description, status, sort } = body
-
-    const existing = await db
-      .select()
-      .from(umsRole)
-      .where(eq(umsRole.id, id))
-      .limit(1)
-
-    if (existing.length === 0) {
-      return c.json(failed('角色不存在'))
-    }
-
-    const updateData: Record<string, any> = {}
-    if (name !== undefined) updateData.name = name
-    if (description !== undefined) updateData.description = description
-    if (status !== undefined) updateData.status = status
-    if (sort !== undefined) updateData.sort = sort
-
-    if (Object.keys(updateData).length === 0) {
-      return c.json(failed('没有需要更新的字段'))
-    }
-
-    await db.update(umsRole).set(updateData).where(eq(umsRole.id, id))
-
-    const updated = await db
-      .select()
-      .from(umsRole)
-      .where(eq(umsRole.id, id))
-      .limit(1)
-
-    return c.json(success(updated[0], '更新成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '更新角色失败'))
-  }
-})
-
-/** POST /role/delete — query: ids (comma-separated), batch delete */
-router.post('/role/delete', async (c) => {
-  try {
-    const idsStr = c.req.query('ids') || ''
-
-    if (!idsStr) {
-      return c.json(failed('ids 不能为空'))
-    }
-
-    const ids = idsStr
-      .split(',')
-      .map((s) => Number(s.trim()))
-      .filter((n) => !isNaN(n) && n > 0)
-
-    if (ids.length === 0) {
-      return c.json(failed('没有有效的 ID'))
-    }
-
-    // 批量删除角色关联
-    await db.delete(umsRoleMenuRelation).where(inArray(umsRoleMenuRelation.roleId, ids))
-    await db.delete(umsRoleResourceRelation).where(inArray(umsRoleResourceRelation.roleId, ids))
-
-    // 批量删除角色
-    await db.delete(umsRole).where(inArray(umsRole.id, ids))
-
-    return c.json(success(null, '删除成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '删除角色失败'))
-  }
-})
-
-/** GET /role/listAll — 返回所有角色 */
-router.get('/role/listAll', async (c) => {
-  try {
-    const roles = await db
-      .select()
-      .from(umsRole)
-      .orderBy(umsRole.sort)
-
-    return c.json(success(roles))
-  } catch (e: any) {
-    return c.json(failed(e.message || '获取角色列表失败'))
-  }
-})
-
-/** GET /role/list — 分页搜索 */
-router.get('/role/list', async (c) => {
-  try {
-    const keyword = c.req.query('keyword') || ''
-    const pageSize = Number(c.req.query('pageSize')) || 5
-    const pageNum = Number(c.req.query('pageNum')) || 1
+    const keyword = (req.query.keyword as string) || ''
+    const pageSize = Number(req.query.pageSize) || 5
+    const pageNum = Number(req.query.pageNum) || 1
     const offset = (pageNum - 1) * pageSize
 
-    let whereClause: ReturnType<typeof sql> | undefined
+    let total: number
+    let roles: any[]
 
     if (keyword) {
-      whereClause = sql`${umsRole.name} LIKE ${'%' + keyword + '%'}`
+      const like = `%${keyword}%`
+      total = (db.prepare(
+        'SELECT COUNT(*) AS count FROM za_role WHERE name LIKE ? OR description LIKE ?',
+      ).get(like, like) as any).count
+
+      roles = db.prepare(
+        'SELECT * FROM za_role WHERE name LIKE ? OR description LIKE ? ORDER BY sort LIMIT ? OFFSET ?',
+      ).all(like, like, pageSize, offset)
+    }
+    else {
+      total = (db.prepare('SELECT COUNT(*) AS count FROM za_role').get() as any).count
+      roles = db.prepare('SELECT * FROM za_role ORDER BY sort LIMIT ? OFFSET ?').all(pageSize, offset)
     }
 
-    // 总数
-    const countResult = whereClause
-      ? await db
-          .select({ count: sql<number>`count(*)` })
-          .from(umsRole)
-          .where(whereClause)
-      : await db.select({ count: sql<number>`count(*)` }).from(umsRole)
-
-    const total = Number(countResult[0].count)
-
-    // 分页
-    const roles = whereClause
-      ? await db
-          .select()
-          .from(umsRole)
-          .where(whereClause)
-          .orderBy(umsRole.sort)
-          .limit(pageSize)
-          .offset(offset)
-      : await db
-          .select()
-          .from(umsRole)
-          .orderBy(umsRole.sort)
-          .limit(pageSize)
-          .offset(offset)
-
-    return c.json(
-      success({
-        list: roles,
-        total,
-        pageSize,
-        pageNum,
-      }),
-    )
-  } catch (e: any) {
-    return c.json(failed(e.message || '获取角色列表失败'))
+    res.json(success({ list: roles, total, pageSize, pageNum }))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取角色列表失败'))
   }
 })
 
-/** POST /role/updateStatus/:id — query: status */
-router.post('/role/updateStatus/:id', async (c) => {
+router.post('/role/create', async (req, res) => {
   try {
-    const id = Number(c.req.param('id'))
-    const status = Number(c.req.query('status'))
+    const { name, description, sort } = req.body
 
-    const existing = await db
-      .select()
-      .from(umsRole)
-      .where(eq(umsRole.id, id))
-      .limit(1)
-
-    if (existing.length === 0) {
-      return c.json(failed('角色不存在'))
+    if (!name) {
+      res.json(failed('角色名称不能为空'))
+      return
     }
 
-    await db.update(umsRole).set({ status }).where(eq(umsRole.id, id))
+    const existing = db.prepare('SELECT id FROM za_role WHERE name = ?').get(name)
+    if (existing) {
+      res.json(failed('角色名称已存在'))
+      return
+    }
 
-    return c.json(success(null, '状态更新成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '更新状态失败'))
+    const result = db.prepare(
+      'INSERT INTO za_role (name, description, sort, create_time, status, admin_count) VALUES (?, ?, ?, ?, ?, ?)',
+    ).run(name, description || null, sort || 0, new Date().toISOString(), 1, 0)
+
+    const role = db.prepare('SELECT * FROM za_role WHERE id = ?').get(result.lastInsertRowid)
+    res.json(success(role))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '创建角色失败'))
   }
 })
 
-/** GET /role/listMenu/:roleId — 返回角色已分配的菜单 */
-router.get('/role/listMenu/:roleId', async (c) => {
+router.get('/role/:id', (req, res) => {
   try {
-    const roleId = Number(c.req.param('roleId'))
+    const id = Number(req.params.id)
+    const role = db.prepare('SELECT * FROM za_role WHERE id = ?').get(id)
 
-    const relations = await db
-      .select()
-      .from(umsRoleMenuRelation)
-      .where(eq(umsRoleMenuRelation.roleId, roleId))
+    if (!role) {
+      res.json(failed('角色不存在'))
+      return
+    }
+    res.json(success(role))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取角色失败'))
+  }
+})
 
-    const menuIds = relations.map((r) => r.menuId)
+router.post('/role/update/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id)
+    const { name, description, sort, status } = req.body
 
+    const existing = db.prepare('SELECT id FROM za_role WHERE id = ?').get(id)
+    if (!existing) {
+      res.json(failed('角色不存在'))
+      return
+    }
+
+    if (name) {
+      const conflict = db.prepare('SELECT id FROM za_role WHERE name = ? AND id != ?').get(name, id)
+      if (conflict) {
+        res.json(failed('角色名称已存在'))
+        return
+      }
+    }
+
+    const sets: string[] = []
+    const values: any[] = []
+
+    if (name !== undefined) { sets.push('name = ?'); values.push(name) }
+    if (description !== undefined) { sets.push('description = ?'); values.push(description) }
+    if (sort !== undefined) { sets.push('sort = ?'); values.push(sort) }
+    if (status !== undefined) { sets.push('status = ?'); values.push(status) }
+
+    if (sets.length === 0) {
+      res.json(failed('没有需要更新的字段'))
+      return
+    }
+
+    values.push(id)
+    db.prepare(`UPDATE za_role SET ${sets.join(', ')} WHERE id = ?`).run(...values)
+
+    const updated = db.prepare('SELECT * FROM za_role WHERE id = ?').get(id)
+    res.json(success(updated))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '更新角色失败'))
+  }
+})
+
+router.post('/role/delete/:id', (req, res) => {
+  try {
+    const id = Number(req.params.id)
+    const existing = db.prepare('SELECT id FROM za_role WHERE id = ?').get(id)
+    if (!existing) {
+      res.json(failed('角色不存在'))
+      return
+    }
+
+    db.prepare('DELETE FROM za_admin_role_relation WHERE role_id = ?').run(id)
+    db.prepare('DELETE FROM za_role_menu_relation WHERE role_id = ?').run(id)
+    db.prepare('DELETE FROM za_role WHERE id = ?').run(id)
+
+    res.json(success(null, '删除成功'))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '删除角色失败'))
+  }
+})
+
+router.get('/role/menu/:roleId', (req, res) => {
+  try {
+    const roleId = Number(req.params.roleId)
+    const relations = db.prepare('SELECT menu_id FROM za_role_menu_relation WHERE role_id = ?').all(roleId) as any[]
+
+    const menuIds = relations.map((r: any) => r.menu_id)
     if (menuIds.length === 0) {
-      return c.json(success([]))
+      res.json(success([]))
+      return
     }
 
-    const menus = await db
-      .select()
-      .from(umsMenu)
-      .where(inArray(umsMenu.id, menuIds))
-      .orderBy(umsMenu.sort)
+    const placeholders = menuIds.map(() => '?').join(',')
+    const menus = db.prepare(`SELECT * FROM za_menu WHERE id IN (${placeholders})`).all(...menuIds)
 
-    return c.json(success(menus))
-  } catch (e: any) {
-    return c.json(failed(e.message || '获取角色菜单失败'))
+    res.json(success(menus))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取角色菜单失败'))
   }
 })
 
-/** GET /role/listResource/:roleId — 返回角色已分配的资源 */
-router.get('/role/listResource/:roleId', async (c) => {
+router.post('/role/menu/update', (req, res) => {
   try {
-    const roleId = Number(c.req.param('roleId'))
-
-    const relations = await db
-      .select()
-      .from(umsRoleResourceRelation)
-      .where(eq(umsRoleResourceRelation.roleId, roleId))
-
-    const resourceIds = relations.map((r) => r.resourceId)
-
-    if (resourceIds.length === 0) {
-      return c.json(success([]))
-    }
-
-    const resources = await db
-      .select()
-      .from(umsResource)
-      .where(inArray(umsResource.id, resourceIds))
-
-    return c.json(success(resources))
-  } catch (e: any) {
-    return c.json(failed(e.message || '获取角色资源失败'))
-  }
-})
-
-/** POST /role/allocMenu — query: roleId, menuIds (comma-separated) */
-router.post('/role/allocMenu', async (c) => {
-  try {
-    const roleId = Number(c.req.query('roleId'))
-    const menuIdsStr = c.req.query('menuIds') || ''
+    const roleId = Number(req.query.roleId)
+    const menuIdsStr = (req.query.menuIds as string) || ''
 
     if (!roleId) {
-      return c.json(failed('roleId 不能为空'))
+      res.json(failed('roleId 不能为空'))
+      return
     }
 
-    // 删除旧关联
-    await db
-      .delete(umsRoleMenuRelation)
-      .where(eq(umsRoleMenuRelation.roleId, roleId))
+    db.prepare('DELETE FROM za_role_menu_relation WHERE role_id = ?').run(roleId)
 
-    // 插入新关联
     if (menuIdsStr) {
-      const menuIds = menuIdsStr
-        .split(',')
-        .map((s) => Number(s.trim()))
-        .filter((n) => !isNaN(n) && n > 0)
-
+      const menuIds = menuIdsStr.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0)
       if (menuIds.length > 0) {
-        await db.insert(umsRoleMenuRelation).values(
-          menuIds.map((menuId) => ({
-            roleId,
-            menuId,
-          })),
-        )
+        const stmt = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
+        for (const menuId of menuIds) stmt.run(roleId, menuId)
       }
     }
 
-    return c.json(success(null, '菜单分配成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '菜单分配失败'))
+    res.json(success(null, '菜单分配成功'))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '菜单分配失败'))
   }
 })
 
-/** POST /role/allocResource — query: roleId, resourceIds (comma-separated) */
-router.post('/role/allocResource', async (c) => {
+router.get('/role/all', (_req, res) => {
   try {
-    const roleId = Number(c.req.query('roleId'))
-    const resourceIdsStr = c.req.query('resourceIds') || ''
-
-    if (!roleId) {
-      return c.json(failed('roleId 不能为空'))
-    }
-
-    // 删除旧关联
-    await db
-      .delete(umsRoleResourceRelation)
-      .where(eq(umsRoleResourceRelation.roleId, roleId))
-
-    // 插入新关联
-    if (resourceIdsStr) {
-      const resourceIds = resourceIdsStr
-        .split(',')
-        .map((s) => Number(s.trim()))
-        .filter((n) => !isNaN(n) && n > 0)
-
-      if (resourceIds.length > 0) {
-        await db.insert(umsRoleResourceRelation).values(
-          resourceIds.map((resourceId) => ({
-            roleId,
-            resourceId,
-          })),
-        )
-      }
-    }
-
-    return c.json(success(null, '资源分配成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '资源分配失败'))
+    const roles = db.prepare('SELECT * FROM za_role ORDER BY sort').all()
+    res.json(success(roles))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取所有角色失败'))
   }
 })
 

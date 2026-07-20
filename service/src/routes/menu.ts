@@ -1,249 +1,147 @@
-import { Hono } from 'hono'
-import { eq, sql } from 'drizzle-orm'
-import { db } from '../db'
-import { umsMenu } from '../db/schema'
-import { success, failed } from '../lib/response'
+import { Router } from 'express'
+import { getDb } from '../db'
+import { failed, success } from '../lib/response'
 import { authMiddleware } from '../middleware/auth'
 
-const router = new Hono()
+const router = Router()
+const db = getDb()
 
-// All routes protected
-router.use('/menu/*', authMiddleware)
+router.use(authMiddleware)
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** 将扁平菜单数组转换为树形结构 (parentId = 0 为根) */
-function buildMenuTree(menus: (typeof umsMenu.$inferSelect)[]): any[] {
-  const map = new Map<number, any>()
-  const tree: any[] = []
-
-  for (const menu of menus) {
-    map.set(menu.id, { ...menu, children: [] })
-  }
-
-  for (const menu of menus) {
-    const node = map.get(menu.id)!
-    if (menu.parentId === 0) {
-      tree.push(node)
-    } else {
-      const parent = map.get(menu.parentId)
-      if (parent) {
-        parent.children.push(node)
-      }
-    }
-  }
-
-  return tree
-}
-
-// ---------------------------------------------------------------------------
-// CRUD
-// ---------------------------------------------------------------------------
-
-/** POST /menu/create */
-router.post('/menu/create', async (c) => {
+router.get('/menu/list', (req, res) => {
   try {
-    const body = await c.req.json()
-    const { title, parentId, level, sort, name, icon, hidden } = body
+    const parentId = Number(req.query.parentId) || 0
+    const menus = db.prepare('SELECT * FROM za_menu WHERE parent_id = ? ORDER BY sort').all(parentId)
+    res.json(success(menus))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取菜单列表失败'))
+  }
+})
+
+router.get('/menu/tree', (_req, res) => {
+  try {
+    const allMenus = db.prepare('SELECT * FROM za_menu ORDER BY sort').all() as any[]
+
+    const buildTree = (parentId: number): any[] =>
+      allMenus.filter(m => m.parent_id === parentId).map(m => ({ ...m, children: buildTree(m.id) }))
+
+    res.json(success(buildTree(0)))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取菜单树失败'))
+  }
+})
+
+router.post('/menu/create', (req, res) => {
+  try {
+    const { parentId, title, level, sort, name, icon, hidden, path, component } = req.body
 
     if (!title) {
-      return c.json(failed('菜单标题不能为空'))
+      res.json(failed('菜单标题不能为空'))
+      return
     }
 
-    const now = new Date()
+    const result = db.prepare(
+      'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(parentId || 0, title, level || 0, sort || 0, name || null, icon || null, hidden || 0, path || null, component || null, new Date().toISOString())
 
-    const insertResult = await db
-      .insert(umsMenu)
-      .values({
-        title,
-        parentId: parentId !== undefined ? parentId : 0,
-        level: level !== undefined ? level : 0,
-        sort: sort !== undefined ? sort : 0,
-        name: name || null,
-        icon: icon || null,
-        hidden: hidden !== undefined ? hidden : 0,
-        createTime: now,
-      })
-
-    // mysql2 驱动的 insert 返回 [ResultSetHeader, ...] 元组
-    const insertId = Number(insertResult[0].insertId)
-
-    const [menu] = await db
-      .select()
-      .from(umsMenu)
-      .where(eq(umsMenu.id, insertId))
-
-    return c.json(success(menu, '创建成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '创建菜单失败'))
+    const menu = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(result.lastInsertRowid)
+    res.json(success(menu))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '创建菜单失败'))
   }
 })
 
-/** POST /menu/update/:id */
-router.post('/menu/update/:id', async (c) => {
+router.get('/menu/:id', (req, res) => {
   try {
-    const id = Number(c.req.param('id'))
-    const body = await c.req.json()
-    const { title, parentId, level, sort, name, icon, hidden } = body
+    const id = Number(req.params.id)
+    const menu = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(id)
 
-    const existing = await db
-      .select()
-      .from(umsMenu)
-      .where(eq(umsMenu.id, id))
-      .limit(1)
-
-    if (existing.length === 0) {
-      return c.json(failed('菜单不存在'))
+    if (!menu) {
+      res.json(failed('菜单不存在'))
+      return
     }
-
-    const updateData: Record<string, any> = {}
-    if (title !== undefined) updateData.title = title
-    if (parentId !== undefined) updateData.parentId = parentId
-    if (level !== undefined) updateData.level = level
-    if (sort !== undefined) updateData.sort = sort
-    if (name !== undefined) updateData.name = name
-    if (icon !== undefined) updateData.icon = icon
-    if (hidden !== undefined) updateData.hidden = hidden
-
-    if (Object.keys(updateData).length === 0) {
-      return c.json(failed('没有需要更新的字段'))
-    }
-
-    await db.update(umsMenu).set(updateData).where(eq(umsMenu.id, id))
-
-    const updated = await db
-      .select()
-      .from(umsMenu)
-      .where(eq(umsMenu.id, id))
-      .limit(1)
-
-    return c.json(success(updated[0], '更新成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '更新菜单失败'))
+    res.json(success(menu))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取菜单失败'))
   }
 })
 
-/** POST /menu/delete/:id */
-router.post('/menu/delete/:id', async (c) => {
+router.post('/menu/update/:id', (req, res) => {
   try {
-    const id = Number(c.req.param('id'))
+    const id = Number(req.params.id)
+    const { parentId, title, level, sort, name, icon, hidden, path, component } = req.body
 
-    const existing = await db
-      .select()
-      .from(umsMenu)
-      .where(eq(umsMenu.id, id))
-      .limit(1)
-
-    if (existing.length === 0) {
-      return c.json(failed('菜单不存在'))
+    const existing = db.prepare('SELECT id FROM za_menu WHERE id = ?').get(id)
+    if (!existing) {
+      res.json(failed('菜单不存在'))
+      return
     }
 
-    await db.delete(umsMenu).where(eq(umsMenu.id, id))
+    const sets: string[] = []
+    const values: any[] = []
 
-    return c.json(success(null, '删除成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '删除菜单失败'))
-  }
-})
+    if (parentId !== undefined) { sets.push('parent_id = ?'); values.push(parentId) }
+    if (title !== undefined) { sets.push('title = ?'); values.push(title) }
+    if (level !== undefined) { sets.push('level = ?'); values.push(level) }
+    if (sort !== undefined) { sets.push('sort = ?'); values.push(sort) }
+    if (name !== undefined) { sets.push('name = ?'); values.push(name) }
+    if (icon !== undefined) { sets.push('icon = ?'); values.push(icon) }
+    if (hidden !== undefined) { sets.push('hidden = ?'); values.push(hidden) }
+    if (path !== undefined) { sets.push('path = ?'); values.push(path) }
+    if (component !== undefined) { sets.push('component = ?'); values.push(component) }
 
-/** GET /menu/list/:parentId — 分页按父级查询 */
-router.get('/menu/list/:parentId', async (c) => {
-  try {
-    const parentId = Number(c.req.param('parentId'))
-    const pageSize = Number(c.req.query('pageSize')) || 5
-    const pageNum = Number(c.req.query('pageNum')) || 1
-    const offset = (pageNum - 1) * pageSize
-
-    // 总数
-    const countResult = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(umsMenu)
-      .where(eq(umsMenu.parentId, parentId))
-
-    const total = Number(countResult[0].count)
-
-    // 分页
-    const menus = await db
-      .select()
-      .from(umsMenu)
-      .where(eq(umsMenu.parentId, parentId))
-      .orderBy(umsMenu.sort)
-      .limit(pageSize)
-      .offset(offset)
-
-    return c.json(
-      success({
-        list: menus,
-        total,
-        pageSize,
-        pageNum,
-      }),
-    )
-  } catch (e: any) {
-    return c.json(failed(e.message || '获取菜单列表失败'))
-  }
-})
-
-/** GET /menu/treeList — 返回所有菜单的树形结构 */
-router.get('/menu/treeList', async (c) => {
-  try {
-    const menus = await db
-      .select()
-      .from(umsMenu)
-      .orderBy(umsMenu.sort)
-
-    const tree = buildMenuTree(menus)
-
-    return c.json(success(tree))
-  } catch (e: any) {
-    return c.json(failed(e.message || '获取菜单树失败'))
-  }
-})
-
-/** GET /menu/:id — 必须放在 /treeList 后面避免被 :id 匹配 */
-router.get('/menu/:id', async (c) => {
-  try {
-    const id = Number(c.req.param('id'))
-
-    const rows = await db
-      .select()
-      .from(umsMenu)
-      .where(eq(umsMenu.id, id))
-      .limit(1)
-
-    if (rows.length === 0) {
-      return c.json(failed('菜单不存在'))
+    if (sets.length === 0) {
+      res.json(failed('没有需要更新的字段'))
+      return
     }
 
-    return c.json(success(rows[0]))
-  } catch (e: any) {
-    return c.json(failed(e.message || '获取菜单失败'))
+    values.push(id)
+    db.prepare(`UPDATE za_menu SET ${sets.join(', ')} WHERE id = ?`).run(...values)
+
+    const updated = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(id)
+    res.json(success(updated))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '更新菜单失败'))
   }
 })
 
-/** POST /menu/updateHidden/:id — query: hidden */
-router.post('/menu/updateHidden/:id', async (c) => {
+router.post('/menu/delete/:id', (req, res) => {
   try {
-    const id = Number(c.req.param('id'))
-    const hidden = Number(c.req.query('hidden'))
-
-    const existing = await db
-      .select()
-      .from(umsMenu)
-      .where(eq(umsMenu.id, id))
-      .limit(1)
-
-    if (existing.length === 0) {
-      return c.json(failed('菜单不存在'))
+    const id = Number(req.params.id)
+    const existing = db.prepare('SELECT id FROM za_menu WHERE id = ?').get(id)
+    if (!existing) {
+      res.json(failed('菜单不存在'))
+      return
     }
 
-    await db.update(umsMenu).set({ hidden }).where(eq(umsMenu.id, id))
+    const childCount = (db.prepare('SELECT COUNT(*) AS count FROM za_menu WHERE parent_id = ?').get(id) as any).count
+    if (childCount > 0) {
+      res.json(failed('存在子菜单，无法删除'))
+      return
+    }
 
-    return c.json(success(null, '隐藏状态更新成功'))
-  } catch (e: any) {
-    return c.json(failed(e.message || '更新隐藏状态失败'))
+    db.prepare('DELETE FROM za_role_menu_relation WHERE menu_id = ?').run(id)
+    db.prepare('DELETE FROM za_menu WHERE id = ?').run(id)
+
+    res.json(success(null, '删除成功'))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '删除菜单失败'))
+  }
+})
+
+router.get('/menu/all', (_req, res) => {
+  try {
+    const menus = db.prepare('SELECT * FROM za_menu ORDER BY sort').all()
+    res.json(success(menus))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取所有菜单失败'))
   }
 })
 

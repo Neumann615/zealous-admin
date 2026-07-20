@@ -1,24 +1,32 @@
-import type { Context, Next } from 'hono'
+import type { NextFunction, Request, Response } from 'express'
 import { verifyToken } from '../lib/jwt'
 import { unauthorized } from '../lib/response'
 
-/** JWT 鉴权中间件 — 从 Authorization header 提取 token 并验证 */
-export async function authMiddleware(c: Context, next: Next) {
-  const authHeader = c.req.header('Authorization')
+declare global {
+  namespace Express {
+    interface Request {
+      username?: string
+    }
+  }
+}
+
+export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization
   if (!authHeader) {
-    return c.json(unauthorized(), 401)
+    res.status(401).json(unauthorized())
+    return
   }
 
   const token = authHeader.startsWith('Bearer ')
     ? authHeader.slice(7)
     : authHeader
 
-  try {
-    const username = await verifyToken(token)
-    c.set('username', username)
-    await next()
-  }
-  catch {
-    return c.json(unauthorized(), 401)
-  }
+  verifyToken(token)
+    .then((username) => {
+      req.username = username
+      next()
+    })
+    .catch(() => {
+      res.status(401).json(unauthorized())
+    })
 }

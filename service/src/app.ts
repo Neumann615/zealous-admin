@@ -1,27 +1,26 @@
-import { Hono } from 'hono'
-import { cors } from 'hono/cors'
+import cors from 'cors'
+import express from 'express'
 import adminRoutes from './routes/admin'
-import roleRoutes from './routes/role'
+import dictRoutes from './routes/dict'
 import menuRoutes from './routes/menu'
-import brandRoutes from './routes/brand'
-import categoryRoutes from './routes/category'
-import productRoutes from './routes/product'
-import orderRoutes from './routes/order'
-import marketingRoutes from './routes/marketing'
+import roleRoutes from './routes/role'
 
-const app = new Hono()
+const app = express()
 
-app.use('*', cors())
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}))
+app.use(express.json())
 
-app.get('/api/health', (c) => c.json({ ok: true }))
+app.use('/', adminRoutes)
+app.use('/', roleRoutes)
+app.use('/', menuRoutes)
+app.use('/', dictRoutes)
 
-app.route('/', adminRoutes)
-app.route('/', roleRoutes)
-app.route('/', menuRoutes)
-app.route('/', brandRoutes)
-app.route('/', categoryRoutes)
-app.route('/product', productRoutes)
-app.route('/', orderRoutes)
-app.route('/', marketingRoutes)
+app.get('/', (_req, res) => {
+  res.json({ message: 'Zealous Admin Service is running!' })
+})
 
 export default app
