@@ -13,7 +13,7 @@ export default function fireworks() {
           min={50}
           max={500}
           value={count}
-          onChange={setCount}
+          onChange={v => setCount(v || 50)}
           style={{ width: 120 }}
         />
         <Button type="primary" onClick={() => throwCards({ count })}>庆祝彩带</Button>

@@ -1,10 +1,10 @@
 import { Layout } from '@zealous-admin/layout/index'
 import { useMemo } from 'react'
-import { useMallUserStore } from '@/store/mall/user'
+import { useUserStore } from '@/store/mall/user'
 
 export default function Home() {
-  const userInfo = useMallUserStore(state => state.userInfo)
-  const userLogout = useMallUserStore(state => state.userLogout)
+  const userInfo = useUserStore(state => state.userInfo)
+  const userLogout = useUserStore(state => state.userLogout)
 
   const layoutUserInfo = useMemo(() => ({
     username: userInfo.username,

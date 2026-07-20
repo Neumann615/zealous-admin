@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-07-21
+
+- 🗑️ **Mall 模块全面清除**（73 个文件，~15000 行）：删除 `src/pages/index/mall/` 全部页面、26 个 API 文件、21 个类型定义、2 个工具函数、3 个 store 文件
+- ✨ **4 个管理系统页面**（`system/admin/role/menu/dict.tsx`）：用户管理、角色管理、导航管理、字典管理完整 CRUD
+- ✨ **字典管理**（`dict.tsx`、`apis/dict.ts`、`types/dict.d.ts`）：字典类型 + 字典数据双 Tab 管理
+- 🔧 **日期格式化统一**（`lib/date.ts`）：所有 `new Date().toISOString()` → `now()`，格式 `YYYY-MM-DD HH:mm:ss`
+- 🔧 **菜单 API 优化**（`menu.ts`）：驼峰映射 `mapMenu`、空 `children` 不返回、路由顺序修复 `/menu/all` 在 `:id` 之前
+- 🔧 **角色 API 优化**（`role.ts`）：驼峰映射 `mapRole`、路由顺序修复 `/role/all` 在 `:id` 之前
+- 🔧 **za_menu 新增 active_icon 字段**：支持激活态图标，默认 NULL
+- 🔧 **导航管理页树表格**（`system/menu.tsx`）：全量加载树形展示，简化表头（名称/路径/图标/显示/操作），叶子节点隐藏展开按钮
+
+
 ## 2026-07-20
 
 - ✨ **移动端响应式布局**（`Layout.tsx`）：新增移动端专属布局，使用 Drawer 组件实现侧边菜单抽屉

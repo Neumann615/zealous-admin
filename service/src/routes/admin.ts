@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { Router } from 'express'
 import { getDb } from '../db'
+import { now } from '../lib/date'
 import { signToken } from '../lib/jwt'
 import { failed, success } from '../lib/response'
 import { authMiddleware } from '../middleware/auth'
@@ -29,7 +30,7 @@ router.post('/admin/login', async (req, res) => {
       return
     }
 
-    db.prepare('UPDATE za_admin SET login_time = ? WHERE id = ?').run(new Date().toISOString(), admin.id)
+    db.prepare('UPDATE za_admin SET login_time = ? WHERE id = ?').run(now(), admin.id)
 
     const token = await signToken({ sub: admin.username })
     res.json(success({ tokenHead: 'Bearer ', token }))
@@ -57,11 +58,11 @@ router.post('/admin/register', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
-    const now = new Date().toISOString()
+    const nowStr = now()
 
     const result = db.prepare(
       'INSERT INTO za_admin (username, password, icon, email, nick_name, note, create_time, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(username, hashedPassword, icon || null, email || null, nickName || null, note || null, now, 1)
+    ).run(username, hashedPassword, icon || null, email || null, nickName || null, note || null, nowStr, 1)
 
     const admin = db.prepare(
       'SELECT id, username, icon, email, nick_name AS nickName, note, create_time AS createTime, login_time AS loginTime, status FROM za_admin WHERE id = ?',
@@ -111,7 +112,19 @@ router.get('/admin/info', async (req, res) => {
 
       if (menuIds.length > 0) {
         const mPlaceholders = menuIds.map(() => '?').join(',')
-        menus = db.prepare(`SELECT * FROM za_menu WHERE id IN (${mPlaceholders}) ORDER BY sort`).all(...menuIds)
+        menus = (db.prepare(`SELECT * FROM za_menu WHERE id IN (${mPlaceholders}) ORDER BY sort`).all(...menuIds) as any[]).map((m: any) => ({
+          id: m.id,
+          parentId: m.parent_id,
+          title: m.title,
+          level: m.level,
+          sort: m.sort,
+          name: m.name,
+          icon: m.icon,
+          hidden: m.hidden,
+          path: m.path,
+          createTime: m.create_time,
+          activeIcon: m.active_icon || null,
+        }))
       }
     }
 

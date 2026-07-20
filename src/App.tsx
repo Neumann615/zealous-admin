@@ -2,12 +2,12 @@
 import { useEffect, useMemo } from 'react'
 import { Navigate, useRoutes } from 'react-router'
 import routes from '~react-pages'
-import { useMallUserStore } from '@/store/mall/user'
+import { useUserStore } from '@/store/mall/user'
 import './App.css'
 
 // 路由守卫
 function RouteGuard(props: { children: React.ReactNode }) {
-  const userStore = useMallUserStore.getState()
+  const userStore = useUserStore.getState()
   const token = userStore.userInfo.token
   if (token?.length) {
     return props.children
@@ -26,18 +26,18 @@ for (let i = 0; i < routes.length; i++) {
 export default function App() {
   // 页面初始化时同步用户数据（刷新页面/已有 token 时）
   useEffect(() => {
-    const { token } = useMallUserStore.getState().userInfo
+    const { token } = useUserStore.getState().userInfo
     if (token) {
-      useMallUserStore.getState().getUserInfo().catch((err) => {
+      useUserStore.getState().getUserInfo().catch((err) => {
         console.error('初始化用户数据失败:', err)
       })
     }
   }, [])
 
   // 响应式订阅 menus，登录后 menus 变化时自动重新生成菜单
-  const menus = useMallUserStore(state => state.userInfo.menus)
+  const menus = useUserStore(state => state.userInfo.menus)
   const menuData = useMemo(() => {
-    const { menus } = useMallUserStore.getState().userInfo
+    const { menus } = useUserStore.getState().userInfo
     let _menuData = []
     // 如果有菜单权限且动态路由未生成，则生成菜单
     if (menus?.length) {

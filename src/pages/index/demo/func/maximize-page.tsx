@@ -1,6 +1,6 @@
 import { FullscreenExitOutlined, FullscreenOutlined } from '@ant-design/icons'
 import { useMaximize } from '@zealous-admin/layout/index'
-import { Button, Card, Space, Tag } from 'antd'
+import { Button, Space, Tag } from 'antd'
 import { createStyles } from 'antd-style'
 
 const useStyles = createStyles(({ token, css }) => ({

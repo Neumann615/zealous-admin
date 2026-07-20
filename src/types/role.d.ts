@@ -1,5 +1,5 @@
 /** 角色信息 */
-export interface UmsRole {
+export interface Role {
   /** ID */
   id?: number
   /** 名称 */

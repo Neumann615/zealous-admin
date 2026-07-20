@@ -293,7 +293,6 @@ export function IconPicker({
     loadIconLibrary(activeTab)
   }, [activeTab, loadIconLibrary])
 
-  const currentLibrary = iconLibraryMap[activeTab]
   const currentIconList = iconLists[activeTab] || []
 
   const filteredIcons = useMemo(() => {

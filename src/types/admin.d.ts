@@ -1,4 +1,4 @@
-import type { UmsMenu } from './menu'
+import type { Menu } from './menu'
 
 /** 登录请求参数 */
 export interface LoginParam {
@@ -25,7 +25,7 @@ export interface UserInfoResult {
   /** 头像 */
   icon: string
   /** 菜单 */
-  menus: UmsMenu[]
+  menus: Menu[]
   /** 角色 */
   roles: []
   /** 邮箱 */
@@ -61,7 +61,7 @@ export type UserInfo = Pick<UserInfoResult, 'username' | 'menus' | 'roles'> & {
 }
 
 /** 管理员信息 */
-export interface UmsAdmin {
+export interface Admin {
   /** ID */
   id?: number
   /** 用户名 */

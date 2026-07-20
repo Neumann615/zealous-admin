@@ -1,6 +1,6 @@
-import type { LoginParam, LoginResult, UmsAdmin, UserInfoResult } from '@/types/admin'
+import type { LoginParam, LoginResult, Admin, UserInfoResult } from '@/types/admin'
 import type { CommonPage, PageParam } from '@/types/common'
-import type { UmsRole } from '@/types/role'
+import type { Role } from '@/types/role'
 import http from '@/utils/http'
 
 /**
@@ -38,7 +38,7 @@ export function getAdminInfoAPI() {
  * 根据用户名或姓名分页获取用户列表
  */
 export function getAdminListAPI(params: PageParam) {
-  return http<CommonPage<UmsAdmin>>({
+  return http<CommonPage<Admin>>({
     url: '/admin/list',
     method: 'get',
     params,
@@ -48,7 +48,7 @@ export function getAdminListAPI(params: PageParam) {
 /**
  * 后台用户注册
  */
-export function adminRegisterAPI(data: UmsAdmin) {
+export function adminRegisterAPI(data: Admin) {
   return http({
     url: '/admin/register',
     method: 'post',
@@ -59,7 +59,7 @@ export function adminRegisterAPI(data: UmsAdmin) {
 /**
  * 根据ID修改指定用户信息
  */
-export function adminUpdateByIdAPI(id: number, data: UmsAdmin) {
+export function adminUpdateByIdAPI(id: number, data: Admin) {
   return http({
     url: `/admin/update/${id}`,
     method: 'post',
@@ -92,7 +92,7 @@ export function adminDeleteByIdAPI(id: number) {
  * 根据用户ID获取分配的角色
  */
 export function getRoleByAdminIdAPI(id: number) {
-  return http<UmsRole[]>({
+  return http<Role[]>({
     url: `/admin/role/${id}`,
     method: 'get',
   })

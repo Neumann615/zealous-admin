@@ -1,7 +1,7 @@
 import type { DataNode } from 'antd/es/tree'
-import type { UmsMenuNode } from '@/types/menu'
-import { App, Modal, Tree } from 'antd'
-import React, { useEffect, useState } from 'react'
+import type { MenuNode } from '@/types/menu'
+import { Modal, Tree } from 'antd'
+import { useEffect, useState } from 'react'
 import { useAppMessage } from '@/hooks/useAppMessage'
 import { getMenuTreeListAPI } from '@/apis/menu'
 import { roleAllocMenuAPI, roleListMenuByRoleIdAPI } from '@/apis/role'
@@ -14,31 +14,23 @@ interface AllocMenuModalProps {
 
 export default function AllocMenuModal({ visible, roleId, onClose }: AllocMenuModalProps) {
   const { message } = useAppMessage()
-  // 所有菜单树形结构列表
-  const [menuTreeList, setMenuTreeList] = useState<UmsMenuNode[]>([])
-  // 选中的菜单ID
+  const [menuTreeList, setMenuTreeList] = useState<MenuNode[]>([])
   const [checkedKeys, setCheckedKeys] = useState<React.Key[]>([])
-  // 加载状态
   const [loading, setLoading] = useState(false)
 
-  // 获取菜单树列表
   const fetchTreeList = async () => {
     const res = await getMenuTreeListAPI()
     setMenuTreeList(res.data)
   }
 
-  // 获取角色对应的菜单
   const fetchRoleMenu = async () => {
-    if (!roleId)
-      return
+    if (!roleId) return
     const res = await roleListMenuByRoleIdAPI(roleId)
     const menuList = res.data
-    // 只选中非父级菜单
     const checkedMenuIds = menuList.filter(item => item.parentId !== 0).map(item => item.id!)
     setCheckedKeys(checkedMenuIds)
   }
 
-  // 弹窗打开时初始化
   useEffect(() => {
     if (visible) {
       setCheckedKeys([])
@@ -52,41 +44,35 @@ export default function AllocMenuModal({ visible, roleId, onClose }: AllocMenuMo
     }
   }, [visible, roleId, menuTreeList])
 
-  // 将菜单数据转换为Tree组件需要的格式
-  const convertToTreeData = (menuList: UmsMenuNode[]): DataNode[] => {
+  const convertToTreeData = (menuList: MenuNode[]): DataNode[] => {
     return menuList.map(menu => ({
       key: menu.id!,
       title: menu.title,
-      children: menu.children && menu.children.length > 0 ? convertToTreeData(menu.children as UmsMenuNode[]) : undefined,
+      children: menu.children && menu.children.length > 0 ? convertToTreeData(menu.children as MenuNode[]) : undefined,
     }))
   }
 
-  // 构建 id → node 的查找表
-  const buildNodeMap = (nodes: UmsMenuNode[]): Map<number, UmsMenuNode> => {
-    const map = new Map<number, UmsMenuNode>()
-    const walk = (list: UmsMenuNode[]) => {
+  const buildNodeMap = (nodes: MenuNode[]): Map<number, MenuNode> => {
+    const map = new Map<number, MenuNode>()
+    const walk = (list: MenuNode[]) => {
       for (const node of list) {
         map.set(node.id!, node)
-        if (node.children?.length) {
-          walk(node.children as UmsMenuNode[])
-        }
+        if (node.children?.length) walk(node.children as MenuNode[])
       }
     }
     walk(nodes)
     return map
   }
 
-  // 递归收集选中菜单ID，同时向上追溯所有祖先节点
   const collectCheckedMenuIds = (
-    nodes: UmsMenuNode[],
+    nodes: MenuNode[],
     checked: React.Key[],
     ids: Set<number>,
-    nodeMap: Map<number, UmsMenuNode>,
+    nodeMap: Map<number, MenuNode>,
   ) => {
     for (const node of nodes) {
       if (checked.includes(node.id!)) {
         ids.add(node.id!)
-        // 向上追溯所有祖先
         let parentId = node.parentId
         while (parentId !== 0) {
           const parent = nodeMap.get(parentId)
@@ -94,18 +80,15 @@ export default function AllocMenuModal({ visible, roleId, onClose }: AllocMenuMo
             ids.add(parent.id!)
             parentId = parent.parentId
           }
-          else {
-            break
-          }
+          else { break }
         }
       }
       if (node.children && node.children.length > 0) {
-        collectCheckedMenuIds(node.children as UmsMenuNode[], checked, ids, nodeMap)
+        collectCheckedMenuIds(node.children as MenuNode[], checked, ids, nodeMap)
       }
     }
   }
 
-  // 保存菜单分配
   const handleSave = async () => {
     const nodeMap = buildNodeMap(menuTreeList)
     const checkedMenuIds = new Set<number>()

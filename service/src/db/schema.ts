@@ -1,4 +1,4 @@
-export interface UmsAdmin {
+export interface Admin {
   id: number
   username: string
   password: string
@@ -11,7 +11,7 @@ export interface UmsAdmin {
   status: number
 }
 
-export interface UmsRole {
+export interface Role {
   id: number
   name: string
   description: string | null
@@ -21,7 +21,7 @@ export interface UmsRole {
   sort: number
 }
 
-export interface UmsMenu {
+export interface Menu {
   id: number
   parentId: number
   createTime: string | null
@@ -35,7 +35,7 @@ export interface UmsMenu {
   component: string | null
 }
 
-export interface UmsDictType {
+export interface DictType {
   id: number
   name: string
   dictType: string
@@ -44,7 +44,7 @@ export interface UmsDictType {
   remark: string | null
 }
 
-export interface UmsDictData {
+export interface DictData {
   id: number
   dictType: string
   dictLabel: string
@@ -57,13 +57,13 @@ export interface UmsDictData {
   listClass: string | null
 }
 
-export interface UmsAdminRoleRelation {
+export interface AdminRoleRelation {
   id: number
   adminId: number
   roleId: number
 }
 
-export interface UmsRoleMenuRelation {
+export interface RoleMenuRelation {
   id: number
   roleId: number
   menuId: number

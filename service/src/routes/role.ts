@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { getDb } from '../db'
+import { now } from '../lib/date'
 import { failed, success } from '../lib/response'
 import { authMiddleware } from '../middleware/auth'
 
@@ -7,6 +8,15 @@ const router = Router()
 const db = getDb()
 
 router.use(authMiddleware)
+
+function mapRole(row: any) {
+  if (!row) return row
+  return {
+    ...row,
+    adminCount: row.admin_count,
+    createTime: row.create_time,
+  }
+}
 
 router.get('/role/list', (req, res) => {
   try {
@@ -33,7 +43,7 @@ router.get('/role/list', (req, res) => {
       roles = db.prepare('SELECT * FROM za_role ORDER BY sort LIMIT ? OFFSET ?').all(pageSize, offset)
     }
 
-    res.json(success({ list: roles, total, pageSize, pageNum }))
+    res.json(success({ list: roles.map(mapRole), total, pageSize, pageNum }))
   }
   catch (e: any) {
     res.json(failed(e.message || '获取角色列表失败'))
@@ -57,13 +67,23 @@ router.post('/role/create', async (req, res) => {
 
     const result = db.prepare(
       'INSERT INTO za_role (name, description, sort, create_time, status, admin_count) VALUES (?, ?, ?, ?, ?, ?)',
-    ).run(name, description || null, sort || 0, new Date().toISOString(), 1, 0)
+    ).run(name, description || null, sort || 0, now(), 1, 0)
 
     const role = db.prepare('SELECT * FROM za_role WHERE id = ?').get(result.lastInsertRowid)
-    res.json(success(role))
+    res.json(success(mapRole(role)))
   }
   catch (e: any) {
     res.json(failed(e.message || '创建角色失败'))
+  }
+})
+
+router.get('/role/all', (_req, res) => {
+  try {
+    const roles = db.prepare('SELECT * FROM za_role ORDER BY sort').all()
+    res.json(success((roles as any[]).map(mapRole)))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取所有角色失败'))
   }
 })
 
@@ -76,7 +96,7 @@ router.get('/role/:id', (req, res) => {
       res.json(failed('角色不存在'))
       return
     }
-    res.json(success(role))
+    res.json(success(mapRole(role)))
   }
   catch (e: any) {
     res.json(failed(e.message || '获取角色失败'))
@@ -119,7 +139,7 @@ router.post('/role/update/:id', async (req, res) => {
     db.prepare(`UPDATE za_role SET ${sets.join(', ')} WHERE id = ?`).run(...values)
 
     const updated = db.prepare('SELECT * FROM za_role WHERE id = ?').get(id)
-    res.json(success(updated))
+    res.json(success(mapRole(updated)))
   }
   catch (e: any) {
     res.json(failed(e.message || '更新角色失败'))
@@ -191,16 +211,6 @@ router.post('/role/menu/update', (req, res) => {
   }
   catch (e: any) {
     res.json(failed(e.message || '菜单分配失败'))
-  }
-})
-
-router.get('/role/all', (_req, res) => {
-  try {
-    const roles = db.prepare('SELECT * FROM za_role ORDER BY sort').all()
-    res.json(success(roles))
-  }
-  catch (e: any) {
-    res.json(failed(e.message || '获取所有角色失败'))
   }
 })
 

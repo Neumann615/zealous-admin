@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { getDb } from '../db'
+import { now } from '../lib/date'
 import { failed, success } from '../lib/response'
 import { authMiddleware } from '../middleware/auth'
 
@@ -57,7 +58,7 @@ router.post('/dict/type/create', (req, res) => {
 
     const result = db.prepare(
       'INSERT INTO za_dict_type (name, dict_type, status, remark, create_time) VALUES (?, ?, ?, ?, ?)',
-    ).run(name, dictType, status || 1, remark || null, new Date().toISOString())
+    ).run(name, dictType, status || 1, remark || null, now())
 
     const type = db.prepare('SELECT * FROM za_dict_type WHERE id = ?').get(result.lastInsertRowid)
     res.json(success(type))
@@ -186,7 +187,7 @@ router.post('/dict/data/create', (req, res) => {
 
     const result = db.prepare(
       'INSERT INTO za_dict_data (dict_type, dict_label, dict_value, dict_sort, status, remark, css_class, list_class, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(dictType, dictLabel, dictValue, dictSort || 0, status || 1, remark || null, cssClass || null, listClass || null, new Date().toISOString())
+    ).run(dictType, dictLabel, dictValue, dictSort || 0, status || 1, remark || null, cssClass || null, listClass || null, now())
 
     const data = db.prepare('SELECT * FROM za_dict_data WHERE id = ?').get(result.lastInsertRowid)
     res.json(success(data))

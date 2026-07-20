@@ -11,7 +11,7 @@ interface UserState {
   fedLogout: () => void
 }
 
-export const useMallUserStore = create<UserState>()(
+export const useUserStore = create<UserState>()(
   persist(
     (set, get) => ({
       userInfo: {
@@ -43,23 +43,18 @@ export const useMallUserStore = create<UserState>()(
 
       getUserInfo: async () => {
         const res = await getAdminInfoAPI()
-        if (res.data.roles && res.data.roles.length > 0) {
-          set(state => ({
-            userInfo: {
-              ...state.userInfo,
-              roles: res.data.roles,
-              menus: res.data.menus,
-              avatar: res.data.icon,
-              email: res.data.email,
-              status: res.data.status,
-              loginTime: res.data.loginTime,
-              nickName: (res.data as any).nickName || '',
-            },
-          }))
-        }
-        else {
-          throw new Error('该用户暂未分配角色，请先分配角色！')
-        }
+        set(state => ({
+          userInfo: {
+            ...state.userInfo,
+            roles: res.data.roles || [],
+            menus: res.data.menus || [],
+            avatar: res.data.icon,
+            email: res.data.email,
+            status: res.data.status,
+            loginTime: res.data.loginTime,
+            nickName: (res.data as any).nickName || '',
+          },
+        }))
       },
 
       userLogout: async () => {

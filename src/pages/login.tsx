@@ -9,7 +9,7 @@ import { createStyles, keyframes } from 'antd-style'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppMessage } from '@/hooks/useAppMessage'
-import { useMallUserStore } from '@/store/mall/user'
+import { useUserStore } from '@/store/mall/user'
 import { useAppStore } from '../../packages/layout/store/index'
 
 const { Link } = Typography
@@ -155,7 +155,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const appStore = useAppStore()
-  const mallUserStore = useMallUserStore()
+  const mallUserStore = useUserStore()
 
   const validateUsername = (_rule: any, value: string) => {
     if (!value || value.trim() === '') {

@@ -73,6 +73,7 @@ export function LayoutProvider({
 
   // menuData 变化时更新菜单数据（登录后 menus 从空变为有值时触发）
   useEffect(() => {
+    console.log('wxx-menuData', menuData)
     menuStore.setMainNavData(menuData || [])
     if (!menuStore?.mainNavCurrentKeys?.length && menuData?.length) {
       menuStore.setMainNavCurrentKeys([menuData[0].key])

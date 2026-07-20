@@ -1,14 +1,14 @@
 import type { CommonPage, PageParam } from '@/types/common'
-import type { UmsMenu } from '@/types/menu'
-import type { UmsRole } from '@/types/role'
+import type { Menu } from '@/types/menu'
+import type { Role } from '@/types/role'
 import http from '@/utils/http'
 
 /**
- * 获取所有角色列表
+ * 获取所有角色列表（不分页）
  */
 export function getRoleListAllAPI() {
-  return http<UmsRole[]>({
-    url: '/role/listAll',
+  return http<Role[]>({
+    url: '/role/all',
     method: 'get',
   })
 }
@@ -17,7 +17,7 @@ export function getRoleListAllAPI() {
  * 根据角色名称分页获取角色列表
  */
 export function getRoleListAPI(params: PageParam) {
-  return http<CommonPage<UmsRole>>({
+  return http<CommonPage<Role>>({
     url: '/role/list',
     method: 'get',
     params,
@@ -27,7 +27,7 @@ export function getRoleListAPI(params: PageParam) {
 /**
  * 添加角色
  */
-export function roleCreateAPI(data: UmsRole) {
+export function roleCreateAPI(data: Role) {
   return http({
     url: '/role/create',
     method: 'post',
@@ -38,7 +38,7 @@ export function roleCreateAPI(data: UmsRole) {
 /**
  * 根据ID修改角色
  */
-export function roleUpdateByIdAPI(id: number, data: UmsRole) {
+export function roleUpdateByIdAPI(id: number, data: Role) {
   return http({
     url: `/role/update/${id}`,
     method: 'post',
@@ -47,33 +47,21 @@ export function roleUpdateByIdAPI(id: number, data: UmsRole) {
 }
 
 /**
- * 修改角色状态启用状态
+ * 根据ID删除角色
  */
-export function roleUpdateStatusAPI(id: number, params: { status: number }) {
+export function roleDeleteByIdAPI(id: number) {
   return http({
-    url: `/role/updateStatus/${id}`,
+    url: `/role/delete/${id}`,
     method: 'post',
-    params,
-  })
-}
-
-/**
- * 根据ids批量删除角色
- */
-export function roleDeleteByIdsAPI(params: { ids: string }) {
-  return http({
-    url: '/role/delete',
-    method: 'post',
-    params,
   })
 }
 
 /**
  * 根据角色ID获取菜单列表
  */
-export function roleListMenuByRoleIdAPI(id: number) {
-  return http<UmsMenu[]>({
-    url: `/role/listMenu/${id}`,
+export function roleListMenuByRoleIdAPI(roleId: number) {
+  return http<Menu[]>({
+    url: `/role/menu/${roleId}`,
     method: 'get',
   })
 }
@@ -82,39 +70,11 @@ export function roleListMenuByRoleIdAPI(id: number) {
  * 给角色分配菜单
  */
 export function roleAllocMenuAPI(params: {
-  /** 角色ID */
   roleId: number
-  /** 菜单ID，多个以逗号分割 */
   menuIds: string
 }) {
   return http({
-    url: '/role/allocMenu',
-    method: 'post',
-    params,
-  })
-}
-
-/**
- * 获取角色相关资源
- */
-export function roleListResourceById(id: number) {
-  return http({
-    url: `/role/listResource/${id}`,
-    method: 'get',
-  })
-}
-
-/**
- * 给角色分配资源
- */
-export function roleAllocResourceAPI(params: {
-  /** 角色ID */
-  roleId: number
-  /** 资源ID，多个以逗号分割 */
-  resourceIds: string
-}) {
-  return http({
-    url: '/role/allocResource',
+    url: '/role/menu/update',
     method: 'post',
     params,
   })

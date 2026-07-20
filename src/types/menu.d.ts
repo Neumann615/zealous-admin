@@ -1,5 +1,5 @@
 /** 菜单 */
-export interface UmsMenu {
+export interface Menu {
   /** 唯一ID */
   id?: number
   /** 父级ID */
@@ -18,10 +18,14 @@ export interface UmsMenu {
   icon: string
   /** 前端隐藏 */
   hidden: number
+  /** 路由路径 */
+  path?: string
+  /** 激活图标 */
+  activeIcon?: string
 }
 
 /** 后台菜单节点封装 */
-export type UmsMenuNode = UmsMenu & {
+export type MenuNode = Menu & {
   /** 子级菜单 */
-  children: UmsMenu[]
+  children: Menu[]
 }

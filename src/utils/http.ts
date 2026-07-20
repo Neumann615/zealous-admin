@@ -1,6 +1,6 @@
 import type { CommonResult } from '@/types/common'
 import axios from 'axios'
-import { useMallUserStore } from '@/store/mall/user'
+import { useUserStore } from '@/store/mall/user'
 import { getGlobalMessage, getGlobalModal } from '@/utils/appMessage'
 
 // 创建axios实例
@@ -13,7 +13,7 @@ const http = axios.create({
 http.interceptors.request.use(
   (config) => {
     // 使用getState()获取store状态，避免在非组件环境中调用Hook
-    const userStore = useMallUserStore.getState()
+    const userStore = useUserStore.getState()
     const token = userStore.userInfo.token
     if (token) {
       config.headers.Authorization = token
@@ -39,7 +39,7 @@ http.interceptors.response.use(
           cancelText: '取消',
           onOk() {
             // 使用getState()获取store状态，避免在非组件环境中调用Hook
-            const userStore = useMallUserStore.getState()
+            const userStore = useUserStore.getState()
             userStore.fedLogout()
             // 为了重新实例化router对象 避免bug
             location.reload()

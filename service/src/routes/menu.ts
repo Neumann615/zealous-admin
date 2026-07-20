@@ -1,10 +1,21 @@
 import { Router } from 'express'
 import { getDb } from '../db'
+import { now } from '../lib/date'
 import { failed, success } from '../lib/response'
 import { authMiddleware } from '../middleware/auth'
 
 const router = Router()
 const db = getDb()
+
+function mapMenu(row: any) {
+  if (!row) return row
+  return {
+    ...row,
+    parentId: row.parent_id,
+    createTime: row.create_time,
+    activeIcon: row.active_icon || null,
+  }
+}
 
 router.use(authMiddleware)
 
@@ -12,7 +23,7 @@ router.get('/menu/list', (req, res) => {
   try {
     const parentId = Number(req.query.parentId) || 0
     const menus = db.prepare('SELECT * FROM za_menu WHERE parent_id = ? ORDER BY sort').all(parentId)
-    res.json(success(menus))
+    res.json(success((menus as any[]).map(mapMenu)))
   }
   catch (e: any) {
     res.json(failed(e.message || '获取菜单列表失败'))
@@ -24,7 +35,14 @@ router.get('/menu/tree', (_req, res) => {
     const allMenus = db.prepare('SELECT * FROM za_menu ORDER BY sort').all() as any[]
 
     const buildTree = (parentId: number): any[] =>
-      allMenus.filter(m => m.parent_id === parentId).map(m => ({ ...m, children: buildTree(m.id) }))
+      allMenus.filter(m => m.parent_id === parentId).map((m) => {
+        const children = buildTree(m.id)
+        const node = mapMenu(m)
+        if (children.length > 0) {
+          node.children = children
+        }
+        return node
+      })
 
     res.json(success(buildTree(0)))
   }
@@ -35,7 +53,7 @@ router.get('/menu/tree', (_req, res) => {
 
 router.post('/menu/create', (req, res) => {
   try {
-    const { parentId, title, level, sort, name, icon, hidden, path, component } = req.body
+    const { parentId, title, level, sort, name, icon, hidden, path, component, activeIcon } = req.body
 
     if (!title) {
       res.json(failed('菜单标题不能为空'))
@@ -43,14 +61,24 @@ router.post('/menu/create', (req, res) => {
     }
 
     const result = db.prepare(
-      'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, create_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(parentId || 0, title, level || 0, sort || 0, name || null, icon || null, hidden || 0, path || null, component || null, new Date().toISOString())
+      'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, create_time, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(parentId || 0, title, level || 0, sort || 0, name || null, icon || null, hidden || 0, path || null, component || null, now(), activeIcon || null)
 
     const menu = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(result.lastInsertRowid)
-    res.json(success(menu))
+    res.json(success(mapMenu(menu)))
   }
   catch (e: any) {
     res.json(failed(e.message || '创建菜单失败'))
+  }
+})
+
+router.get('/menu/all', (_req, res) => {
+  try {
+    const menus = db.prepare('SELECT * FROM za_menu ORDER BY sort').all()
+    res.json(success((menus as any[]).map(mapMenu)))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '获取所有菜单失败'))
   }
 })
 
@@ -63,7 +91,7 @@ router.get('/menu/:id', (req, res) => {
       res.json(failed('菜单不存在'))
       return
     }
-    res.json(success(menu))
+    res.json(success(mapMenu(menu)))
   }
   catch (e: any) {
     res.json(failed(e.message || '获取菜单失败'))
@@ -73,7 +101,7 @@ router.get('/menu/:id', (req, res) => {
 router.post('/menu/update/:id', (req, res) => {
   try {
     const id = Number(req.params.id)
-    const { parentId, title, level, sort, name, icon, hidden, path, component } = req.body
+    const { parentId, title, level, sort, name, icon, hidden, path, component, activeIcon } = req.body
 
     const existing = db.prepare('SELECT id FROM za_menu WHERE id = ?').get(id)
     if (!existing) {
@@ -93,6 +121,7 @@ router.post('/menu/update/:id', (req, res) => {
     if (hidden !== undefined) { sets.push('hidden = ?'); values.push(hidden) }
     if (path !== undefined) { sets.push('path = ?'); values.push(path) }
     if (component !== undefined) { sets.push('component = ?'); values.push(component) }
+    if (activeIcon !== undefined) { sets.push('active_icon = ?'); values.push(activeIcon) }
 
     if (sets.length === 0) {
       res.json(failed('没有需要更新的字段'))
@@ -103,7 +132,7 @@ router.post('/menu/update/:id', (req, res) => {
     db.prepare(`UPDATE za_menu SET ${sets.join(', ')} WHERE id = ?`).run(...values)
 
     const updated = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(id)
-    res.json(success(updated))
+    res.json(success(mapMenu(updated)))
   }
   catch (e: any) {
     res.json(failed(e.message || '更新菜单失败'))
@@ -132,16 +161,6 @@ router.post('/menu/delete/:id', (req, res) => {
   }
   catch (e: any) {
     res.json(failed(e.message || '删除菜单失败'))
-  }
-})
-
-router.get('/menu/all', (_req, res) => {
-  try {
-    const menus = db.prepare('SELECT * FROM za_menu ORDER BY sort').all()
-    res.json(success(menus))
-  }
-  catch (e: any) {
-    res.json(failed(e.message || '获取所有菜单失败'))
   }
 })
 

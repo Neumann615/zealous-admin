@@ -1,13 +1,13 @@
 import type { CommonPage, PageParam } from '@/types/common'
-import type { UmsMenu, UmsMenuNode } from '@/types/menu'
+import type { Menu, MenuNode } from '@/types/menu'
 import http from '@/utils/http'
 
 /**
- *  树形结构返回所有菜单列表
+ * 树形结构返回所有菜单列表
  */
 export function getMenuTreeListAPI() {
-  return http<UmsMenuNode[]>({
-    url: '/menu/treeList',
+  return http<MenuNode[]>({
+    url: '/menu/tree',
     method: 'get',
   })
 }
@@ -16,10 +16,10 @@ export function getMenuTreeListAPI() {
  * 根据上级菜单ID分页查询菜单
  */
 export function getMenuListByParentIdAPI(parentId: number, params: PageParam) {
-  return http<CommonPage<UmsMenu>>({
-    url: `/menu/list/${parentId}`,
+  return http<CommonPage<Menu>>({
+    url: '/menu/list',
     method: 'get',
-    params,
+    params: { ...params, parentId },
   })
 }
 
@@ -36,7 +36,7 @@ export function deleteMenuByIdAPI(id: number) {
 /**
  * 添加后台菜单
  */
-export function menuCreateAPI(data: UmsMenu) {
+export function menuCreateAPI(data: Menu) {
   return http({
     url: '/menu/create',
     method: 'post',
@@ -47,7 +47,7 @@ export function menuCreateAPI(data: UmsMenu) {
 /**
  * 修改后台菜单
  */
-export function updateMenu(id: number, data: UmsMenu) {
+export function updateMenu(id: number, data: Menu) {
   return http({
     url: `/menu/update/${id}`,
     method: 'post',
@@ -59,19 +59,18 @@ export function updateMenu(id: number, data: UmsMenu) {
  * 根据ID获取菜单详情
  */
 export function getMenuByIdAPI(id: number) {
-  return http<UmsMenu>({
+  return http<Menu>({
     url: `/menu/${id}`,
     method: 'get',
   })
 }
 
 /**
- * 根据ID修改菜单显示状态
+ * 获取所有菜单（扁平列表）
  */
-export function menuUpdateHiddenByIdAPI(id: number, params: { hidden: number }) {
-  return http({
-    url: `/menu/updateHidden/${id}`,
-    method: 'post',
-    params,
+export function getMenuAllAPI() {
+  return http<Menu[]>({
+    url: '/menu/all',
+    method: 'get',
   })
 }
