@@ -17,17 +17,22 @@ import {
   Layout, // 布局外壳组件
   LayoutConfig, // TypeScript 配置类型
   LayoutProvider, // 布局上下文提供者
+  Logo, // 项目 Logo 组件（内置 ZA 图标 SVG）
+  useControlTab, // 标签页/导航控制 Hook
+  useLayoutSetting, // 布局配置读写 Hook
+  useAppMessage, // antd message/modal 上下文
 } from '@zealous-admin/layout'
 ```
 
 ## 特性一览
 
 - **5 种布局模式** — side / only-side / head / only-head / simple
-- **菜单系统** — 支持多级嵌套、图标映射、4 种激活风格
-- **多标签页** — default / card / block 三种样式，拖拽排序
+- **菜单系统** — 多级嵌套、图标映射、激活图标（activeIcon）选中切换 + 父节点链路级联、4 种激活指示风格
+- **多标签页** — default / card / block 三种样式，拖拽排序，图标激活态切换
 - **面包屑** — default / modern 两种样式
 - **工具栏** — 可配置工具项、拖拽排序
 - **布局居中显示** — outside（全局）/ inside（内容区）两种作用范围，自定义宽度
+- **Logo 组件** — 内置 ZA 图标 SVG，支持点击跳转首页
 - **设置面板** — 可视化配置所有选项，实时预览
 - **状态持久化** — 基于 Zustand + localStorage/sessionStorage
 - **响应式** — 移动端自动切换 Drawer 抽屉菜单（< 700px），面包屑自动隐藏

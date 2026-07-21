@@ -28,6 +28,10 @@ features:
     title: 5 种布局 + 移动端响应式
     details: side / only-side / head / only-head / simple + 移动端自动 Drawer 抽屉菜单，窄屏自动切换，桌面端面包屑自动隐藏。
     link: /layout/layout-modes
+  - icon: 🖼️
+    title: 菜单激活图标系统
+    details: 选中菜单时图标自动切换为 activeIcon，父节点链路级联高亮，标签页同步切换，视觉反馈清晰直观。
+    link: /layout/menu-system
   - icon: 🧩
     title: 9 个业务组件
     details: 图标选择器（32 个图标库）· 链接预览 · Markdown 渲染 · 跑马灯 · 图案背景 · 流光文字 · 滑块验证码 · 闪烁文字
@@ -38,8 +42,12 @@ features:
     link: /layout/layout-config
   - icon: 🏷️
     title: 多标签页导航
-    details: 拖拽排序 · 右键菜单 · 固定标签 · 三种风格 (default / card / block)，像浏览器一样管理页面。
+    details: 拖拽排序 · 右键菜单 · 固定标签 · 图标激活态切换 · 三种风格 (default / card / block)，像浏览器一样管理页面。
     link: /layout/tab-bar
+  - icon: 🗄️
+    title: 内置后端服务
+    details: Express + node:sqlite，用户/角色/导航/字典完整 CRUD，JWT 认证，菜单 path 自动计算。
+    link: /guide/
   - icon: ⚡
     title: 最新技术栈
     details: React 19 + Vite 8 + TypeScript 5 + Ant Design 6 + Zustand 5 + React Router 7

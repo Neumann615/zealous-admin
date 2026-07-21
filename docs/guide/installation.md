@@ -43,14 +43,14 @@ corepack prepare pnpm@11.8.0 --activate
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `VITE_APP_TITLE` | 应用标题 | zealous-admin |
-| `VITE_API_BASE_URL` | API 基础地址 | `/api` |
+| `VITE_BASE_SERVER_URL` | 后端 API 地址 | `http://localhost:3508` |
 
-生产环境使用 `.env.production`。
+生产环境使用 `.env.production`。后端服务可通过 `service/.env` 配置 `PORT` 和 `DB_PATH`。
 
 ## 启动开发
 
 ```bash
-# 启动开发服务器
+# 启动前端开发服务器
 pnpm dev
 
 # 构建生产版本

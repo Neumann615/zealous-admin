@@ -82,11 +82,19 @@ menu.menuData // 次级菜单数据
 menu.mainNavData // 主导航数据（由外部传入的 menuData 驱动）
 menu.menuType // 当前布局模式（side / only-side / head / only-head / simple）
 menu.subMenuCollapse // 侧边栏是否折叠
-menu.menuCurrentKeys // 当前选中的菜单项 key 路径
-menu.mainNavCurrentKeys // 当前选中的主导航 key 路径
+menu.menuCurrentKeys // 当前选中的菜单项 key 路径（包含完整父节点链路，用于激活图标级联）
+menu.mainNavCurrentKeys // 当前选中的主导航 key 路径（同上，父节点链路）
 menu.openKeys // 当前展开的子菜单 key
 menu.mobileDrawerOpen // 移动端抽屉是否打开（运行时状态，不持久化）
 ```
+
+### 菜单激活图标链路
+
+`menuCurrentKeys` 和 `mainNavCurrentKeys` 存储的是从根到叶的**完整 key 数组**（如 `['/demo', '/demo/menu-active', '/demo/menu-active/children']`），而非仅最后一级。这使得：
+
+- **`includes(key)`** 用于判断激活图标（`selectIcon`）是否替换 — 链路中所有节点均响应
+- **最后一项匹配** 用于判断白色文字高亮（`color`） — 仅精确选中项变色
+
 
 ## useTopBarStore
 

@@ -23,10 +23,14 @@ pnpm install
 ## 启动开发服务器
 
 ```bash
+# 前端开发服务器（端口 3509）
 pnpm dev
+
+# 后端服务（端口 3508）
+cd service && pnpm dev
 ```
 
-项目默认运行在 `http://localhost:3509`。
+项目前端默认运行在 `http://localhost:3509`，后端 API 在 `http://localhost:3508`。
 
 ## 快速使用
 
@@ -34,7 +38,7 @@ pnpm dev
 
 ```tsx
 import type { LayoutConfig } from '@zealous-admin/layout'
-import { Layout, LayoutProvider } from '@zealous-admin/layout'
+import { Layout, LayoutProvider, Logo } from '@zealous-admin/layout'
 
 const config: LayoutConfig = {
   app: {
@@ -90,6 +94,9 @@ import { ZaMarquee, ZaShinyText, ZaSparklesText } from '@zealous-admin/component
 
 // 闪烁文字
 <ZaSparklesText text="欢迎回来" shapes={['star', 'four-point-star']} />
+
+// Logo 组件
+<Logo size={32} />
 ```
 
 ### 使用主题

@@ -7,6 +7,7 @@
 - ✨ **首页美化**（`index.tsx`）：顶部加 Logo + Zealous-admin 项目名称，导出 `Logo` 组件
 - ✨ **激活图标演示页面**（`menu-active-children.tsx`、`menu-active-parent-test.tsx`）：导航图标激活栏对应路由页面
 - 🔧 **导航管理优化**（`menu.tsx`）：新增前端名称列，path 列父节点隐藏，弹窗去 path 输入改为后端自动计算
+- 📝 **文档全面更新**（`docs/`）：首页新增激活图标和后端服务特性卡片，补全 `selectIcon` API 文档，更新快速开始、安装、布局模块文档
 
 ## 2026-07-21
 

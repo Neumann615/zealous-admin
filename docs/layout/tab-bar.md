@@ -9,10 +9,13 @@ const config: LayoutConfig = {
   topBar: {
     tabBar: {
       isEnableTabBar: true,
+      showIcon: true, // 显示标签图标，支持 selectIcon 激活态切换
     },
   },
 }
 ```
+
+配置 `showIcon: true` 后，标签栏会显示菜单项图标。若菜单项配置了 `selectIcon`，当前激活标签的图标会自动切换为激活图标。
 
 ## 标签栏样式
 
