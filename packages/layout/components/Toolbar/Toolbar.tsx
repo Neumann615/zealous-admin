@@ -239,16 +239,18 @@ export function Toolbar() {
 
   return (
     <Row align="middle" className={styles.headerModule}>
-      <Col span={12}>
+      <Col span={16}>
         {isMobile
-          ? (
-              mobileDrawerOpen
-                ? <MenuFoldOutlined onClick={() => setMobileDrawerOpen(false)} />
-                : <MenuUnfoldOutlined onClick={() => setMobileDrawerOpen(true)} />
-            )
+          ? <div className={styles.ToolbarItem}>
+              {
+                mobileDrawerOpen
+                  ? <MenuFoldOutlined onClick={() => setMobileDrawerOpen(false)} />
+                  : <MenuUnfoldOutlined onClick={() => setMobileDrawerOpen(true)} />
+              }
+            </div>
           : <Breadcrumb />}
       </Col>
-      <Col span={12}>
+      <Col span={8}>
         <div className={styles.Toolbar}>
           {topBarStore.toolbar.isEnableSearch
             ? <Search />

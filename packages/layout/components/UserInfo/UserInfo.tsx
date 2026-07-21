@@ -128,7 +128,7 @@ export function UserInfo({ userInfo, onLogout }: UserInfoProps) {
   const displayEmail = userInfo?.email || ''
   const avatarSrc = userInfo?.avatar
     ? userInfo.avatar
-    : 'https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=default'
+    : `https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=${userInfo?.username}`
 
   const handleLogout = async () => {
     setPopoverOpen(false)
@@ -165,7 +165,13 @@ export function UserInfo({ userInfo, onLogout }: UserInfoProps) {
           <span className={styles.menuItemIcon}><HomeFilled /></span>
           <span>用户信息</span>
         </div>
-        <div className={styles.menuItem} onClick={() => { setPopoverOpen(false); setConfigPanelOpen(true) }}>
+        <div
+          className={styles.menuItem}
+          onClick={() => {
+            setPopoverOpen(false)
+            setConfigPanelOpen(true)
+          }}
+        >
           <span className={styles.menuItemIcon}><SettingFilled /></span>
           <span>偏好设置</span>
         </div>

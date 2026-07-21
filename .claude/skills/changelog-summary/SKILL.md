@@ -1,6 +1,11 @@
 ---
 name: changelog-summary
 description: 分析代码变更，按照项目根目录 CHANGELOG.md 的格式写入更新内容，并生成一句代码提交日志。当用户要求总结改动、整理提交日志或更新 changelog 时使用。
+version: "1.0.0"
+license: MIT
+metadata:
+  hermes:
+    tags: [git]
 ---
 
 # Changelog Summary Skill
@@ -17,7 +22,7 @@ git diff HEAD -- . ":(exclude)node_modules" ":(exclude)CHANGELOG.md"
 
 ### Step 2: 分析并分类
 
-将每条变更归入以下类型，同类合并，只保留关键信息：
+将每条变更归入以下类型，同类合并，只保留关键信息,尽量精简一点，不要说的过于具体：
 
 | 图标 | 类型 | 适用场景 |
 |------|------|---------|
@@ -37,7 +42,7 @@ cat CHANGELOG.md 2>/dev/null || echo ""
 
 ### Step 4: 拼接写入
 
-将新内容**插入今日日期条目**（已有则追加到当日条目下，没有则新建），**完整保留所有历史内容**。
+将新内容**插入今日日期条目**（已有则追加到当日条目下，没有则新建），不要修改旧的提交日志，**完整保留所有历史内容**。
 
 合并同类项后每条不超过 2 行，文件/组件名用反引号包裹。格式：
 

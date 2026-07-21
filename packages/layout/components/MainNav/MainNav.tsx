@@ -83,6 +83,14 @@ const useStyles = createStyles(({ token, css }) => ({
       background-color: ${token.colorPrimary} !important;
       color: ${token.colorWhite} !important;
     }
+    .ant-menu-item {
+      display: flex !important;
+      align-items: center !important;
+    }
+    .ant-menu-submenu-title {
+      display: flex !important;
+      align-items: center !important;
+    }
   `,
   TopAsideBar: {
     width: '100%',
@@ -184,7 +192,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
         return {
           key: item.key,
           label: item.label,
-          icon: item.icon ? <MenuIcon icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
+          icon: item.icon ? <MenuIcon size={19} icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
           children: _generatorMenuItem(item.children),
         }
       }
@@ -192,7 +200,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
         return {
           key: item.key,
           label: item.label,
-          icon: item.icon ? <MenuIcon icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
+          icon: item.icon ? <MenuIcon size={19} icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
           onClick: () => {
             openTab(item)
             setMobileDrawerOpen(false)
@@ -214,7 +222,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
           <MenuIcon
             icon={item.icon}
             color={isActive ? theme.colorWhite : ''}
-            size={20}
+            size={22}
           >
           </MenuIcon>
           <div>{item.label}</div>
@@ -227,10 +235,10 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
           key: item.key,
           label: labelContent,
           popupClassName: styles.mainNavPopupSubMenu,
-          popupOffset: menuType === 'only-head' ? [-70, 74] : [0, 0],
+          popupOffset: menuType === 'only-head' ? [-110, 60] : [0, 0],
           children: isRenderChildren
             ? _generatorMenuItem(item.children)
-            : undefined,
+            : null,
           onClick: () => {
             if (menuType === 'side' || menuType === 'head') {
               useMenuStore.setState(() => ({

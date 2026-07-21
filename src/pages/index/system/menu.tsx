@@ -213,9 +213,8 @@ export default function SystemMenu() {
 
   return (
     <div className="app-container">
-      <Card
-        title={<Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加主导航</Button>}
-      >
+      <Card>
+        <Button style={{ marginBottom: 8 }} type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加主导航</Button>
         <Table
           columns={columns}
           dataSource={treeData}

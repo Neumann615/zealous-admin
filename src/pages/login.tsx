@@ -209,8 +209,8 @@ export default function Login() {
   const onFinishFailed = () => {}
 
   const demoAccounts = [
-    { label: '管理员', userName: 'admin_z', password: 'admin123' },
-    { label: '测试用户', userName: 'test_z', password: 'test123' },
+    { label: '管理员', userName: 'admin', password: 'admin123' },
+    { label: '测试用户', userName: 'test', password: 'test123' },
   ]
 
   const fillDemo = (userName: string, password: string) => {

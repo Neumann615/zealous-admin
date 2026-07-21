@@ -9,8 +9,13 @@
 - 🔧 **菜单 API 优化**（`menu.ts`）：驼峰映射 `mapMenu`、空 `children` 不返回、路由顺序修复 `/menu/all` 在 `:id` 之前
 - 🔧 **角色 API 优化**（`role.ts`）：驼峰映射 `mapRole`、路由顺序修复 `/role/all` 在 `:id` 之前
 - 🔧 **za_menu 新增 active_icon 字段**：支持激活态图标，默认 NULL
-- 🔧 **导航管理页树表格**（`system/menu.tsx`）：全量加载树形展示，简化表头（名称/路径/图标/显示/操作），叶子节点隐藏展开按钮
-
+- 🔧 **导航对齐修复**（`MainNav.tsx`）：弹窗子菜单添加 flex 布局，图标尺寸统一为 19，主菜单图标 22，弹窗位置调整
+- 🔧 **侧边菜单图标**（`Menu.tsx`）：图标尺寸从 18 调整为 19
+- 🔧 **工具栏布局**（`Toolbar.tsx`）：面包屑 span=16，工具栏 span=8，移动端按钮包装
+- 🔧 **头像生成**（`UserInfo.tsx`）：头像 seed 使用用户名，不同用户不同头像
+- 🔧 **导航按钮位置**（`system/menu.tsx`）：添加按钮移出 Card title，放入内容区
+- 🐛 **演示账号**（`login.tsx`）：账号名修正为 admin/test，与数据库一致
+- 📝 **Skill 文档**（`SKILL.md`）：更新分类说明和写入规则
 
 ## 2026-07-20
 

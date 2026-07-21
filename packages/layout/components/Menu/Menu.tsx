@@ -134,7 +134,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
       v[i].icon = v[i].icon
         ? (
             <MenuIcon
-              size={18}
+              size={19}
               color={
                 menuCurrentKeys[menuCurrentKeys.length - 1] === v[i].key
                   ? theme.colorWhite
