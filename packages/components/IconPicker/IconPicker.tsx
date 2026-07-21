@@ -293,6 +293,15 @@ export function IconPicker({
     loadIconLibrary(activeTab)
   }, [activeTab, loadIconLibrary])
 
+  useEffect(() => {
+    if (!value)
+      return
+    const [libKey] = value.split(':')
+    if (libKey && !iconLibraryCache[libKey]) {
+      loadIconLibrary(libKey)
+    }
+  }, [value, loadIconLibrary])
+
   const currentIconList = iconLists[activeTab] || []
 
   const filteredIcons = useMemo(() => {
@@ -331,7 +340,7 @@ export function IconPicker({
     if (!IconComponent || typeof IconComponent !== 'function')
       return null
     return createElement(IconComponent, { className: styles.selectedIcon } as any)
-  }, [parseValue, styles.selectedIcon])
+  }, [parseValue, styles.selectedIcon, iconLists[parseValue?.libKey as string]])
 
   const displayValue = useMemo(() => {
     if (!parseValue)

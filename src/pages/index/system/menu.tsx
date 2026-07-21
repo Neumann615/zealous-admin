@@ -203,7 +203,6 @@ export default function SystemMenu() {
       align: 'center' as const,
       render: (_: any, row: Menu) => (
         <Space>
-          <Button type="link" size="small" onClick={() => handleAdd()}>添加子级</Button>
           <Button type="link" size="small" onClick={() => handleUpdate(row)}>编辑</Button>
           <Button type="link" size="small" danger onClick={() => handleDelete(row)}>删除</Button>
         </Space>
@@ -214,7 +213,7 @@ export default function SystemMenu() {
   return (
     <div className="app-container">
       <Card>
-        <Button style={{ marginBottom: 8 }} type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加主导航</Button>
+        <Button style={{ marginBottom: 8 }} type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加导航</Button>
         <Table
           columns={columns}
           dataSource={treeData}
