@@ -470,12 +470,14 @@ export function TabBar() {
                                     style={{ width: '100%', height: '100%' }}
                                   >
                                     <div className="flex-start">
-                                      {tabItem.icon
+                                      {tabItem.icon || tabItem.menuData?.selectIcon
                                         ? (
                                             <MenuIcon
-                                              size={14}
+                                              size={15}
                                               style={{ marginRight: theme.marginXS }}
                                               icon={tabItem.icon}
+                                              selectIcon={tabItem.menuData?.selectIcon}
+                                              isActive={nowTab.tabId === tabItem.tabId}
                                             >
                                             </MenuIcon>
                                           )
@@ -566,12 +568,14 @@ export function TabBar() {
                                 style={{ width: '100%', height: '100%' }}
                               >
                                 <div className="flex-start">
-                                  {tabItem.icon
+                                  {tabItem.icon || tabItem.menuData?.selectIcon
                                     ? (
                                         <MenuIcon
                                           size={14}
                                           style={{ marginRight: theme.marginXS }}
                                           icon={tabItem.icon}
+                                          selectIcon={tabItem.menuData?.selectIcon}
+                                          isActive={nowTab.tabId === tabItem.tabId}
                                         >
                                         </MenuIcon>
                                       )

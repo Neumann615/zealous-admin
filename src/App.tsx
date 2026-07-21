@@ -81,11 +81,9 @@ function convertMenus(menus: any[]) {
 
     return children
       .map((menu) => {
-        // 拼接父节点的 key 到当前节点的 key
-        const currentPath = menu.path || `/${menu.name}`
-        const currentKey = parentKey
-          ? `${parentKey}${currentPath}`
-          : currentPath
+        // path 已含完整路径时直接使用，否则按层级拼接 name
+        const currentKey = menu.path
+          || (parentKey ? `${parentKey}/${menu.name}` : `/${menu.name}`)
 
         const childTree = buildTree(Number(menu.id) || 0, currentKey).filter(
           (item: any) => item !== null,
@@ -102,6 +100,7 @@ function convertMenus(menus: any[]) {
           label: menu.title || menu.name,
           icon: menu.icon || '',
           key: currentKey,
+          selectIcon: menu.activeIcon || '',
         }
 
         if (childTree.length > 0) {

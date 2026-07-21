@@ -149,14 +149,24 @@ export default function SystemMenu() {
       title: '菜单名称',
       dataIndex: 'title',
       key: 'title',
-      width: 240,
+      width: 200,
+    },
+    {
+      title: '前端名称',
+      dataIndex: 'name',
+      key: 'name',
+      width: 140,
+      render: (name: string) => name || '-',
     },
     {
       title: '路由路径',
       dataIndex: 'path',
       key: 'path',
       width: 200,
-      render: (path: string) => path || '-',
+      render: (path: string, row: MenuNode) => {
+        if (row.children?.length) return '-'
+        return path || '-'
+      },
     },
     {
       title: '图标',
@@ -262,9 +272,6 @@ export default function SystemMenu() {
             ]}
           >
             <Input />
-          </Form.Item>
-          <Form.Item label="路由路径：" name="path" help="相对路径，上级路径会自动拼接">
-            <Input placeholder="如 /admin" />
           </Form.Item>
           <Form.Item label="前端图标：" name="icon" rules={[{ required: true, message: '请选择前端图标' }]}>
             <ZaIconPicker placeholder="请选择图标" />

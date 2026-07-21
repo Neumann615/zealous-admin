@@ -201,6 +201,7 @@ export type StorageType = 'local' | 'session'
 
 export interface MenuItem {
   icon: string
+  selectIcon?: string
   id: string
   key: string
   label: string

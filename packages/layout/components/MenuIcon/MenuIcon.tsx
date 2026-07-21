@@ -19,6 +19,8 @@ const useStyles = createStyles(({ css }) => ({
 
 interface MenuIconProps {
   icon: string
+  selectIcon?: string
+  isActive?: boolean
   className?: string
   style?: React.CSSProperties
   size?: number | string
@@ -30,7 +32,9 @@ interface MenuIconProps {
 export const MenuIcon = memo((props: MenuIconProps) => {
   const { styles } = useStyles()
 
-  if (!props.icon) {
+  const displayIcon = props.isActive && props.selectIcon ? props.selectIcon : props.icon
+
+  if (!displayIcon) {
     return null
   }
 
@@ -54,7 +58,7 @@ export const MenuIcon = memo((props: MenuIconProps) => {
 
   return (
     <span className={styles.wrapper} style={wrapperStyle}>
-      <ZaIcon value={props.icon} className={props.className} style={mergedStyle} />
+      <ZaIcon value={displayIcon} className={props.className} style={mergedStyle} />
     </span>
   )
 })

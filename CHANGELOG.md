@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-22
+
+- ✨ **菜单图标激活态**（`MenuIcon.tsx`、`MainNav.tsx`、`Menu.tsx`、`TabBar.tsx`）：选中菜单项时自动切换 `activeIcon`，父节点链路级联切换，精确选中项白色高亮
+- ✨ **菜单 path 自动计算**（`menu.ts`、`db/index.ts`）：后端 `computePath()` 根据 name 层级自动生成完整 path，修改 name/parentId 时级联更新子孙
+- ✨ **首页美化**（`index.tsx`）：顶部加 Logo + Zealous-admin 项目名称，导出 `Logo` 组件
+- ✨ **激活图标演示页面**（`menu-active-children.tsx`、`menu-active-parent-test.tsx`）：导航图标激活栏对应路由页面
+- 🔧 **导航管理优化**（`menu.tsx`）：新增前端名称列，path 列父节点隐藏，弹窗去 path 输入改为后端自动计算
+
 ## 2026-07-21
 
 - 🗑️ **Mall 模块全面清除**（73 个文件，~15000 行）：删除 `src/pages/index/mall/` 全部页面、26 个 API 文件、21 个类型定义、2 个工具函数、3 个 store 文件

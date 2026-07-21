@@ -8,12 +8,34 @@ const router = Router()
 const db = getDb()
 
 function mapMenu(row: any) {
-  if (!row) return row
+  if (!row)
+    return row
   return {
     ...row,
     parentId: row.parent_id,
     createTime: row.create_time,
     activeIcon: row.active_icon || null,
+  }
+}
+
+// 根据父级 path + name 计算菜单的完整 path
+function computePath(parentId: number, name: string): string {
+  if (!name)
+    return ''
+  if (parentId === 0)
+    return `/${name}`
+  const parent = db.prepare('SELECT path FROM za_menu WHERE id = ?').get(parentId) as any
+  const parentPath = parent?.path || ''
+  return `${parentPath}/${name}`
+}
+
+// 递归更新所有子孙菜单的 path
+function updateDescendantPaths(parentId: number) {
+  const children = db.prepare('SELECT * FROM za_menu WHERE parent_id = ?').all(parentId) as any[]
+  for (const child of children) {
+    const newPath = computePath(child.parent_id, child.name)
+    db.prepare('UPDATE za_menu SET path = ? WHERE id = ?').run(newPath, child.id)
+    updateDescendantPaths(child.id)
   }
 }
 
@@ -53,16 +75,20 @@ router.get('/menu/tree', (_req, res) => {
 
 router.post('/menu/create', (req, res) => {
   try {
-    const { parentId, title, level, sort, name, icon, hidden, path, component, activeIcon } = req.body
+    const { parentId, title, level, sort, name, icon, hidden, component, activeIcon } = req.body
 
     if (!title) {
       res.json(failed('菜单标题不能为空'))
       return
     }
 
+    const pid = parentId || 0
+    const menuName = name || ''
+    const menuPath = computePath(pid, menuName)
+
     const result = db.prepare(
       'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, create_time, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(parentId || 0, title, level || 0, sort || 0, name || null, icon || null, hidden || 0, path || null, component || null, now(), activeIcon || null)
+    ).run(pid, title, level || 0, sort || 0, menuName, icon || null, hidden || 0, menuPath, component || null, now(), activeIcon || null)
 
     const menu = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(result.lastInsertRowid)
     res.json(success(mapMenu(menu)))
@@ -101,9 +127,9 @@ router.get('/menu/:id', (req, res) => {
 router.post('/menu/update/:id', (req, res) => {
   try {
     const id = Number(req.params.id)
-    const { parentId, title, level, sort, name, icon, hidden, path, component, activeIcon } = req.body
+    const { parentId, title, level, sort, name, icon, hidden, component, activeIcon } = req.body
 
-    const existing = db.prepare('SELECT id FROM za_menu WHERE id = ?').get(id)
+    const existing = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(id) as any
     if (!existing) {
       res.json(failed('菜单不存在'))
       return
@@ -119,9 +145,19 @@ router.post('/menu/update/:id', (req, res) => {
     if (name !== undefined) { sets.push('name = ?'); values.push(name) }
     if (icon !== undefined) { sets.push('icon = ?'); values.push(icon) }
     if (hidden !== undefined) { sets.push('hidden = ?'); values.push(hidden) }
-    if (path !== undefined) { sets.push('path = ?'); values.push(path) }
     if (component !== undefined) { sets.push('component = ?'); values.push(component) }
     if (activeIcon !== undefined) { sets.push('active_icon = ?'); values.push(activeIcon) }
+
+    // name 或 parentId 变更时，重新计算自身及所有子孙的 path
+    const newName = name !== undefined ? (name || '') : existing.name
+    const newParentId = parentId !== undefined ? parentId : existing.parent_id
+    const needsPathUpdate = (name !== undefined || parentId !== undefined)
+      && (newName !== existing.name || newParentId !== existing.parent_id)
+
+    if (needsPathUpdate) {
+      const newPath = computePath(newParentId, newName)
+      sets.push('path = ?'); values.push(newPath)
+    }
 
     if (sets.length === 0) {
       res.json(failed('没有需要更新的字段'))
@@ -130,6 +166,11 @@ router.post('/menu/update/:id', (req, res) => {
 
     values.push(id)
     db.prepare(`UPDATE za_menu SET ${sets.join(', ')} WHERE id = ?`).run(...values)
+
+    // 如果 path 变了，级联更新所有子孙菜单的 path
+    if (needsPathUpdate) {
+      updateDescendantPaths(id)
+    }
 
     const updated = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(id)
     res.json(success(mapMenu(updated)))

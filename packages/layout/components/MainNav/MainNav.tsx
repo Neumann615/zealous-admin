@@ -188,11 +188,12 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
   function _generatorMenuItem(menuData: MenuData): any[] {
     return menuData.map((item: MenuItem) => {
       const isActive = mainNavCurrentKeys.includes(item.key)
+      const isExact = mainNavCurrentKeys[mainNavCurrentKeys.length - 1] === item.key
       if (item.children?.length) {
         return {
           key: item.key,
           label: item.label,
-          icon: item.icon ? <MenuIcon size={19} icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
+          icon: item.icon ? <MenuIcon size={19} icon={item.icon} selectIcon={item.selectIcon} isActive={isActive} color={isExact ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
           children: _generatorMenuItem(item.children),
         }
       }
@@ -200,7 +201,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
         return {
           key: item.key,
           label: item.label,
-          icon: item.icon ? <MenuIcon size={19} icon={item.icon} color={isActive ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
+          icon: item.icon ? <MenuIcon size={19} icon={item.icon} selectIcon={item.selectIcon} isActive={isActive} color={isExact ? theme.colorWhite : ''} gap={theme.marginSM}></MenuIcon> : null,
           onClick: () => {
             openTab(item)
             setMobileDrawerOpen(false)
@@ -216,12 +217,15 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
   ): any[] {
     return menuData.map((item: any, index: number) => {
       const isActive = mainNavCurrentKeys.includes(item.key)
+      const isExact = mainNavCurrentKeys[mainNavCurrentKeys.length - 1] === item.key
       const activeDom = isActive ? renderMenuActiveDom() : null
       const labelContent = (
         <>
           <MenuIcon
             icon={item.icon}
-            color={isActive ? theme.colorWhite : ''}
+            selectIcon={item.selectIcon}
+            isActive={isActive}
+            color={isExact ? theme.colorWhite : ''}
             size={22}
           >
           </MenuIcon>

@@ -117,9 +117,10 @@ export function initDb() {
 
     const allMenuIds: number[] = []
 
-    // 递归插入菜单节点
-    function insertMenuTree(parentId: number, level: number, items: any[]) {
+    // 递归插入菜单节点，自动计算 path
+    function insertMenuTree(parentId: number, level: number, parentPath: string, items: any[]) {
       items.forEach((item, idx) => {
+        const menuPath = item.name ? `${parentPath}/${item.name}` : parentPath
         const result = insertMenu.run(
           parentId,
           item.title,
@@ -129,42 +130,42 @@ export function initDb() {
           item.icon || '',
           0,
           nowStr,
-          item.path || null,
+          menuPath,
           item.activeIcon || null,
         )
         const id = Number(result.lastInsertRowid)
         allMenuIds.push(id)
         if (item.children?.length) {
-          insertMenuTree(id, level + 1, item.children)
+          insertMenuTree(id, level + 1, menuPath, item.children)
         }
       })
     }
 
     // 演示（在系统管理前面）
-    insertMenuTree(0, 0, [
+    insertMenuTree(0, 0, '', [
       {
         title: '演示',
         name: 'demo',
         icon: 'ai:AiOutlineExperiment',
         children: [
-          { title: '风格实验室', name: 'style', path: '/style', icon: 'ai:AiOutlineBgColors' },
+          { title: '风格实验室', name: 'style', icon: 'ai:AiOutlineBgColors' },
           {
             title: '多级导航',
             name: 'nav',
             icon: 'ai:AiOutlineAlignRight',
             children: [
-              { title: '导航1', name: 'nav1', path: '/nav1' },
+              { title: '导航1', name: 'nav1', },
               {
                 title: '导航2',
                 name: 'nav2',
                 children: [
-                  { title: '导航2-1', name: 'nav2-1', path: '/nav2-1' },
+                  { title: '导航2-1', name: 'nav2-1', },
                   {
                     title: '导航2-2',
                     name: 'nav2-2',
                     children: [
-                      { title: '导航2-2-1', name: 'nav2-2-1', path: '/nav2-2-1' },
-                      { title: '导航2-2-2', name: 'nav2-2-2', path: '/nav2-2-2' },
+                      { title: '导航2-2-1', name: 'nav2-2-1', },
+                      { title: '导航2-2-2', name: 'nav2-2-2', },
                     ],
                   },
                 ],
@@ -176,14 +177,14 @@ export function initDb() {
             name: 'components',
             icon: 'ai:AiOutlineBuild',
             children: [
-              { title: '闪烁文字', name: 'sparkles-text', path: '/sparkles-text', icon: 'ai:AiOutlineHighlight' },
-              { title: '滑块验证码', name: 'slider-captcha', path: '/slider-captcha', icon: 'ai:AiOutlineSafetyCertificate' },
-              { title: '链接预览', name: 'link-preview', path: '/link-preview', icon: 'ai:AiOutlineLink' },
-              { title: '流光文字', name: 'shiny-text', path: '/shiny-text', icon: 'ai:AiOutlineFontColors' },
-              { title: '跑马灯', name: 'marquee', path: '/marquee', icon: 'ai:AiOutlineColumnWidth' },
-              { title: '图标选择器', name: 'icon-picker', path: '/icon-picker', icon: 'ai:AiOutlineSmile' },
-              { title: 'Markdown预览', name: 'markdown', path: '/markdown', icon: 'ai:AiOutlineFileMarkdown' },
-              { title: '图案背景', name: 'pattern-bg', path: '/pattern-bg', icon: 'ai:AiOutlineBgColors' },
+              { title: '闪烁文字', name: 'sparkles-text', icon: 'ai:AiOutlineHighlight' },
+              { title: '滑块验证码', name: 'slider-captcha', icon: 'ai:AiOutlineSafetyCertificate' },
+              { title: '链接预览', name: 'link-preview', icon: 'ai:AiOutlineLink' },
+              { title: '流光文字', name: 'shiny-text', icon: 'ai:AiOutlineFontColors' },
+              { title: '跑马灯', name: 'marquee', icon: 'ai:AiOutlineColumnWidth' },
+              { title: '图标选择器', name: 'icon-picker', icon: 'ai:AiOutlineSmile' },
+              { title: 'Markdown预览', name: 'markdown', icon: 'ai:AiOutlineFileMarkdown' },
+              { title: '图案背景', name: 'pattern-bg', icon: 'ai:AiOutlineBgColors' },
             ],
           },
           {
@@ -191,11 +192,11 @@ export function initDb() {
             name: 'func',
             icon: 'ai:AiOutlineFunction',
             children: [
-              { title: '页面最大化', name: 'maximize-page', path: '/maximize-page', icon: 'ai:AiOutlineFullscreen' },
-              { title: '庆祝效果', name: 'fireworks', path: '/fireworks', icon: 'ai:AiOutlineCoffee' },
+              { title: '页面最大化', name: 'maximize-page', icon: 'ai:AiOutlineFullscreen' },
+              { title: '庆祝效果', name: 'fireworks', icon: 'ai:AiOutlineCoffee' },
             ],
           },
-          { title: '页面保活', name: 'keepalive', path: '/keepalive', icon: 'ai:AiOutlineDesktop' },
+          { title: '页面保活', name: 'keepalive', icon: 'ai:AiOutlineDesktop' },
         ],
       },
       {
@@ -203,10 +204,10 @@ export function initDb() {
         name: 'system',
         icon: 'ai:AiOutlineSetting',
         children: [
-          { title: '用户管理', name: 'system-admin', path: '/admin', icon: 'ai:AiOutlineUser' },
-          { title: '角色管理', name: 'system-role', path: '/role', icon: 'ai:AiOutlineTeam' },
-          { title: '导航管理', name: 'system-menu', path: '/menu', icon: 'ai:AiOutlineMenu' },
-          { title: '字典管理', name: 'system-dict', path: '/dict', icon: 'ai:AiOutlineBook' },
+          { title: '用户管理', name: 'system-admin', icon: 'ai:AiOutlineUser' },
+          { title: '角色管理', name: 'system-role', icon: 'ai:AiOutlineTeam' },
+          { title: '导航管理', name: 'system-menu', icon: 'ai:AiOutlineMenu' },
+          { title: '字典管理', name: 'system-dict', icon: 'ai:AiOutlineBook' },
         ],
       },
     ])

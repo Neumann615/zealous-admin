@@ -1,5 +1,6 @@
 export { Layout } from './components/Layout'
 export { LayoutProvider } from './components/LayoutProvider'
+export { Logo } from './components/Logo/Logo'
 export { useAppMessage } from './hooks/useAppMessage'
 export { useControlTab } from './hooks/useControlTab'
 export { useFireworks } from './hooks/useFireworks'

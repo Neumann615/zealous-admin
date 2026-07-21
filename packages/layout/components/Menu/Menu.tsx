@@ -131,7 +131,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
 
   function generatorMenuData(v: any) {
     for (let i = 0; i < v.length; i++) {
-      v[i].icon = v[i].icon
+      v[i].icon = v[i].icon || v[i].selectIcon
         ? (
             <MenuIcon
               size={19}
@@ -140,7 +140,9 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
                   ? theme.colorWhite
                   : ''
               }
-              icon={v[i].icon}
+              icon={v[i].icon || ''}
+              selectIcon={v[i].selectIcon}
+              isActive={menuCurrentKeys.includes(v[i].key)}
               gap={theme.marginSM}
             >
             </MenuIcon>

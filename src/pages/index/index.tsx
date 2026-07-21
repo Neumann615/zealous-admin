@@ -1,7 +1,24 @@
-﻿import { ZaSparklesText } from '@zealous-admin/components/index'
+import { ZaSparklesText } from '@zealous-admin/components/index'
+import { Logo } from '@zealous-admin/layout/index'
 import { BorderBeam, Button, Card, Col, Row, Space, Typography } from 'antd'
+import { createStyles } from 'antd-style'
 
 const { Title, Paragraph, Text } = Typography
+
+const useStyles = createStyles(({ token, css }) => ({
+  hero: css`
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 32px 0;
+  `,
+  name: css`
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    color: ${token.colorTextHeading};
+  `,
+}))
 
 const featureScenarios = [
   {
@@ -23,9 +40,16 @@ const featureScenarios = [
 ]
 
 export default function HomePage() {
+  const { styles, theme } = useStyles()
+
   return (
     <div className="w-full sm:w-[100%] md:w-[100%] lg:w-[80%] xl:w-[70%] mx-auto px-6 py-6">
-      <BorderBeam lineWidth={2}>
+      <div className={styles.hero}>
+        <Logo size={32} />
+        <h1 className={styles.name}>Zealous-admin</h1>
+      </div>
+
+      <BorderBeam lineWidth={2} style={{ borderRadius: theme.borderRadiusLG }}>
         <Card>
           <Text type="secondary" className="font-mono" style={{ fontSize: 14, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 1 }}>
             TypeScript · React 19.2 · Vite 8 · Antd 6 · Tailwindcss
