@@ -217,7 +217,6 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
   ): any[] {
     return menuData.map((item: any, index: number) => {
       const isActive = mainNavCurrentKeys.includes(item.key)
-      const isExact = mainNavCurrentKeys[mainNavCurrentKeys.length - 1] === item.key
       const activeDom = isActive ? renderMenuActiveDom() : null
       const labelContent = (
         <>
@@ -225,7 +224,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
             icon={item.icon}
             selectIcon={item.selectIcon}
             isActive={isActive}
-            color={isExact ? theme.colorWhite : ''}
+            color={isActive ? theme.colorWhite : ''}
             size={22}
           >
           </MenuIcon>

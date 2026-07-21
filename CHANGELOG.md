@@ -8,6 +8,7 @@
 - ✨ **激活图标演示页面**（`menu-active-children.tsx`、`menu-active-parent-test.tsx`）：导航图标激活栏对应路由页面
 - 🔧 **导航管理优化**（`menu.tsx`）：新增前端名称列，path 列父节点隐藏，弹窗去 path 输入改为后端自动计算
 - 📝 **文档全面更新**（`docs/`）：首页新增激活图标和后端服务特性卡片，补全 `selectIcon` API 文档，更新快速开始、安装、布局模块文档
+- 🐛 **MainNav 顶层导航白色文字修复**（`MainNav.tsx`）：`generatorMenuItem` color 改回 `isActive` 链路判断，确保选中子级时顶层导航按钮文字正常变白
 
 ## 2026-07-21
 
