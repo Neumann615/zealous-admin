@@ -1,3 +1,3 @@
-﻿import { ZaLinkPreviewDemo } from '@zealous-admin/components/index'
+import { ZaLinkPreviewDemo } from '@zealous-admin/components/index'
 
 export default ZaLinkPreviewDemo

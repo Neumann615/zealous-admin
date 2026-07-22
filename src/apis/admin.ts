@@ -1,4 +1,4 @@
-import type { LoginParam, LoginResult, Admin, UserInfoResult } from '@/types/admin'
+import type { Admin, LoginParam, LoginResult, UserInfoResult } from '@/types/admin'
 import type { CommonPage, PageParam } from '@/types/common'
 import type { Role } from '@/types/role'
 import http from '@/utils/http'

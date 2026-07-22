@@ -1,4 +1,4 @@
-﻿import type { MenuData, MenuItem } from '../../types/config'
+import type { MenuData, MenuItem } from '../../types/config'
 import type { UserInfoData } from '../UserInfo/UserInfo'
 import { ZaShinyText } from '@zealous-admin/components/index'
 import { Menu } from 'antd'

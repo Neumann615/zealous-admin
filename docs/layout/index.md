@@ -18,9 +18,9 @@ import {
   LayoutConfig, // TypeScript 配置类型
   LayoutProvider, // 布局上下文提供者
   Logo, // 项目 Logo 组件（内置 ZA 图标 SVG）
+  useAppMessage, // antd message/modal 上下文
   useControlTab, // 标签页/导航控制 Hook
   useLayoutSetting, // 布局配置读写 Hook
-  useAppMessage, // antd message/modal 上下文
 } from '@zealous-admin/layout'
 ```
 

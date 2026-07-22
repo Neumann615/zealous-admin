@@ -1,5 +1,5 @@
 import { useFireworks } from '@zealous-admin/layout/index'
-import { Button, Card, Space, InputNumber } from 'antd'
+import { Button, Card, InputNumber, Space } from 'antd'
 import { useState } from 'react'
 
 export default function fireworks() {

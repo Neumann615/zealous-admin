@@ -1,4 +1,4 @@
-﻿import type { IconLibraryKey } from './IconPicker'
+import type { IconLibraryKey } from './IconPicker'
 import { Button, Card, Checkbox, Col, Form, Input, Row, Select } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'

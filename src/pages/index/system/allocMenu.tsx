@@ -2,9 +2,9 @@ import type { DataNode } from 'antd/es/tree'
 import type { MenuNode } from '@/types/menu'
 import { Modal, Tree } from 'antd'
 import { useEffect, useState } from 'react'
-import { useAppMessage } from '@/hooks/useAppMessage'
 import { getMenuTreeListAPI } from '@/apis/menu'
 import { roleAllocMenuAPI, roleListMenuByRoleIdAPI } from '@/apis/role'
+import { useAppMessage } from '@/hooks/useAppMessage'
 
 interface AllocMenuModalProps {
   visible: boolean
@@ -24,7 +24,8 @@ export default function AllocMenuModal({ visible, roleId, onClose }: AllocMenuMo
   }
 
   const fetchRoleMenu = async () => {
-    if (!roleId) return
+    if (!roleId)
+      return
     const res = await roleListMenuByRoleIdAPI(roleId)
     const menuList = res.data
     const checkedMenuIds = menuList.filter(item => item.parentId !== 0).map(item => item.id!)
@@ -57,7 +58,8 @@ export default function AllocMenuModal({ visible, roleId, onClose }: AllocMenuMo
     const walk = (list: MenuNode[]) => {
       for (const node of list) {
         map.set(node.id!, node)
-        if (node.children?.length) walk(node.children as MenuNode[])
+        if (node.children?.length)
+          walk(node.children as MenuNode[])
       }
     }
     walk(nodes)

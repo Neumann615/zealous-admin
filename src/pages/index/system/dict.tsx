@@ -17,18 +17,18 @@ import {
 } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import { useAppMessage } from '@/hooks/useAppMessage'
 import {
-  getDictTypeListAPI,
-  getDictTypeAllAPI,
-  dictTypeCreateAPI,
-  dictTypeUpdateByIdAPI,
-  dictTypeDeleteByIdAPI,
-  getDictDataListAPI,
   dictDataCreateAPI,
-  dictDataUpdateByIdAPI,
   dictDataDeleteByIdAPI,
+  dictDataUpdateByIdAPI,
+  dictTypeCreateAPI,
+  dictTypeDeleteByIdAPI,
+  dictTypeUpdateByIdAPI,
+  getDictDataListAPI,
+  getDictTypeAllAPI,
+  getDictTypeListAPI,
 } from '@/apis/dict'
+import { useAppMessage } from '@/hooks/useAppMessage'
 
 const { TextArea } = Input
 
@@ -107,15 +107,26 @@ function DictTypePane() {
     { title: '类型编码', dataIndex: 'dictType', key: 'dictType', align: 'center' as const },
     { title: '备注', dataIndex: 'remark', key: 'remark', align: 'center' as const },
     {
-      title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160, align: 'center' as const,
+      title: '创建时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 160,
+      align: 'center' as const,
       render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : 'N/A',
     },
     {
-      title: '是否启用', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const,
+      title: '是否启用',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      align: 'center' as const,
       render: (status: number) => <Switch checked={status === 1} disabled />,
     },
     {
-      title: '操作', key: 'actions', width: 150, align: 'center' as const,
+      title: '操作',
+      key: 'actions',
+      width: 150,
+      align: 'center' as const,
       render: (_: any, row: DictType) => (
         <Space>
           <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>
@@ -227,7 +238,8 @@ function DictDataPane() {
   }, [])
 
   const getList = async () => {
-    if (!selectedType) return
+    if (!selectedType)
+      return
     setListLoading(true)
     try {
       const res = await getDictDataListAPI({ ...listQuery, dictType: selectedType })
@@ -298,11 +310,18 @@ function DictDataPane() {
     { title: '字典值', dataIndex: 'dictValue', key: 'dictValue', align: 'center' as const },
     { title: '排序', dataIndex: 'dictSort', key: 'dictSort', width: 80, align: 'center' as const },
     {
-      title: '是否启用', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const,
+      title: '是否启用',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      align: 'center' as const,
       render: (status: number) => <Switch checked={status === 1} disabled />,
     },
     {
-      title: '操作', key: 'actions', width: 150, align: 'center' as const,
+      title: '操作',
+      key: 'actions',
+      width: 150,
+      align: 'center' as const,
       render: (_: any, row: DictData) => (
         <Space>
           <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>

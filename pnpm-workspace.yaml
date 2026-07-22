@@ -21,13 +21,22 @@ catalog:
   '@hello-pangea/dnd': ^18.0.1
   '@icon-park/react': ^1.4.2
   '@tanem/react-nprogress': ^5.0.51
+  '@types/bcryptjs': ^2.4.6
+  '@types/cors': ^2.8.17
+  '@types/express': ^5.0.6
+  '@types/node': ^22.0.0
   ahooks: ^3.9.7
   animate.css: ^4.1.1
   antd: ^6.4.4
   antd-style: ^3.6.2
   axios: ^1.6.8
+  bcryptjs: ^2.4.3
   classnames: ^2.5.1
+  cors: ^2.8.5
   create-puzzle: ^2.0.0
+  dotenv: ^16.4.5
+  express: ^5.2.0
+  jose: ^5.9.0
   rc-slider-captcha: ^1.2.2
   react: ^19.2.7
   react-dom: ^19.2.7
@@ -40,21 +49,12 @@ catalog:
   react-syntax-highlighter: ^15.5.0
   react-transition-group: ^4.4.5
   remark-gfm: ^4.0.0
+  tsx: ^4.19.0
+
   typescript: ^5.6.0
   vite-plugin-svgr: ^5.2.0
   zustand: ^5.0.14
-  bcryptjs: ^2.4.3
-  cors: ^2.8.5
-  dotenv: ^16.4.5
-  express: ^5.2.0
-  jose: ^5.9.0
   zod: ^3.23.0
-  '@types/bcryptjs': ^2.4.6
-  '@types/cors': ^2.8.17
-  '@types/express': ^5.0.6
-  '@types/node': ^22.0.0
-  tsx: ^4.19.0
-
 allowBuilds:
   '@swc/core': true
   esbuild: true

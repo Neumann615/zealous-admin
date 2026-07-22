@@ -1,4 +1,4 @@
-﻿import { Avatar, Card, Col, Form, InputNumber, Row, Select, Switch } from 'antd'
+import { Avatar, Card, Col, Form, InputNumber, Row, Select, Switch } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'
 import { Marquee } from './Marquee'

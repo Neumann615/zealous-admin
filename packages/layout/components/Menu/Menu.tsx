@@ -1,4 +1,4 @@
-﻿import type { MenuItem } from '../../types/config'
+import type { MenuItem } from '../../types/config'
 import type { UserInfoData } from '../UserInfo/UserInfo'
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { ZaShinyText } from '@zealous-admin/components/index'

@@ -1,4 +1,4 @@
-﻿import type React from 'react'
+import type React from 'react'
 import { ZaIcon } from '@zealous-admin/components/index'
 import { createStyles } from 'antd-style'
 import { memo, useMemo } from 'react'

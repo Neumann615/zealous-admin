@@ -1,4 +1,4 @@
-﻿import { Card, Col, ColorPicker, Form, Input, InputNumber, Row, Select } from 'antd'
+import { Card, Col, ColorPicker, Form, Input, InputNumber, Row, Select } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'
 import { ShinyText } from './ShinyText'

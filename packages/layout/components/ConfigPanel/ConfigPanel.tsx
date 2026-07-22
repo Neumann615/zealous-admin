@@ -558,7 +558,7 @@ export default defaultSetting`
             }}
           />
         </Row>
-        
+
         <Row align="middle" className={styles.configItem}>
           <Col flex={1} className={styles.moduleLable}>
             色弱模式

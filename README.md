@@ -189,20 +189,20 @@ zealous-admin/
 const defaultSetting: LayoutConfig = {
   app: {
     layout: {
-      isCenter: false,       // 是否居中显示
+      isCenter: false, // 是否居中显示
       layoutScope: 'outside', // 居中作用范围: 'outside' | 'inside'
-      width: 1200,            // 居中宽度 (px)
+      width: 1200, // 居中宽度 (px)
     },
   },
   theme: {
     themeColor: '#2f54eb',
-    darkMode: 'auto',        // '0' | '1' | 'auto'
+    darkMode: 'auto', // '0' | '1' | 'auto'
     compactMode: false,
     happyEffect: false,
   },
   menu: {
-    menuType: 'side',        // 布局模式
-    menuActiveStyle: 'dot',  // 激活指示: 'none' | 'arrow' | 'line' | 'dot'
+    menuType: 'side', // 布局模式
+    menuActiveStyle: 'dot', // 激活指示: 'none' | 'arrow' | 'line' | 'dot'
     subMenuUniqueOpened: false,
   },
   page: {

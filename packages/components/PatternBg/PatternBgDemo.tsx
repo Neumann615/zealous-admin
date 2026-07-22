@@ -1,4 +1,4 @@
-﻿import type { AnimationDirection, MaskDirection, PatternType } from './PatternBg'
+import type { AnimationDirection, MaskDirection, PatternType } from './PatternBg'
 import {
   Card,
   Col,
@@ -6,7 +6,6 @@ import {
   InputNumber,
   Row,
   Select,
-  Space,
 } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'

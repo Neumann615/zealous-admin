@@ -1,4 +1,4 @@
-﻿import { Card, Input } from 'antd'
+import { Card, Input } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'
 import { Markdown } from './Markdown'

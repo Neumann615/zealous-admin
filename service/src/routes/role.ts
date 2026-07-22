@@ -10,7 +10,8 @@ const db = getDb()
 router.use(authMiddleware)
 
 function mapRole(row: any) {
-  if (!row) return row
+  if (!row)
+    return row
   return {
     ...row,
     adminCount: row.admin_count,

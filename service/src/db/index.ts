@@ -154,18 +154,18 @@ export function initDb() {
             name: 'nav',
             icon: 'ai:AiOutlineAlignRight',
             children: [
-              { title: '导航1', name: 'nav1', },
+              { title: '导航1', name: 'nav1' },
               {
                 title: '导航2',
                 name: 'nav2',
                 children: [
-                  { title: '导航2-1', name: 'nav2-1', },
+                  { title: '导航2-1', name: 'nav2-1' },
                   {
                     title: '导航2-2',
                     name: 'nav2-2',
                     children: [
-                      { title: '导航2-2-1', name: 'nav2-2-1', },
-                      { title: '导航2-2-2', name: 'nav2-2-2', },
+                      { title: '导航2-2-1', name: 'nav2-2-1' },
+                      { title: '导航2-2-2', name: 'nav2-2-2' },
                     ],
                   },
                 ],

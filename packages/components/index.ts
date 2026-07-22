@@ -1,4 +1,4 @@
-﻿export { Icon as ZaIcon, IconPicker as ZaIconPicker, IconPickerDemo as ZaIconPickerDemo } from './IconPicker'
+export { Icon as ZaIcon, IconPicker as ZaIconPicker, IconPickerDemo as ZaIconPickerDemo } from './IconPicker'
 export { LinkPreview as ZaLinkPreview, LinkPreviewDemo as ZaLinkPreviewDemo } from './LinkPreview'
 export { Markdown as ZaMarkdown, MarkdownDemo as ZaMarkdownDemo } from './Markdown'
 export { Marquee as ZaMarquee, MarqueeDemo as ZaMarqueeDemo } from './Marquee'

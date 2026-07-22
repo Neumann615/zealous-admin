@@ -164,7 +164,8 @@ export default function SystemMenu() {
       key: 'path',
       width: 200,
       render: (path: string, row: MenuNode) => {
-        if (row.children?.length) return '-'
+        if (row.children?.length)
+          return '-'
         return path || '-'
       },
     },

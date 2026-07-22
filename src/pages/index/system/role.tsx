@@ -13,13 +13,13 @@ import {
 } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import { useAppMessage } from '@/hooks/useAppMessage'
 import {
   getRoleListAPI,
   roleCreateAPI,
   roleDeleteByIdAPI,
   roleUpdateByIdAPI,
 } from '@/apis/role'
+import { useAppMessage } from '@/hooks/useAppMessage'
 import AllocMenuModal from './allocMenu'
 
 const { TextArea } = Input
@@ -118,17 +118,28 @@ export default function SystemRole() {
     { title: '描述', dataIndex: 'description', key: 'description', align: 'center' as const },
     { title: '用户数', dataIndex: 'adminCount', key: 'adminCount', width: 80, align: 'center' as const },
     {
-      title: '添加时间', dataIndex: 'createTime', key: 'createTime', width: 160, align: 'center' as const,
+      title: '添加时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 160,
+      align: 'center' as const,
       render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : 'N/A',
     },
     {
-      title: '是否启用', dataIndex: 'status', key: 'status', width: 100, align: 'center' as const,
+      title: '是否启用',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      align: 'center' as const,
       render: (status: number) => (
         <Switch checked={status === 1} disabled />
       ),
     },
     {
-      title: '操作', key: 'actions', width: 220, align: 'center' as const,
+      title: '操作',
+      key: 'actions',
+      width: 220,
+      align: 'center' as const,
       render: (_: any, row: Role) => (
         <div style={{ display: 'flex', gap: 4, whiteSpace: 'nowrap' }}>
           <Button type="link" onClick={() => handleSelectMenu(row)}>分配菜单</Button>

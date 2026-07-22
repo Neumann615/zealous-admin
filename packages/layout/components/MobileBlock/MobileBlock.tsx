@@ -1,4 +1,4 @@
-﻿import type React from 'react'
+import type React from 'react'
 import { StopOutlined } from '@ant-design/icons'
 import { ZaPatternBg } from '@zealous-admin/components/index'
 import { createStyles } from 'antd-style'
