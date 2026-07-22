@@ -5,6 +5,7 @@
 - ✨ **大屏演示2 3D 中国地图**（`dashboard2.tsx`）：Three.js 实现 Lambert 等角圆锥投影、GDP 热力图配色、省份挤出体立体效果、省级下钻回退、OrbitControls 拖拽旋转/滚轮缩放、悬停 tooltip
 - ✨ **新增依赖**（`package.json`、`pnpm-workspace.yaml`）：`echarts ^6.1`、`three ^0.185`、`@types/three`
 - 🔧 **菜单种子数据更新**（`sqlite.db`）：demo 模块添加大屏演示路由
+- 🐛 **GeoJSON 数据源改为本地静态文件**（`dashboard2.tsx`）：HTTPS 部署时 DataV API 防盗链报 403，改用 `/geo/` 本地文件
 
 ## 2026-07-22
 

@@ -18,13 +18,13 @@ function buildLambertProjector() {
 
   const n = Math.log(Math.cos(φ1) / Math.cos(φ2))
     / Math.log(Math.tan(Math.PI / 4 + φ2 / 2) / Math.tan(Math.PI / 4 + φ1 / 2))
-  const F = (Math.cos(φ1) * Math.pow(Math.tan(Math.PI / 4 + φ1 / 2), n)) / n
-  const ρ0 = F / Math.pow(Math.tan(Math.PI / 4 + φ0 / 2), n)
+  const F = (Math.cos(φ1) * Math.tan(Math.PI / 4 + φ1 / 2) ** n) / n
+  const ρ0 = F / Math.tan(Math.PI / 4 + φ0 / 2) ** n
 
   return (lng: number, lat: number): [number, number] => {
     const φ = lat * DEG
     const λ = lng * DEG
-    const ρ = F / Math.pow(Math.tan(Math.PI / 4 + φ / 2), n)
+    const ρ = F / Math.tan(Math.PI / 4 + φ / 2) ** n
     const x = ρ * Math.sin(n * (λ - λ0))
     const y = ρ0 - ρ * Math.cos(n * (λ - λ0))
     return [x, y]
@@ -50,16 +50,40 @@ function heatColorHex(t: number, baseColor: THREE.Color): string {
 // 省份 GDP 模拟数据 (亿元)
 // ============================================================
 const PROVINCE_GDP: Record<string, number> = {
-  '广东省': 124369, '江苏省': 116364, '山东省': 87435, '浙江省': 77715,
-  '河南省': 61345, '四川省': 53851, '湖北省': 50013, '福建省': 48810,
-  '湖南省': 46063, '上海市': 43215, '安徽省': 43005, '河北省': 40391,
-  '北京市': 40269, '陕西省': 32772, '江西省': 32074, '重庆市': 29129,
-  '辽宁省': 28975, '云南省': 28954, '广西壮族自治区': 26301,
-  '山西省': 23000, '内蒙古自治区': 20500, '贵州省': 20164,
-  '新疆维吾尔自治区': 17742, '天津市': 16311, '黑龙江省': 15884,
-  '吉林省': 13200, '甘肃省': 11201, '海南省': 6475,
-  '宁夏回族自治区': 5069, '青海省': 3615, '西藏自治区': 2139,
-  '香港特别行政区': 28000, '澳门特别行政区': 2500, '台湾省': 48000,
+  广东省: 124369,
+  江苏省: 116364,
+  山东省: 87435,
+  浙江省: 77715,
+  河南省: 61345,
+  四川省: 53851,
+  湖北省: 50013,
+  福建省: 48810,
+  湖南省: 46063,
+  上海市: 43215,
+  安徽省: 43005,
+  河北省: 40391,
+  北京市: 40269,
+  陕西省: 32772,
+  江西省: 32074,
+  重庆市: 29129,
+  辽宁省: 28975,
+  云南省: 28954,
+  广西壮族自治区: 26301,
+  山西省: 23000,
+  内蒙古自治区: 20500,
+  贵州省: 20164,
+  新疆维吾尔自治区: 17742,
+  天津市: 16311,
+  黑龙江省: 15884,
+  吉林省: 13200,
+  甘肃省: 11201,
+  海南省: 6475,
+  宁夏回族自治区: 5069,
+  青海省: 3615,
+  西藏自治区: 2139,
+  香港特别行政区: 28000,
+  澳门特别行政区: 2500,
+  台湾省: 48000,
 }
 
 interface FeatureData {
@@ -230,7 +254,9 @@ export default function Dashboard2() {
     function renderGeo(adcode: string, name?: string) {
       currentAdcodeRef.current = adcode
       currentNameRef.current = name || ''
-      const url = `https://geo.datav.aliyun.com/areas_v3/bound/${adcode}_full.json`
+      // 本地静态 GeoJSON (存放在 public/geo/ 目录下)
+      // 之前直连 geo.datav.aliyun.com 会因防盗链在 HTTPS 部署时报 403
+      const url = `/geo/${adcode}_full.json`
 
       fetch(url)
         .then(r => r.json())
@@ -259,8 +285,12 @@ export default function Dashboard2() {
           let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity
           features.forEach(f => f.polygons.forEach(poly => poly.outer.forEach(([lng, lat]) => {
             const [x, y] = project(lng, lat)
-            if (x < minX) minX = x; if (x > maxX) maxX = x
-            if (y < minY) minY = y; if (y > maxY) maxY = y
+            if (x < minX)
+              minX = x; if (x > maxX)
+              maxX = x
+            if (y < minY)
+              minY = y; if (y > maxY)
+              maxY = y
           })))
 
           const dw = maxX - minX || 1
@@ -281,20 +311,24 @@ export default function Dashboard2() {
           let minVal = Infinity; let maxVal = -Infinity
 
           if (isNational) {
-            features.forEach(f => {
+            features.forEach((f) => {
               const v = PROVINCE_GDP[f.name] ?? 0
               dataMap[f.name] = v
-              if (v < minVal) minVal = v
-              if (v > maxVal) maxVal = v
+              if (v < minVal)
+                minVal = v
+              if (v > maxVal)
+                maxVal = v
             })
           }
           else {
             // 省级: 生成随机模拟数据
-            features.forEach(f => {
+            features.forEach((f) => {
               const v = Math.round(Math.random() * 9000 + 500)
               dataMap[f.name] = v
-              if (v < minVal) minVal = v
-              if (v > maxVal) maxVal = v
+              if (v < minVal)
+                minVal = v
+              if (v > maxVal)
+                maxVal = v
             })
           }
 
@@ -309,12 +343,12 @@ export default function Dashboard2() {
           // ===== 创建 3D 网格 =====
           const EXTRUDE_DEPTH = 0.18
 
-          features.forEach(feat => {
+          features.forEach((feat) => {
             const value = dataMap[feat.name] ?? 0
             const t = maxVal > minVal ? (value - minVal) / (maxVal - minVal) : 0.5
             const color = heatColor(t, baseColor)
 
-            feat.polygons.forEach(polyData => {
+            feat.polygons.forEach((polyData) => {
               const outer = polyData.outer
               if (outer.length < 3)
                 return
@@ -328,7 +362,7 @@ export default function Dashboard2() {
                 }
                 shape.closePath()
 
-                polyData.holes.forEach(hole => {
+                polyData.holes.forEach((hole) => {
                   if (hole.length < 3)
                     return
                   const hp = new THREE.Path()
@@ -504,8 +538,7 @@ export default function Dashboard2() {
 
   // 省名简化
   const shortName = (name: string) =>
-    name.replace('特别行政区', '').replace('壮族自治区', '').replace('回族自治区', '')
-      .replace('维吾尔自治区', '').replace('自治区', '').replace('省', '').replace('市', '')
+    name.replace('特别行政区', '').replace('壮族自治区', '').replace('回族自治区', '').replace('维吾尔自治区', '').replace('自治区', '').replace('省', '').replace('市', '')
 
   const fmtVal = (v: number) => v >= 10000 ? `${(v / 10000).toFixed(2)}万亿` : `${v}亿`
 
