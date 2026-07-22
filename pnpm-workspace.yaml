@@ -55,6 +55,9 @@ catalog:
   vite-plugin-svgr: ^5.2.0
   zustand: ^5.0.14
   zod: ^3.23.0
+  echarts: ^6.1.0
+  three: ^0.185.1
+  '@types/three': ^0.185.1
 allowBuilds:
   '@swc/core': true
   esbuild: true
