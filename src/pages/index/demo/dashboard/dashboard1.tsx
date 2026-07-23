@@ -368,7 +368,7 @@ export default function Dashboard1() {
         tr.data.shift()
       }
       setTrendTick(v => v + 1)
-    }, 2000)
+    }, 1500)
     return () => clearInterval(t)
   }, [])
 
@@ -442,7 +442,7 @@ export default function Dashboard1() {
         {
           name: '净流出',
           type: 'pie',
-          radius: ['38%', '58%'],
+          radius: ['62%', '78%'],
           center: ['32%', '50%'],
           label: { show: false },
           emphasis: { label: { show: true, color: theme.colorTextHeading, fontSize: 11 } },
@@ -736,13 +736,13 @@ export default function Dashboard1() {
               <div ref={trendEl} style={{ width: '100%', height: 280 }} />
             </div>
           </Col>
-          <Col xs={24} lg={5}>
+          <Col xs={24} lg={6}>
             <div className={styles.chartCard} style={{ height: '100%' }}>
               <div className={styles.chartTitle}>板块资金流向 (亿元)</div>
               <div ref={pieEl} style={{ width: '100%', height: 280 }} />
             </div>
           </Col>
-          <Col xs={24} lg={5}>
+          <Col xs={24} lg={4}>
             <div className={styles.chartCard} style={{ height: '100%' }}>
               <div className={styles.chartTitle}>恐慌贪婪指数</div>
               <div ref={gaugeEl} style={{ width: '100%', height: 280 }} />

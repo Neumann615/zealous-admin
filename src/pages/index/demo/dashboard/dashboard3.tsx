@@ -433,8 +433,7 @@ function useChart(el: HTMLDivElement | null): echarts.ECharts | null {
 // 组件
 // ============================================================
 export default function Dashboard3() {
-  const { styles } = useStyles()
-  const theme = useTheme()
+  const { styles, theme } = useStyles()
   const { enterMaximize } = useMaximize()
 
   // ---- 动态状态 ----
@@ -552,7 +551,7 @@ export default function Dashboard3() {
         tr.data.shift()
       }
       setTrendTick(v => v + 1)
-    }, 2000)
+    }, 1500)
     return () => clearInterval(t)
   }, [])
 
@@ -626,7 +625,7 @@ export default function Dashboard3() {
         {
           name: '净流出',
           type: 'pie',
-          radius: ['38%', '58%'],
+          radius: ['62%', '78%'],
           center: ['32%', '50%'],
           label: { show: false },
           emphasis: { label: { show: true, color: theme.colorTextHeading, fontSize: 11 } },
@@ -718,46 +717,39 @@ export default function Dashboard3() {
     })
   }, [industries, theme])
 
-  // ---- ECharts: 各股分布 ----
+  // ---- ECharts: 各股分布（基于实时涨跌幅动态分类）----
   useEffect(() => {
     const chart = useChart(stockDistEl.current)
     if (!chart)
       return
 
-    // 按行业分组股票
-    const industryMap: Record<string, number> = {}
-    stocks.forEach((stock) => {
-      // 简单映射：根据股票代码前缀判断行业
-      let industry = '其他'
-      if (stock.code.startsWith('600') || stock.code.startsWith('601')) {
-        if (stock.name.includes('茅台') || stock.name.includes('五粮液'))
-          industry = '白酒'
-        else if (stock.name.includes('平安') || stock.name.includes('招商'))
-          industry = '金融'
-        else industry = '传统行业'
-      }
-      else if (stock.code.startsWith('000') || stock.code.startsWith('002')) {
-        if (stock.name.includes('比亚迪'))
-          industry = '新能源'
-        else if (stock.name.includes('海康'))
-          industry = '科技'
-        else industry = '制造业'
-      }
-      else if (stock.code.startsWith('300')) {
-        if (stock.name.includes('宁德'))
-          industry = '新能源'
-        else if (stock.name.includes('东方财富'))
-          industry = '金融'
-        else industry = '创业板'
-      }
-      else if (stock.code.startsWith('688')) {
-        industry = '科创板'
-      }
+    // 基于涨跌幅动态分类
+    const categoryMap: Record<string, number> = {
+      '强势上涨': 0,
+      '温和上涨': 0,
+      '震荡整理': 0,
+      '温和下跌': 0,
+      '强势下跌': 0,
+    }
 
-      industryMap[industry] = (industryMap[industry] || 0) + 1
+    stocks.forEach((stock) => {
+      const changePercent = ((stock.price - stock.prevClose) / stock.prevClose) * 100
+
+      if (changePercent >= 3)
+        categoryMap['强势上涨']++
+      else if (changePercent >= 1)
+        categoryMap['温和上涨']++
+      else if (changePercent >= -1)
+        categoryMap['震荡整理']++
+      else if (changePercent >= -3)
+        categoryMap['温和下跌']++
+      else
+        categoryMap['强势下跌']++
     })
 
-    const data = Object.entries(industryMap).map(([name, value]) => ({ name, value }))
+    const data = Object.entries(categoryMap)
+      .filter(([, value]) => value > 0)
+      .map(([name, value]) => ({ name, value }))
 
     chart.setOption({
       tooltip: {
@@ -765,17 +757,17 @@ export default function Dashboard3() {
         formatter: '{b}: {c}只 ({d}%)',
       },
       legend: {
-        orient: 'vertical',
-        left: 'left',
-        top: 'middle',
+        orient: 'horizontal',
+        bottom: 0,
+        left: 'center',
         textStyle: { color: theme.colorTextSecondary, fontSize: 11 },
       },
       series: [
         {
           name: '各股分布',
           type: 'pie',
-          radius: ['40%', '70%'],
-          center: ['65%', '50%'],
+          radius: ['35%', '60%'],
+          center: ['50%', '45%'],
           avoidLabelOverlap: false,
           itemStyle: {
             borderRadius: 6,
@@ -800,7 +792,7 @@ export default function Dashboard3() {
           data,
         },
       ],
-      color: [theme.colorPrimary, theme.colorSuccess, theme.colorWarning, theme.colorError, theme.purple, theme.cyan],
+      color: [theme.colorError, '#FF7875', theme.colorWarning, '#95DE64', theme.colorSuccess],
     })
   }, [stocks, theme])
 
@@ -1162,16 +1154,22 @@ export default function Dashboard3() {
 
   // ---- Resize & Cleanup ----
   useEffect(() => {
-    const handleResize = () => {
-      ;[trendEl, pieEl, gaugeEl, barEl, stockDistEl].forEach((ref) => {
+    const chartRefs = [trendEl, pieEl, gaugeEl, barEl, stockDistEl]
+    const resizeAll = () => {
+      chartRefs.forEach((ref) => {
         if (ref.current)
           echarts.getInstanceByDom(ref.current)?.resize()
       })
     }
-    window.addEventListener('resize', handleResize)
+    // 延迟 resize 确保 flex 容器尺寸已计算完成
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(resizeAll)
+    })
+    window.addEventListener('resize', resizeAll)
     return () => {
-      window.removeEventListener('resize', handleResize)
-      ;[trendEl, pieEl, gaugeEl, barEl, stockDistEl].forEach((ref) => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', resizeAll)
+      chartRefs.forEach((ref) => {
         if (ref.current)
           echarts.getInstanceByDom(ref.current)?.dispose()
       })

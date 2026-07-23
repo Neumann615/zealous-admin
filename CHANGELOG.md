@@ -2,6 +2,9 @@
 
 ## 2026-07-23
 
+- 🔧 **大屏图表优化**（`dashboard1.tsx`、`dashboard3.tsx`）：数据刷新间隔 2s→1.5s，板块资金流向/恐慌贪婪指数列宽调整，净流出饼图外环放大
+- 🔧 **各股分布饼图重构**（`dashboard3.tsx`）：分类逻辑从按行业分组改为按涨跌幅动态分类（强势/温和上涨、震荡整理、温和/强势下跌），图例移至底部水平布局，饼图尺寸调小
+- 🐛 **初始化卡顿与图表显示不全修复**（`dashboard3.tsx`）：合并 `useStyles`/`useTheme` 减少多余渲染，新增 `requestAnimationFrame` 延迟 resize 确保 flex 容器尺寸就绪后再初始化 ECharts
 - ✨ **金融可视化大屏 dashboard3**（`dashboard3.tsx`）：整合 dashboard1/2 内容，Three.js 3D 中国地图 GDP 热力图、省份下钻、多指标动态数据模拟、ECharts 趋势/饼图/仪表盘/柱状图/各股分布、三列布局
 - ✨ **大屏演示2 3D 中国地图**（`dashboard2.tsx`）：Three.js 实现 Lambert 等角圆锥投影、GDP 热力图配色、省份挤出体立体效果、省级下钻回退、OrbitControls 拖拽旋转/滚轮缩放、悬停 tooltip
 - ✨ **新增依赖**（`package.json`、`pnpm-workspace.yaml`）：`echarts ^6.1`、`three ^0.185`、`@types/three`
