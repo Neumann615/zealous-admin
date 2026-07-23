@@ -50,6 +50,7 @@ export default function App() {
   return (
     <LayoutProvider
       menuData={menuData}
+      cachedPages={['/demo/keepalive']}
       // defaultSetting={defaultSetting as LayoutConfig}
     >
       {useRoutes(routes)}

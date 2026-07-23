@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-24
+
+- ✨ **页面 KeepAlive 缓存**（`Content.tsx`、`page.ts`）：双层渲染架构（cachedLayer + transitionLayer），缓存页保持组件状态不丢失，非缓存页保留过渡动画
+- ✨ **缓存配置外部化**（`LayoutProvider.tsx`、`App.tsx`）：新增 `cachedPages` prop，由外部决定缓存页面列表，通过 `setCachedPages` 同步到 store
+
 ## 2026-07-23
 
 - 🔧 **大屏图表优化**（`dashboard1.tsx`、`dashboard3.tsx`）：数据刷新间隔 2s→1.5s，板块资金流向/恐慌贪婪指数列宽调整，净流出饼图外环放大

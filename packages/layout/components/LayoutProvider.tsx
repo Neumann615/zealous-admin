@@ -19,12 +19,14 @@ interface AppLayoutProps {
   defaultSetting?: LayoutConfig
   userInfo?: UserInfoData
   onLogout?: () => void
+  cachedPages?: string[]
 }
 
 export function LayoutProvider({
   children,
   menuData,
   defaultSetting,
+  cachedPages,
 }: AppLayoutProps) {
   const themeStore = useThemeStore()
   const menuStore = useMenuStore()
@@ -73,13 +75,20 @@ export function LayoutProvider({
 
   // menuData 变化时更新菜单数据（登录后 menus 从空变为有值时触发）
   useEffect(() => {
-    console.log('wxx-menuData', menuData)
+    console.log('za-menuData', menuData)
     menuStore.setMainNavData(menuData || [])
     if (!menuStore?.mainNavCurrentKeys?.length && menuData?.length) {
       menuStore.setMainNavCurrentKeys([menuData[0].key])
       menuStore.setMenuData(menuData[0].children || [])
     }
   }, [menuData])
+
+  // 同步外部传入的 cachedPages
+  useEffect(() => {
+    if (cachedPages) {
+      usePageStore.getState().setCachedPages(cachedPages)
+    }
+  }, [cachedPages])
 
   // 监听系统深色模式
   useEffect(() => {
