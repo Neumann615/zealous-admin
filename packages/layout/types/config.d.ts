@@ -63,6 +63,8 @@ export interface LayoutConfig {
   }
   /* 主题配置 */
   theme: {
+    /* 主题类型 */
+    themeType: ThemeType
     /* 主题色 */
     themeColor: string
     /* 暗色模式 */
@@ -163,6 +165,9 @@ export type LayoutScope = 'outside' | 'inside'
 
 /* 菜单布局类型 */
 export type MenuType = 'side' | 'only-side' | 'head' | 'only-head' | 'simple'
+
+/* 主题类型 */
+export type ThemeType = 'default' | 'mui' | 'shadcn' | 'bootstrap' | 'cartoon' | 'illustration' | 'glass' | 'hacker'
 
 /* 暗色模式 */
 export type DarkMode = '1' | '0' | 'auto'

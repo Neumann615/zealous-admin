@@ -1,4 +1,4 @@
-import type { DarkMode, LayoutConfig, LayoutScope, TabBarDblClickEventType, TabBarWidthType } from '../types/config'
+import type { DarkMode, LayoutConfig, LayoutScope, TabBarDblClickEventType, TabBarWidthType, ThemeType } from '../types/config'
 import _defaultSetting from '../defaultSetting'
 import { useAppStore, useMenuStore, usePageStore, useThemeStore, useTopBarStore } from '../store/index'
 import {
@@ -12,6 +12,7 @@ import {
   tabBarStyleList,
   tabBarWidthTypeList,
   themeColorList,
+  themeTypeList,
   topBarPositionList,
   transitionTypeList,
 } from '../utils/index'
@@ -75,6 +76,7 @@ export function useLayoutSetting() {
     // ===== theme 主题 =====
     const randomColor = pickRandom(themeColorList)
     const randomDarkMode: DarkMode = pickRandom(['0', '1', 'auto'])
+    const randomThemeType: ThemeType = pickRandom(themeTypeList).value
 
     // ===== menu 菜单 =====
     const randomMenuType = pickRandomValue(menuTypeList)
@@ -125,6 +127,7 @@ export function useLayoutSetting() {
         },
       },
       theme: {
+        themeType: randomThemeType,
         themeColor: randomColor,
         darkMode: randomDarkMode,
       },

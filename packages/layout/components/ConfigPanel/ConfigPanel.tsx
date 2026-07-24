@@ -1,4 +1,4 @@
-import type { ExpireMode, MenuType } from '../../types/config'
+import type { ExpireMode, MenuType, ThemeType } from '../../types/config'
 import {
   BgColorsOutlined,
   CopyOutlined,
@@ -34,6 +34,7 @@ import {
   tabBarStyleList,
   tabBarWidthTypeList,
   themeColorList,
+  themeTypeList,
   topBarPositionList,
   transitionTypeList,
 } from '../../utils/index'
@@ -493,14 +494,37 @@ export default defaultSetting`
     }
   }
 
+  const isCustomTheme = defaultSetting.theme.themeType !== 'default'
+
   const renderThemeConfig = () => (
     <Card key="theme" title="主题">
       <div className={styles.cardContent}>
+        <Row align="middle" className={styles.configItem}>
+          <Col flex={1} className={styles.moduleLable}>
+            主题类型
+          </Col>
+          <Col>
+            <Select
+              value={defaultSetting.theme.themeType}
+              onChange={(v: ThemeType) => {
+                setDefaultSetting({
+                  ...defaultSetting,
+                  theme: { ...defaultSetting.theme, themeType: v },
+                })
+              }}
+              options={themeTypeList}
+              style={{ width: 140 }}
+            >
+            </Select>
+          </Col>
+        </Row>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
             gap: 8,
+            opacity: isCustomTheme ? 0.4 : 1,
+            pointerEvents: isCustomTheme ? 'none' : 'auto',
           }}
         >
           {themeColorList.map((color: string | undefined) => {
@@ -540,23 +564,26 @@ export default defaultSetting`
           <Col flex={1} className={styles.moduleLable}>
             颜色方案
           </Col>
-          <Segmented
-            options={[
-              { value: '0', icon: <SunOutlined /> },
-              { value: '1', icon: <MoonOutlined /> },
-              { value: 'auto', icon: <SyncOutlined /> },
-            ]}
-            value={defaultSetting.theme.darkMode}
-            onChange={(v: string) => {
-              setDefaultSetting({
-                ...defaultSetting,
-                theme: {
-                  ...defaultSetting.theme,
-                  darkMode: v,
-                },
-              })
-            }}
-          />
+          <Col>
+            <Segmented
+              options={[
+                { value: '0', icon: <SunOutlined /> },
+                { value: '1', icon: <MoonOutlined /> },
+                { value: 'auto', icon: <SyncOutlined /> },
+              ]}
+              value={defaultSetting.theme.darkMode}
+              disabled={isCustomTheme}
+              onChange={(v: string) => {
+                setDefaultSetting({
+                  ...defaultSetting,
+                  theme: {
+                    ...defaultSetting.theme,
+                    darkMode: v,
+                  },
+                })
+              }}
+            />
+          </Col>
         </Row>
 
         <Row align="middle" className={styles.configItem}>

@@ -10,6 +10,7 @@ import {
   useThemeStore,
   useTopBarStore,
 } from '../store/index'
+import { useThemeByType } from '../themeMap'
 import { AppMessageProvider } from './AppMessageProvider'
 
 interface AppLayoutProps {
@@ -34,7 +35,7 @@ export function LayoutProvider({
     () => window.matchMedia('(prefers-color-scheme: dark)').matches,
   )
 
-  // 计算全局主题算法
+  // 计算全局主题算法（仅 default 主题生效）
   const globalAlgorithm = useMemo(() => {
     const algorithmData = []
     if (
@@ -45,6 +46,24 @@ export function LayoutProvider({
     }
     return algorithmData
   }, [themeStore.darkMode, systemDarkMode])
+
+  // 自定义主题配置（default 返回空对象，其他主题返回完整 ConfigProviderProps）
+  const themeType = themeStore.themeType
+  const isDefaultTheme = themeType === 'default'
+  const customThemeProps = useThemeByType(themeType)
+
+  // 最终 ConfigProvider 配置：default 沿用原有逻辑，其他主题透传
+  const themeConfig = useMemo(() => {
+    if (!isDefaultTheme) {
+      return customThemeProps
+    }
+    return {
+      theme: {
+        algorithm: globalAlgorithm,
+        token: { colorPrimary: themeStore.themeColor },
+      },
+    }
+  }, [isDefaultTheme, customThemeProps, globalAlgorithm, themeStore.themeColor])
 
   // 哀悼模式 色弱模式
   useEffect(() => {
@@ -102,10 +121,7 @@ export function LayoutProvider({
     <StyleProvider>
       <ConfigProvider
         locale={zhCN}
-        theme={{
-          algorithm: globalAlgorithm,
-          token: { colorPrimary: themeStore.themeColor },
-        }}
+        {...themeConfig}
       >
         <App>
           <AppMessageProvider>

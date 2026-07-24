@@ -35,6 +35,7 @@ const defaultSetting: LayoutConfig = {
     },
   },
   theme: {
+    themeType: 'default',
     themeColor: '#2f54eb',
     darkMode: 'auto',
     compactMode: false,

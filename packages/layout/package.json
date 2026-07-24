@@ -19,6 +19,7 @@
     "@ant-design/icons": "catalog:",
     "@hello-pangea/dnd": "catalog:",
     "@tanem/react-nprogress": "catalog:",
+    "@zealous-admin/theme": "workspace:*",
     "ahooks": "catalog:",
     "animate.css": "catalog:",
     "antd": "catalog:",

@@ -1,4 +1,7 @@
 export { useBootstrapTheme } from './bootstrapTheme.ts'
+export { useCartoonTheme } from './cartoonTheme.ts'
 export { useGlassTheme } from './glassTheme.ts'
+export { useHackerTheme } from './hackerTheme.ts'
 export { useIllustrationTheme } from './illustrationTheme.ts'
 export { useMuiTheme } from './muiTheme.ts'
+export { useShadcnTheme } from './shadcnTheme.ts'

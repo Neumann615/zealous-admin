@@ -8,6 +8,10 @@
 - ✨ **401 过期模式分流与重新登录弹窗**（`http.ts`、`ReLoginModal.tsx`、`reLogin.ts`）：`expireMode=logout` 直接退出，`expireMode=prompt` 弹窗重新输入用户名密码；2s 延时确保用户看到错误提示后再执行
 - 🔧 **外部引用收敛**（`Layout.tsx`、`UserInfo.tsx`、7 个页面文件）：api/类型/工具统一从 `@zealous-admin/layout` 导入，UserInfo 移除 props 内部闭环，`Layout` 零参数渲染
 - 🗑️ **src/utils/、src/types/、src/store/mall/ 清空**（15 个文件，~672 行）：所有已迁移文件全部删除
+- ✨ **多主题类型系统**（`themeMap.ts`、`config.d.ts`、`data.ts`）：新增 `ThemeType` 类型和 `useThemeByType` 映射 Hook，支持 default/mui/bootstrap/glass/illustration/cartoon/shadcn/hacker 八种主题
+- ✨ **主题类型选择器与权限控制**（`ConfigPanel.tsx`）：新增主题类型下拉框；非 default 主题时禁用主题色选择和暗色模式切换
+- 🔧 **LayoutProvider 主题路由**（`LayoutProvider.tsx`）：default 沿用原逻辑（主题色 + 暗色可切换），其他主题透传固定主题配置
+- ✨ **theme 包新增 3 套主题**（`cartoonTheme.ts`、`hackerTheme.ts`、`shadcnTheme.ts`）：卡通漫画风重写为珊瑚红 + 粗描边 + 偏移投影风格，黑客/Shadcn
 
 ## 2026-07-23
 

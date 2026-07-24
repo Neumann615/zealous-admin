@@ -2,6 +2,7 @@ import type {
   ExpireMode,
   LayoutScope,
   TabBarDblClickEventType,
+  ThemeType,
 } from '../types/config'
 import {
   blue,
@@ -32,6 +33,17 @@ export const themeColorList = [
   magenta.primary,
   lime.primary,
   gold.primary,
+]
+
+export const themeTypeList: Array<{ label: string, value: ThemeType }> = [
+  { label: '默认', value: 'default' },
+  { label: '插画', value: 'illustration' },
+  { label: '卡通', value: 'cartoon' },
+  { label: 'Shadcn', value: 'shadcn' },
+  { label: '黑客', value: 'hacker' },
+  { label: 'MUI', value: 'mui' },
+  { label: 'Bootstrap', value: 'bootstrap' },
+  { label: '玻璃', value: 'glass' },
 ]
 
 export const menuFillStyleList = ['none', 'radius']
