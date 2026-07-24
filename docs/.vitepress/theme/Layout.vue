@@ -30,7 +30,7 @@ onMounted(() => {
     'flower',
   ]
 
-  for (let i = 0; i < 45; i++) {
+  for (let i = 0; i < 60; i++) {
     const sparkle = document.createElement('span')
     sparkle.className = `sparkle-particle ${shapes[i % shapes.length]}`
     // Randomize vertical start position for natural distribution

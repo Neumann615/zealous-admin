@@ -1,19 +1,17 @@
-﻿# Zealous-admin
+# Zealous-admin
 
 一个基于 React + Vite + Ant Design 构建的现代化后台管理系统模板。
 
 ## 功能特性
 
-- 🎨 **主题系统** - 支持亮色/暗色/跟随系统模式切换，12 种主题色，紧凑模式，色弱模式，快乐特效
-- 📐 **5 种布局模式** - side / only-side / head / only-head / simple，适配不同业务场景
-- 📏 **布局居中显示** - 支持 inside（仅内容区）/ outside（全局）两种居中作用范围，自定义居中宽度
-- 🎲 **风格实验室** - 一键随机切换所有视觉配置，快速探索框架风格组合
-- 🔧 **可视化配置面板** - 实时预览效果，支持复制配置导出
-- 🏷️ **多标签页导航** - 拖拽排序、右键菜单、固定标签、3 种风格，支持上下布局适配
-- 🌐 **语言切换** - 工具栏支持多语言切换入口
-- 📦 **状态管理** - 基于 Zustand 的轻量级状态管理，支持 localStorage 持久化
-- 🎯 **权限控制** - 路由权限与菜单权限控制
-- 🧩 **组件库** - 内置 9 个自定义组件（图标选择器、跑马灯、流光文字、滑块验证码、图案背景等）
+- 🎨 **8 套主题** — default 支持亮色/暗色/跟随系统 + 主题色自由切换；MUI/Bootstrap/Glass/Illustration/Cartoon/Shadcn/Hacker 七种定制主题一键应用
+- 📐 **5 种布局 + 移动端响应式** — side / only-side / head / only-head / simple + 居中显示（inside/outside），窄屏自动切换 Drawer 抽屉菜单
+- � **自包含权限体系** — 登录/登出/用户信息全部封装在 layout 包，401 过期自动分流（logout / prompt），HTTP 拦截器内置 token 注入
+- 🔧 **可视化配置面板** — 50+ 配置项实时预览，风格实验室一键随机切换所有视觉配置，支持复制配置导出为 TypeScript 代码
+- 🏷️ **多标签页导航** — 拖拽排序、右键菜单、固定标签、图标激活态切换、3 种风格，支持上下布局适配
+- 🧩 **8 个业务组件** — 图标选择器（32 个图标库）、链接预览、Markdown 渲染、跑马灯、图案背景、流光文字、滑块验证码、闪烁文字
+- 🧠 **页面 KeepAlive** — 双层渲染架构，缓存页保持组件状态不丢失，非缓存页保留过渡动画，外部配置缓存列表
+- 🗄️ **内置后端服务** — Express + SQLite，用户/角色/菜单/字典完整 CRUD，JWT 认证，菜单 path 自动计算
 
 ## 技术栈
 
@@ -29,21 +27,22 @@
 - [Ant Design Charts](https://ant-design-charts.antgroup.com/) - 图表组件
 - [Ant Design Style](https://ant-design.github.io/antd-style/) - CSS-in-JS 样式方案
 
+### 图标
+- [react-icons](https://react-icons.github.io/react-icons/) - 32+ 图标库集合
+- [@icon-park/react](https://iconpark.oceanengine.com/) - IconPark 图标
+- [@ant-design/icons](https://ant.design/components/icon-cn) - Ant Design 图标
+
 ### 工具库
 - [ahooks](https://ahooks.js.org/) - React Hooks 工具库
 - [axios](https://axios-http.com/) - HTTP 请求库
-- [classnames](https://github.com/JedWatson/classnames) - 样式类名拼接
 - [@hello-pangea/dnd](https://github.com/hello-pangea/dnd) - 拖拽功能
 - [react-syntax-highlighter](https://github.com/react-syntax-highlighter/react-syntax-highlighter) - 代码高亮
 
 ### 图表与图形
 - [@antv/g6](https://g6.antv.antgroup.com/) - 图可视化引擎
 - [react-grid-layout](https://github.com/react-grid-layout/react-grid-layout) - 可拖拽网格布局
-
-### 图标
-- [react-icons](https://react-icons.github.io/react-icons/) - 32+ 图标库集合
-- [@icon-park/react](https://iconpark.oceanengine.com/) - IconPark 图标
-- [@ant-design/icons](https://ant.design/components/icon-cn) - Ant Design 图标
+- [ECharts](https://echarts.apache.org/) - 数据可视化图表
+- [Three.js](https://threejs.org/) - 3D 图形渲染
 
 ### 动画效果
 - [Animate.css](https://animate.style/) - CSS 动画库
@@ -52,8 +51,12 @@
 
 ### 其他
 - [React Markdown](https://github.com/remarkjs/react-markdown) - Markdown 渲染
-- [CodeMirror](https://codemirror.net/) - 代码编辑器
 - [Tailwind CSS](https://tailwindcss.com/) - 实用优先 CSS 框架
+
+### 后端
+- [Express](https://expressjs.com/) - Node.js Web 框架
+- [node:sqlite](https://nodejs.org/api/sqlite.html) - 内置 SQLite 数据库
+- [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) - JWT 认证
 
 ## 快速开始
 
@@ -66,7 +69,11 @@ pnpm install
 ### 启动开发服务器
 
 ```bash
+# 前端（端口 3509）
 pnpm dev
+
+# 后端服务（端口 3508）
+cd service && pnpm dev
 ```
 
 ### 构建生产版本
@@ -75,175 +82,216 @@ pnpm dev
 pnpm build
 ```
 
-### 预览生产版本
+### 构建子包（库模式）
 
 ```bash
-pnpm preview
-```
-
-### 代码检查
-
-```bash
-pnpm lint
+pnpm build:lib
 ```
 
 ## 项目结构
 
 ```
 zealous-admin/
-├── docs/                        # 文档
+├── docs/                        # 文档站（VitePress）
 │   ├── components/              # 组件文档
 │   ├── guide/                   # 指南文档
 │   ├── layout/                  # 布局文档
 │   └── theme/                   # 主题文档
 ├── packages/                    # 子包（Monorepo）
-│   ├── components/              # 组件库
-│   │   ├── IconPicker/          # 图标选择器
-│   │   ├── LinkPreview/         # 链接预览
+│   ├── components/              # 通用组件库
+│   │   ├── IconPicker/          # 图标选择器 + 渲染器
+│   │   ├── LinkPreview/         # 链接悬停预览
 │   │   ├── Markdown/            # Markdown 渲染
-│   │   ├── Marquee/             # 跑马灯
+│   │   ├── Marquee/             # 跑马灯滚动
 │   │   ├── PatternBg/           # 图案背景
 │   │   ├── ShinyText/           # 流光文字
 │   │   ├── SliderCaptcha/       # 滑块验证码
-│   │   └── SparklesText/        # 闪烁文字
-│   ├── layout/                  # 布局包
-│   │   ├── components/          # 布局组件
-│   │   │   ├── Breadcrumb/      # 面包屑
-│   │   │   ├── ConfigPanel/     # 配置面板
-│   │   │   ├── Header/          # 头部
-│   │   │   ├── TabBar/          # 标签栏
-│   │   │   ├── Toolbar/         # 工具栏
-│   │   │   ├── UserInfo/        # 用户信息
-│   │   │   └── ...
-│   │   ├── hooks/               # 自定义 Hooks
-│   │   ├── store/               # 状态管理
-│   │   └── utils/               # 工具函数
-│   └── theme/                   # 主题包
-│       ├── bootstrapTheme.ts    # Bootstrap 主题
-│       ├── glassTheme.ts        # 玻璃拟态主题
-│       ├── illustrationTheme.ts # 插画主题
-│       └── muiTheme.ts          # Material UI 主题
+│   │   └── SparklesText/        # 闪烁粒子文字
+│   ├── layout/                  # 布局核心包
+│   │   ├── components/          # 21 个布局组件
+│   │   ├── hooks/               # 7 个自定义 Hooks
+│   │   ├── store/               # 7 个 Zustand Store
+│   │   ├── types/               # 6 个类型定义
+│   │   ├── utils/               # HTTP 实例 + 工具函数
+│   │   ├── themeMap.ts          # 主题类型映射
+│   │   └── defaultSetting.ts    # 默认布局配置
+│   └── theme/                   # 主题包（7 套预设主题）
+│       ├── bootstrapTheme.ts    # Bootstrap 经典
+│       ├── cartoonTheme.ts      # 卡通漫画风
+│       ├── glassTheme.ts        # 毛玻璃
+│       ├── hackerTheme.ts       # 黑客终端
+│       ├── illustrationTheme.ts # 手绘插画
+│       ├── muiTheme.ts          # Material Design 3
+│       └── shadcnTheme.ts       # shadcn/ui
+├── service/                     # 后端 API 服务
+│   └── src/
+│       ├── db/                  # SQLite 数据库
+│       ├── lib/                 # JWT、日期、响应格式
+│       ├── middleware/          # 认证中间件
+│       └── routes/              # admin/dict/menu/role 路由
 ├── src/                         # 主应用
-│   ├── apis/                    # API 接口
-│   ├── assets/                  # 静态资源
-│   ├── pages/                   # 页面组件
-│   │   ├── index/               # 首页
-│   │   └── mall/                # 商城管理
-│   ├── store/                   # 应用状态
-│   ├── types/                   # TypeScript 类型定义
-│   ├── utils/                   # 工具函数
+│   ├── apis/                    # API 请求层（admin/dict/menu/role）
+│   ├── pages/                   # 页面
+│   │   ├── login.tsx            # 登录页
+│   │   ├── index.tsx            # 主入口路由
+│   │   └── index/
+│   │       ├── demo/            # 演示页面（组件/Dashboard/功能）
+│   │       └── system/          # 系统管理（用户/角色/菜单/字典）
 │   ├── App.tsx                  # 应用入口
-│   └── main.tsx                 # 入口文件
+│   └── main.tsx                 # 启动文件
 ├── public/                      # 静态资源
 ├── pnpm-workspace.yaml          # pnpm 工作区配置
-├── vite.config.ts               # Vite 主配置
-├── tsconfig.json                # TypeScript 配置
 └── package.json                 # 根目录依赖
 ```
 
 ## 子包说明
 
-### @zealous-admin/components
-
-提供丰富的自定义 UI 组件：
-
-- **ZaIcon** - 动态图标渲染器，支持 32+ 个主流图标库
-- **ZaIconPicker** - 图标选择器，带侧边栏搜索和网格浏览
-- **ZaLinkPreview** - 链接悬停预览卡片
-- **ZaMarkdown** - Markdown 渲染组件
-- **ZaMarquee** - 跑马灯/无限滚动
-- **ZaPatternBg** - 图案背景（grid/dot 两种图案）
-- **ZaShinyText** - 流光文字动效
-- **ZaSliderCaptcha** - 滑块验证码（3 种模式）
-- **ZaSparklesText** - 闪烁粒子文字动效
-
 ### @zealous-admin/layout
 
-提供完整的布局系统：
+布局核心包，提供完整的后台管理系统骨架。是一个**自包含**的基础设施层，外部只需关注页面逻辑本身。
 
-- **Layout** - 主布局组件
-- **LayoutProvider** - 布局配置提供者
-- **Header** - 头部组件（集成 TabBar 和 Toolbar）
-- **TabBar** - 标签栏管理
-- **Toolbar** - 工具栏（面包屑、全屏、主题切换）
-- **Breadcrumb** - 面包屑导航
-- **UserInfo** - 用户信息组件
+| 模块 | 说明 |
+|------|------|
+| **Layout** | 零参数渲染的布局外壳，UserInfo 内部闭环获取用户信息/登出 |
+| **LayoutProvider** | 上下文提供者，初始化主题/菜单/页面等全部状态 |
+| **http** | Axios 实例，内置 token 注入、401 过期分流（logout/prompt） |
+| **user store** | 用户信息 + 登录/登出/获取用户信息 API |
+| **useAuth** | 登录/登出 Hook + 命令式方法（loginAction/logoutAction） |
+| **ReLoginModal** | 401 过期重新登录弹窗 |
+| **ConfigPanel** | 可视化配置面板，支持主题类型切换 |
+| **KeepAlive** | 页面缓存保持组件状态 |
+| **Search** | 全局路由搜索 |
+
+**导出清单**：
+
+```tsx
+// 组件
+import { Layout, LayoutProvider, Logo } from '@zealous-admin/layout'
+
+// Hooks
+import {
+  useAppMessage, useControlTab, useFireworks,
+  useLayoutSetting, useMaximize,
+  useLogin, useLogout, useThemeByType,
+} from '@zealous-admin/layout'
+
+// 命令式方法
+import { loginAction, logoutAction } from '@zealous-admin/layout'
+
+// 状态
+import { useAppStore, useUserStore, useThemeStore, useMenuStore, usePageStore, useTopBarStore } from '@zealous-admin/layout'
+
+// 类型（type-only export）
+import type { Admin, CommonResult, CommonPage, LoginParam, UserInfo, Menu, Role, DictType, DictData, LayoutConfig } from '@zealous-admin/layout'
+
+// HTTP 实例
+import { http } from '@zealous-admin/layout'
+```
 
 ### @zealous-admin/theme
 
-提供多种预设主题风格：
+提供 7 套独立主题 Hook + default 默认主题，通过 `useThemeByType` 自动映射，在 ConfigPanel 中一键切换。
 
-- **useBootstrapTheme** - Bootstrap 风格主题
-- **useGlassTheme** - 玻璃拟态主题
-- **useIllustrationTheme** - 插画风格主题
-- **useMuiTheme** - Material UI 风格主题
+| 主题 | Hook | 设计风格 |
+|------|------|----------|
+| Default | — | 默认主题，支持主题色/暗色自定义 |
+| MUI | `useMuiTheme` | Material Design 3，波纹动效 |
+| Bootstrap | `useBootstrapTheme` | Bootstrap 经典，渐变按钮 |
+| Glass | `useGlassTheme` | 毛玻璃拟态，半透明模糊 |
+| Illustration | `useIllustrationTheme` | 手绘插画风，粗描边 |
+| Cartoon | `useCartoonTheme` | 卡通漫画风，珊瑚红 + 偏移投影 |
+| Shadcn | `useShadcnTheme` | shadcn/ui 极简风格 |
+| Hacker | `useHackerTheme` | 黑客终端，绿色矩阵 |
+
+### @zealous-admin/components
+
+提供 8 个通用业务组件：
+
+- **ZaIcon** — 动态图标渲染器，支持 32+ 个图标库
+- **ZaIconPicker** — 图标选择器，侧边栏搜索 + 网格浏览
+- **ZaLinkPreview** — 链接悬停预览卡片
+- **ZaMarkdown** — Markdown 渲染组件
+- **ZaMarquee** — 跑马灯/无限滚动
+- **ZaPatternBg** — 图案背景（grid/dot）
+- **ZaShinyText** — 流光文字动效
+- **ZaSliderCaptcha** — 滑块验证码（3 种模式）
+- **ZaSparklesText** — 闪烁粒子文字动效
 
 ## 配置说明
 
 ### 布局配置
 
-在 `packages/layout/defaultSetting.ts` 中可以修改默认配置，共计 50+ 配置项：
+在 `packages/layout/defaultSetting.ts` 中修改默认配置，共计 50+ 配置项：
 
 ```typescript
-// 常用配置示例
 const defaultSetting: LayoutConfig = {
   app: {
-    layout: {
-      isCenter: false, // 是否居中显示
-      layoutScope: 'outside', // 居中作用范围: 'outside' | 'inside'
-      width: 1200, // 居中宽度 (px)
-    },
+    name: 'zealous-admin',
+    layout: { isCenter: false, layoutScope: 'outside', width: 1200 },
+    account: { isEnablePermission: false, expireMode: 'logout' },
+    isEnableDynamicTitle: true,
+    isEnableMobileAccess: true,
   },
   theme: {
-    themeColor: '#2f54eb',
-    darkMode: 'auto', // '0' | '1' | 'auto'
+    themeType: 'default',      // 主题类型（default 支持主题色/暗色切换）
+    themeColor: '#2f54eb',     // 仅 default 主题生效
+    darkMode: 'auto',          // '0' | '1' | 'auto'
     compactMode: false,
     happyEffect: false,
   },
   menu: {
-    menuType: 'side', // 布局模式
-    menuActiveStyle: 'dot', // 激活指示: 'none' | 'arrow' | 'line' | 'dot'
+    menuType: 'side',
+    menuActiveStyle: 'dot',
     subMenuUniqueOpened: false,
+    isEnableSubMenuCollapse: true,
   },
   page: {
     transitionType: 'fade-in',
     isEnablePageLoadProgress: true,
   },
   topBar: {
+    order: ['TabBar', 'Toolbar'],
+    tabBar: { isEnableTabBar: true, style: 'card', showIcon: true },
     toolbar: {
-      breadcrumb: {
-        isEnableBreadcrumb: true,
-        style: 'modern',
-      },
+      isEnableToolbar: true,
+      breadcrumb: { isEnableBreadcrumb: true, style: 'modern' },
     },
   },
 }
 ```
 
-### 路由配置
+## 后端服务
 
-基于文件系统的路由，在 `src/pages/` 目录下创建文件即可自动生成路由。
+项目内置 Express + SQLite 后端，提供完整的 RBAC API：
+
+| 模块 | 路由 | 说明 |
+|------|------|------|
+| 认证 | `POST /admin/login`、`/admin/logout`、`GET /admin/info` | JWT 登录/登出/获取用户信息 |
+| 管理员 | `GET/POST/PUT/DELETE /admin/:id` | 用户 CRUD |
+| 角色 | `GET/POST/PUT/DELETE /role/:id` | 角色 CRUD + 菜单分配 |
+| 菜单 | `GET/POST/PUT/DELETE /menu/:id` | 菜单 CRUD + path 自动计算 |
+| 字典 | `GET/POST/PUT/DELETE /dict-type/:id`、`/dict-data/:id` | 字典类型 + 字典数据管理 |
+
+```bash
+# 启动后端
+cd service && pnpm dev
+
+# 默认账号
+# admin / admin123（管理员）
+# test / test123（测试用户）
+```
 
 ## 开发指南
 
 ### Git 提交规范
 
-```bash
-git add .
-git commit -m "feat: 添加新功能"
-git push origin main
-```
-
-### Commit 类型
-
-- `feat`: 新功能
-- `fix`: 修复 Bug
-- `docs`: 文档更新
-- `style`: 代码格式调整
-- `refactor`: 代码重构
-- `perf`: 性能优化
-- `test`: 测试相关
-- `chore`: 构建/工具相关
+| 类型 | 说明 |
+|------|------|
+| `feat` | 新功能 |
+| `fix` | 修复 Bug |
+| `refactor` | 代码重构 |
+| `docs` | 文档更新 |
+| `chore` | 构建/工具相关 |
 
 ## 浏览器支持
 
@@ -255,7 +303,3 @@ git push origin main
 ## License
 
 [MIT](LICENSE)
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request。

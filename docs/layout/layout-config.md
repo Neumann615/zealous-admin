@@ -70,8 +70,9 @@ LayoutConfig
 
 | 属性 | 说明 | 类型 | 默认值 |
 |------|------|------|--------|
-| themeColor | 主题色（HEX） | `string` | `'#1677ff'` |
-| darkMode | 暗色模式 | `'1'` (开) \| `'0'` (关) \| `'auto'` (跟随系统) | `'0'` |
+| themeType | 主题类型 | `'default' \| 'mui' \| 'bootstrap' \| 'glass' \| 'illustration' \| 'cartoon' \| 'shadcn' \| 'hacker'` | `'default'` |
+| themeColor | 主题色（HEX，仅 default 主题生效） | `string` | `'#1677ff'` |
+| darkMode | 暗色模式（仅 default 主题生效） | `'1'` (开) \| `'0'` (关) \| `'auto'` (跟随系统) | `'0'` |
 | compactMode | 紧凑模式（减小间距） | `boolean` | `false` |
 | colorWeak | 色弱模式 | `boolean` | `false` |
 | happyEffect | 快乐效果（@ant-design/happy-work-theme） | `boolean` | `false` |

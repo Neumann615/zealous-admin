@@ -1,4 +1,4 @@
-﻿---
+---
 layout: home
 
 hero:
@@ -21,36 +21,36 @@ hero:
 
 features:
   - icon: 🎨
-    title: 4 套精美主题
-    details: Bootstrap 经典 · Glass 毛玻璃 · Illustration 插画风 · MUI Material Design 3，切换主题就像换皮肤一样简单。
+    title: 8 套精美主题
+    details: Default 支持主题色/暗色自定义 + MUI / Bootstrap / Glass / Illustration / Cartoon / Shadcn / Hacker 七种定制主题一键切换。
     link: /theme/
   - icon: 📐
     title: 5 种布局 + 移动端响应式
-    details: side / only-side / head / only-head / simple + 移动端自动 Drawer 抽屉菜单，窄屏自动切换，桌面端面包屑自动隐藏。
+    details: side / only-side / head / only-head / simple + 居中显示（inside/outside），窄屏自动 Drawer 抽屉，菜单 activeIcon 链路级联高亮。
     link: /layout/layout-modes
-  - icon: 🖼️
-    title: 菜单激活图标系统
-    details: 选中菜单时图标自动切换为 activeIcon，父节点链路级联高亮，标签页同步切换，视觉反馈清晰直观。
-    link: /layout/menu-system
-  - icon: 🧩
-    title: 9 个业务组件
-    details: 图标选择器（32 个图标库）· 链接预览 · Markdown 渲染 · 跑马灯 · 图案背景 · 流光文字 · 滑块验证码 · 闪烁文字
-    link: /components/
+  - icon: 🔐
+    title: 自包含权限体系
+    details: 登录/登出/用户状态全部封装在 layout 包，401 过期自动分流（logout / prompt），HTTP 拦截器内置 token 注入。
+    link: /layout/
   - icon: 🔧
     title: 50+ 可视化配置
-    details: 覆盖 App · Theme · Menu · Page · TopBar 五维度，居中布局（inside/outside）、所见即所得，实时预览。
+    details: 覆盖 App · Theme · Menu · Page · TopBar 五维度，主题类型切换、风格实验室一键随机，所见即所得，复制配置导出为 TypeScript 代码。
     link: /layout/layout-config
   - icon: 🏷️
     title: 多标签页导航
     details: 拖拽排序 · 右键菜单 · 固定标签 · 图标激活态切换 · 三种风格 (default / card / block)，像浏览器一样管理页面。
     link: /layout/tab-bar
+  - icon: 🧩
+    title: 8 个业务组件
+    details: 图标选择器（32 个图标库）· 链接预览 · Markdown 渲染 · 跑马灯 · 图案背景 · 流光文字 · 滑块验证码 · 闪烁文字
+    link: /components/
+  - icon: 🧠
+    title: 页面 KeepAlive 缓存
+    details: 双层渲染架构，缓存页保持组件状态不丢失，非缓存页保留过渡动画，外部配置缓存列表。
+    link: /layout/
   - icon: 🗄️
     title: 内置后端服务
     details: Express + node:sqlite，用户/角色/导航/字典完整 CRUD，JWT 认证，菜单 path 自动计算。
-    link: /guide/
-  - icon: ⚡
-    title: 最新技术栈
-    details: React 19 + Vite 8 + TypeScript 5 + Ant Design 6 + Zustand 5 + React Router 7
     link: /guide/
 ---
 

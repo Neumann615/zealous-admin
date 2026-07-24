@@ -1,4 +1,4 @@
-﻿# 快速开始
+# 快速开始
 
 本指南将帮助你在本地启动 zealous-admin 开发环境，并了解三个核心包的基本用法。
 
@@ -44,9 +44,11 @@ const config: LayoutConfig = {
   app: {
     name: 'zealous-admin',
     logo: '/logo.svg',
+    account: { expireMode: 'logout' }, // 401 过期行为: 'logout' 直接退出 | 'prompt' 弹窗重登
   },
   theme: {
-    themeColor: '#1677ff',
+    themeType: 'default', // 主题类型: default/mui/bootstrap/glass/illustration/cartoon/shadcn/hacker
+    themeColor: '#1677ff', // 仅 default 主题生效
     darkMode: '0',
   },
   menu: {
@@ -75,6 +77,35 @@ function App() {
     >
       <Layout />
     </LayoutProvider>
+  )
+}
+```
+
+### 使用登录/登出
+
+```tsx
+import { useLogin, useLogout, useUserStore } from '@zealous-admin/layout'
+
+function LoginPage() {
+  const { login, loading } = useLogin()
+
+  const handleLogin = async () => {
+    const success = await login({ username: 'admin', password: 'admin123' })
+    if (success) {
+      // 登录成功，跳转首页
+    }
+  }
+}
+
+function Header() {
+  const { logout } = useLogout()
+  const userInfo = useUserStore(state => state.userInfo)
+
+  return (
+    <div>
+      <span>{userInfo.nickName}</span>
+      <button onClick={logout}>退出登录</button>
+    </div>
   )
 }
 ```
@@ -111,8 +142,18 @@ function App() {
 }
 ```
 
+### 使用 HTTP 实例
+
+```tsx
+import { http } from '@zealous-admin/layout'
+
+// http 已内置 token 注入和 401 过期处理
+const res = await http<YourType>({ method: 'GET', url: '/admin/info' })
+```
+
 ## 下一步
 
 - 查看 [组件文档](/components/) 了解所有可用组件及其 API
 - 查看 [布局配置](/layout/layout-config) 了解完整的配置选项
-- 查看 [主题系统](/theme/) 了解 4 套内置主题
+- 查看 [主题系统](/theme/) 了解 8 套内置主题
+- 查看 [布局系统](/layout/) 了解 Layout/Store/Hooks 完整 API
