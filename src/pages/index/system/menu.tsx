@@ -1,7 +1,8 @@
+import type { Menu, MenuNode } from '@zealous-admin/layout/index'
 import type { TableColumnsType } from 'antd'
-import type { Menu, MenuNode } from '@/types/menu'
 import { PlusOutlined } from '@ant-design/icons'
 import { ZaIcon, ZaIconPicker } from '@zealous-admin/components/index'
+import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
   Card,
@@ -22,7 +23,6 @@ import {
   menuCreateAPI,
   updateMenu,
 } from '@/apis/menu'
-import { useAppMessage } from '@/hooks/useAppMessage'
 
 export default function SystemMenu() {
   const { message, modal } = useAppMessage()

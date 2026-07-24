@@ -1,4 +1,3 @@
-import type { UserInfoData } from './UserInfo/UserInfo'
 import { ConfigProvider, Drawer } from 'antd'
 import { createStyles } from 'antd-style'
 import { useEffect } from 'react'
@@ -13,6 +12,7 @@ import { Header } from './Header/Header'
 import { MainNav } from './MainNav/MainNav'
 import { Menu } from './Menu/Menu'
 import { MobileBlock } from './MobileBlock/MobileBlock'
+import { ReLoginModal } from './ReLoginModal/ReLoginModal'
 import { Setting } from './Setting/Setting'
 import 'animate.css'
 import './reset.css'
@@ -119,12 +119,7 @@ const useStyles = createStyles(({ token }) => ({
   },
 }))
 
-interface LayoutProps {
-  userInfo?: UserInfoData
-  onLogout?: () => void
-}
-
-export function Layout({ userInfo, onLogout }: LayoutProps) {
+export function Layout() {
   const { theme, styles } = useStyles()
   const { menuType, menuCurrentKeys, openKeys, mainNavCurrentKeys, mobileDrawerOpen, setMobileDrawerOpen } = useMenuStore()
   const isMobile = useMobileDetect()
@@ -157,7 +152,7 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
       return (
         <div className={styles.layoutContainerStyle}>
           <div className={styles.layoutSiderStyle}>
-            <MainNav userInfo={userInfo} onLogout={onLogout}></MainNav>
+            <MainNav />
             <Menu></Menu>
           </div>
           <div className={styles.layoutMainStyle}>
@@ -172,7 +167,7 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
       return (
         <div className={styles.layoutContainerStyle}>
           <div className={styles.layoutSiderStyle}>
-            <MainNav userInfo={userInfo} onLogout={onLogout}></MainNav>
+            <MainNav />
           </div>
           <div className={styles.layoutMainStyle}>
             <Header></Header>
@@ -186,7 +181,7 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
       return (
         <div className={styles.headContainer}>
           <div className={styles.headTop}>
-            <MainNav userInfo={userInfo} onLogout={onLogout}></MainNav>
+            <MainNav />
           </div>
           <div className={styles.headContent}>
             <div className={styles.headContentMenu}>
@@ -205,7 +200,7 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
       return (
         <div className={styles.headContainer}>
           <div className={styles.headTop}>
-            <MainNav userInfo={userInfo} onLogout={onLogout}></MainNav>
+            <MainNav />
           </div>
           <div className={styles.onlyHeadContent}>
             <Header></Header>
@@ -219,7 +214,7 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
       return (
         <div className={styles.singleMain}>
           <div className={styles.singleMainLeft}>
-            <Menu userInfo={userInfo} onLogout={onLogout}></Menu>
+            <Menu />
           </div>
           <div className={styles.singleMainContent}>
             <Header></Header>
@@ -247,7 +242,7 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
           closable={false}
           styles={{ body: { padding: 0, display: 'flex' }, header: { display: 'none' } }}
         >
-          <MainNav userInfo={userInfo} onLogout={onLogout} />
+          <MainNav />
           <Menu />
         </Drawer>
       </div>
@@ -295,6 +290,7 @@ export function Layout({ userInfo, onLogout }: LayoutProps) {
             )
           : layoutContent}
         <Setting></Setting>
+        <ReLoginModal />
         <GlobalProgress
           isAnimating={globalProgressLoading}
           key={location.key}

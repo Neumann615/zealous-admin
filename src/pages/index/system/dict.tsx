@@ -1,6 +1,6 @@
-import type { PageParam } from '@/types/common'
-import type { DictData, DictType } from '@/types/dict'
+import type { DictData, DictType, PageParam } from '@zealous-admin/layout/index'
 import { PlusOutlined } from '@ant-design/icons'
+import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
   Card,
@@ -28,7 +28,6 @@ import {
   getDictTypeAllAPI,
   getDictTypeListAPI,
 } from '@/apis/dict'
-import { useAppMessage } from '@/hooks/useAppMessage'
 
 const { TextArea } = Input
 
@@ -56,7 +55,9 @@ function DictTypePane() {
     finally { setListLoading(false) }
   }
 
-  useEffect(() => { getList() }, [listQuery])
+  useEffect(() => {
+    getList()
+  }, [listQuery])
 
   const handleAdd = () => {
     setIsEdit(false)
@@ -250,7 +251,9 @@ function DictDataPane() {
     finally { setListLoading(false) }
   }
 
-  useEffect(() => { getList() }, [listQuery, selectedType])
+  useEffect(() => {
+    getList()
+  }, [listQuery, selectedType])
 
   const handleTypeChange = (value: string) => {
     setSelectedType(value)

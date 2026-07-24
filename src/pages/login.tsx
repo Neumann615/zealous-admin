@@ -4,13 +4,11 @@ import {
   LockOutlined,
   UserOutlined,
 } from '@ant-design/icons'
+import { useAppMessage, useAppStore, useLogin, useUserStore } from '@zealous-admin/layout/index'
 import { Button, Checkbox, Form, Input, Typography } from 'antd'
 import { createStyles, keyframes } from 'antd-style'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAppMessage } from '@/hooks/useAppMessage'
-import { useUserStore } from '@/store/mall/user'
-import { useAppStore } from '../../packages/layout/store/index'
 
 const { Link } = Typography
 
@@ -152,10 +150,10 @@ export default function Login() {
   const { message } = useAppMessage()
   const { styles } = useStyles()
   const [form] = Form.useForm()
-  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const appStore = useAppStore()
   const mallUserStore = useUserStore()
+  const { login, loading } = useLogin()
 
   const validateUsername = (_rule: any, value: string) => {
     if (!value || value.trim() === '') {
@@ -177,12 +175,12 @@ export default function Login() {
   const onFinish = async () => {
     try {
       const values = await form.validateFields()
-      setLoading(true)
-
-      await mallUserStore.userLogin({
+      const success = await login({
         username: values.userName.trim(),
         password: values.password,
       })
+
+      if (!success) return
 
       if (values.autoLogin) {
         window.localStorage.setItem(
@@ -194,14 +192,12 @@ export default function Login() {
           }),
         )
       }
-      setLoading(false)
       message.success('登录成功')
       setTimeout(() => {
         navigate('/', { replace: true })
       }, 1500)
     }
     catch (err) {
-      setLoading(false)
       console.error('登录失败:', err)
     }
   }

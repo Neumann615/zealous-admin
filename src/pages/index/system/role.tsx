@@ -1,6 +1,6 @@
-import type { PageParam } from '@/types/common'
-import type { Role } from '@/types/role'
+import type { PageParam, Role } from '@zealous-admin/layout/index'
 import { PlusOutlined } from '@ant-design/icons'
+import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
   Card,
@@ -19,7 +19,6 @@ import {
   roleDeleteByIdAPI,
   roleUpdateByIdAPI,
 } from '@/apis/role'
-import { useAppMessage } from '@/hooks/useAppMessage'
 import AllocMenuModal from './allocMenu'
 
 const { TextArea } = Input

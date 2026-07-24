@@ -23,6 +23,7 @@
     "animate.css": "catalog:",
     "antd": "catalog:",
     "antd-style": "catalog:",
+    "axios": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-router": "catalog:",

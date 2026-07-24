@@ -1,7 +1,5 @@
-import type { CommonPage, PageParam } from '@/types/common'
-import type { Menu } from '@/types/menu'
-import type { Role } from '@/types/role'
-import http from '@/utils/http'
+import type { CommonPage, Menu, PageParam, Role } from '@zealous-admin/layout/index'
+import { http } from '@zealous-admin/layout/index'
 
 /**
  * 获取所有角色列表（不分页）

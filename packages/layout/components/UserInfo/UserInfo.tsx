@@ -3,20 +3,9 @@ import { App, Avatar, Divider, Popover } from 'antd'
 import { createStyles } from 'antd-style'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMenuStore } from '../../store/index'
+import { useLogout } from '../../hooks/useAuth'
+import { useMenuStore, useUserStore } from '../../store/index'
 import { ConfigPanel } from '../ConfigPanel/ConfigPanel'
-
-export interface UserInfoData {
-  username: string
-  email: string
-  avatar: string
-  nickName?: string
-}
-
-interface UserInfoProps {
-  userInfo?: UserInfoData
-  onLogout?: () => void
-}
 
 const useStyles = createStyles(({ token }) => ({
   userInfo: {
@@ -114,7 +103,7 @@ const useStyles = createStyles(({ token }) => ({
   },
 }))
 
-export function UserInfo({ userInfo, onLogout }: UserInfoProps) {
+export function UserInfo() {
   const { message } = App.useApp()
   const { styles, theme } = useStyles()
   const navigate = useNavigate()
@@ -123,7 +112,9 @@ export function UserInfo({ userInfo, onLogout }: UserInfoProps) {
   const [configPanelOpen, setConfigPanelOpen] = useState(false)
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const { logout } = useLogout()
 
+  const userInfo = useUserStore(state => state.userInfo)
   const displayName = userInfo?.nickName || userInfo?.username || '未登录'
   const displayEmail = userInfo?.email || ''
   const avatarSrc = userInfo?.avatar
@@ -134,11 +125,7 @@ export function UserInfo({ userInfo, onLogout }: UserInfoProps) {
     setPopoverOpen(false)
     setLoggingOut(true)
     try {
-      if (onLogout) {
-        await onLogout()
-      }
-      message.success('已退出登录')
-      navigate('/login', { replace: true })
+      await logout()
     }
     catch {
       message.error('退出失败，请重试')

@@ -1,8 +1,7 @@
-import { LayoutProvider } from '@zealous-admin/layout/index'
+import { LayoutProvider, useUserStore } from '@zealous-admin/layout/index'
 import { useEffect, useMemo } from 'react'
 import { Navigate, useRoutes } from 'react-router'
 import routes from '~react-pages'
-import { useUserStore } from '@/store/mall/user'
 import './App.css'
 
 // 路由守卫
@@ -26,11 +25,12 @@ for (let i = 0; i < routes.length; i++) {
 export default function App() {
   // 页面初始化时同步用户数据（刷新页面/已有 token 时）
   useEffect(() => {
+    if (window.location.pathname === '/login') {
+      return
+    }
     const { token } = useUserStore.getState().userInfo
     if (token) {
-      useUserStore.getState().getUserInfo().catch((err) => {
-        console.error('初始化用户数据失败:', err)
-      })
+      useUserStore.getState().getUserInfo()
     }
   }, [])
 
@@ -51,7 +51,6 @@ export default function App() {
     <LayoutProvider
       menuData={menuData}
       cachedPages={['/demo/keepalive']}
-      // defaultSetting={defaultSetting as LayoutConfig}
     >
       {useRoutes(routes)}
     </LayoutProvider>

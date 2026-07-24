@@ -1,6 +1,5 @@
-import type { CommonPage, PageParam } from '@/types/common'
-import type { DictData, DictType } from '@/types/dict'
-import http from '@/utils/http'
+import type { CommonPage, DictData, DictType, PageParam } from '@zealous-admin/layout/index'
+import { http } from '@zealous-admin/layout/index'
 
 // ==================== 字典类型 ====================
 

@@ -1,1 +1,0 @@
-export { useAppMessage } from '@zealous-admin/layout/index'

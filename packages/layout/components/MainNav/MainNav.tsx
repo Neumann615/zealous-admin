@@ -1,5 +1,4 @@
 import type { MenuData, MenuItem } from '../../types/config'
-import type { UserInfoData } from '../UserInfo/UserInfo'
 import { ZaShinyText } from '@zealous-admin/components/index'
 import { Menu } from 'antd'
 import { createStyles } from 'antd-style'
@@ -146,12 +145,7 @@ const useStyles = createStyles(({ token, css }) => ({
   `,
 }))
 
-interface MainNavProps {
-  userInfo?: UserInfoData
-  onLogout?: () => void
-}
-
-export function MainNav({ userInfo, onLogout }: MainNavProps) {
+export function MainNav() {
   const { styles, theme } = useStyles()
   const { mainNavData, menuType, mainNavCurrentKeys, menuActiveStyle, setMobileDrawerOpen }
     = useMenuStore(
@@ -300,7 +294,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
                 selectedKeys={mainNavCurrentKeys}
                 items={generatorMenuItem(mainNavData, false)}
               />
-              <UserInfo userInfo={userInfo} onLogout={onLogout} />
+              <UserInfo />
             </div>
           )
         : null}
@@ -337,7 +331,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
                 selectedKeys={mainNavCurrentKeys}
                 items={generatorMenuItem(mainNavData, true)}
               />
-              <UserInfo userInfo={userInfo} onLogout={onLogout} />
+              <UserInfo />
             </div>
           )
         : null}
@@ -380,7 +374,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
                 selectedKeys={mainNavCurrentKeys}
                 items={generatorMenuItem(mainNavData, false)}
               />
-              <UserInfo userInfo={userInfo} onLogout={onLogout} />
+              <UserInfo />
             </div>
           )
         : null}
@@ -423,7 +417,7 @@ export function MainNav({ userInfo, onLogout }: MainNavProps) {
                 selectedKeys={mainNavCurrentKeys}
                 items={generatorMenuItem(mainNavData, true)}
               />
-              <UserInfo userInfo={userInfo} onLogout={onLogout} />
+              <UserInfo />
             </div>
           )
         : null}

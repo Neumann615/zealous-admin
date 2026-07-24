@@ -1,7 +1,33 @@
-import type { LoginParam, UserInfo } from '@/types/admin'
+import type { LoginParam, LoginResult, UserInfo, UserInfoResult } from '../types/admin'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { adminLoginAPI, adminLogoutAPI, getAdminInfoAPI } from '@/apis/admin'
+import http from '../utils/http'
+
+// ==================== Auth API（内置在 layout 包中，保证完整性） ====================
+
+function adminLoginAPI(data: LoginParam) {
+  return http<LoginResult>({
+    method: 'POST',
+    url: '/admin/login',
+    data,
+  })
+}
+
+function adminLogoutAPI() {
+  return http({
+    method: 'POST',
+    url: '/admin/logout',
+  })
+}
+
+function getAdminInfoAPI() {
+  return http<UserInfoResult>({
+    method: 'GET',
+    url: '/admin/info',
+  })
+}
+
+// ==================== User Store ====================
 
 interface UserState {
   userInfo: UserInfo

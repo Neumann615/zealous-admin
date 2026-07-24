@@ -1,6 +1,5 @@
-import type { CommonPage, PageParam } from '@/types/common'
-import type { Menu, MenuNode } from '@/types/menu'
-import http from '@/utils/http'
+import type { CommonPage, Menu, MenuNode, PageParam } from '@zealous-admin/layout/index'
+import { http } from '@zealous-admin/layout/index'
 
 /**
  * 树形结构返回所有菜单列表

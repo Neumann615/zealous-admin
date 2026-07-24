@@ -1,5 +1,4 @@
 import type { LayoutConfig, MenuData } from '../types/config'
-import type { UserInfoData } from './UserInfo/UserInfo'
 import { theme as antdTheme, App, ConfigProvider } from 'antd'
 import { StyleProvider } from 'antd-style'
 import zhCN from 'antd/locale/zh_CN'
@@ -17,8 +16,6 @@ interface AppLayoutProps {
   children: React.ReactNode
   menuData?: MenuData
   defaultSetting?: LayoutConfig
-  userInfo?: UserInfoData
-  onLogout?: () => void
   cachedPages?: string[]
 }
 

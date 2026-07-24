@@ -1,7 +1,5 @@
-import type { Admin, LoginParam, LoginResult, UserInfoResult } from '@/types/admin'
-import type { CommonPage, PageParam } from '@/types/common'
-import type { Role } from '@/types/role'
-import http from '@/utils/http'
+import type { Admin, CommonPage, LoginParam, LoginResult, PageParam, Role, UserInfoResult } from '@zealous-admin/layout/index'
+import { http } from '@zealous-admin/layout/index'
 
 /**
  * 后台管理员登录以后返回token

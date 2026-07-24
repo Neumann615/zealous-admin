@@ -1,7 +1,6 @@
-import type { Admin } from '@/types/admin'
-import type { PageParam } from '@/types/common'
-import type { Role } from '@/types/role'
+import type { Admin, PageParam, Role } from '@zealous-admin/layout/index'
 import { PlusOutlined } from '@ant-design/icons'
+import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
   Card,
@@ -26,7 +25,6 @@ import {
   getRoleByAdminIdAPI,
 } from '@/apis/admin'
 import { getRoleListAllAPI } from '@/apis/role'
-import { useAppMessage } from '@/hooks/useAppMessage'
 
 const { TextArea } = Input
 

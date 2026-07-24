@@ -4,6 +4,10 @@
 
 - ✨ **页面 KeepAlive 缓存**（`Content.tsx`、`page.ts`）：双层渲染架构（cachedLayer + transitionLayer），缓存页保持组件状态不丢失，非缓存页保留过渡动画
 - ✨ **缓存配置外部化**（`LayoutProvider.tsx`、`App.tsx`）：新增 `cachedPages` prop，由外部决定缓存页面列表，通过 `setCachedPages` 同步到 store
+- 🔧 **HTTP/用户/权限基础设施集成至 layout**（`http.ts`、`user.ts`、`useAuth.ts`）：Axios 实例、用户 store、登录登出 Hook 迁入 layout 包，新增 `loginAction`/`logoutAction` 命令式方法
+- ✨ **401 过期模式分流与重新登录弹窗**（`http.ts`、`ReLoginModal.tsx`、`reLogin.ts`）：`expireMode=logout` 直接退出，`expireMode=prompt` 弹窗重新输入用户名密码；2s 延时确保用户看到错误提示后再执行
+- 🔧 **外部引用收敛**（`Layout.tsx`、`UserInfo.tsx`、7 个页面文件）：api/类型/工具统一从 `@zealous-admin/layout` 导入，UserInfo 移除 props 内部闭环，`Layout` 零参数渲染
+- 🗑️ **src/utils/、src/types/、src/store/mall/ 清空**（15 个文件，~672 行）：所有已迁移文件全部删除
 
 ## 2026-07-23
 

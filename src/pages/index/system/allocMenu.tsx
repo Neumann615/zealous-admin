@@ -1,10 +1,10 @@
+import type { MenuNode } from '@zealous-admin/layout/index'
 import type { DataNode } from 'antd/es/tree'
-import type { MenuNode } from '@/types/menu'
+import { useAppMessage } from '@zealous-admin/layout/index'
 import { Modal, Tree } from 'antd'
 import { useEffect, useState } from 'react'
 import { getMenuTreeListAPI } from '@/apis/menu'
 import { roleAllocMenuAPI, roleListMenuByRoleIdAPI } from '@/apis/role'
-import { useAppMessage } from '@/hooks/useAppMessage'
 
 interface AllocMenuModalProps {
   visible: boolean

@@ -1,5 +1,4 @@
 import type { MenuItem } from '../../types/config'
-import type { UserInfoData } from '../UserInfo/UserInfo'
 import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
 import { ZaShinyText } from '@zealous-admin/components/index'
 import { Menu as AntdMenu, Flex } from 'antd'
@@ -73,12 +72,7 @@ const useStyles = createStyles(({ token, css }) => ({
   `,
 }))
 
-interface MenuProps {
-  userInfo?: UserInfoData
-  onLogout?: () => void
-}
-
-export function Menu({ userInfo, onLogout }: MenuProps) {
+export function Menu() {
   const { styles, theme } = useStyles()
   const {
     menuData,
@@ -255,7 +249,7 @@ export function Menu({ userInfo, onLogout }: MenuProps) {
             </Flex>
           )
         : null}
-      { ['simple'].includes(menuType) ? <UserInfo userInfo={userInfo} onLogout={onLogout}></UserInfo> : null}
+      { ['simple'].includes(menuType) ? <UserInfo /> : null}
     </div>
   )
 }

@@ -1,1 +1,0 @@
-export { getGlobalMessage, getGlobalModal } from '@zealous-admin/layout/index'
