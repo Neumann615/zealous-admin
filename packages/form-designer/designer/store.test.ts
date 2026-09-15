@@ -111,6 +111,16 @@ describe('designer store', () => {
     expect(store().importSchema('{"version":99,"children":[]}').ok).toBe(false)
   })
 
+  it('importSchema 把 v1 payload 迁移到当前版本', () => {
+    const result = store().importSchema(JSON.stringify({
+      version: 1,
+      form: { layout: 'vertical' },
+      children: [{ id: 'a', type: 'input', field: 'fa', props: {} }],
+    }))
+    expect(result.ok).toBe(true)
+    expect(store().schema.version).toBe(2)
+  })
+
   it('importSchema 拒绝同一层级重名的字段名，且不改动当前 schema', () => {
     const result = store().importSchema(JSON.stringify({
       version: 2,

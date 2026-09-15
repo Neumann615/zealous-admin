@@ -25,8 +25,8 @@ export default function FormRenderPage() {
         try {
           setSchema(parseSchema(res.data.schema))
         }
-        catch {
-          message.warning('表单数据解析失败')
+        catch (e: any) {
+          message.warning(e?.message || '表单数据解析失败')
         }
       }
     }).finally(() => setLoading(false))

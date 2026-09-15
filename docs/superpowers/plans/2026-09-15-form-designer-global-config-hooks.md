@@ -65,7 +65,7 @@
 | `packages/form-designer/designer/FormDesigner.tsx:69-76` | 保存前追加钩子语法校验 |
 | `packages/form-designer/renderer/FormRenderer.tsx` | 接入横切场景 + 白名单 + 新配置项 |
 | `src/pages/index/form/design.tsx:24`、`src/pages/index/form/render.tsx:26` | 改用 `parseSchema` |
-| 7 个测试文件的 `version: 1` fixture | 机械改为 `version: 2`（共 19 处） |
+| 6 个测试文件的 `version: 1` fixture | 机械改为 `version: 2`（共 15 处） |
 
 ## 执行分阶段
 
@@ -264,7 +264,7 @@ export function parseSchema(input: string | unknown): FormSchema {
 
 - [x] **步骤 7：批量更新 fixture 版本号**
 
-`packages/form-designer` 下 7 个测试文件共 19 处 `version: 1` → `version: 2`（勿动 `packages/layout/store/topBar.ts`，那是无关的 store 版本字段）。
+`packages/form-designer` 下 6 个测试文件共 15 处 `version: 1` → `version: 2`（勿动 `packages/layout/store/topBar.ts`，那是无关的 store 版本字段）。
 
 运行：`node ./node_modules/.bin/vitest.CMD run`
 预期：全部 PASS

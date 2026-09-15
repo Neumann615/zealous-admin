@@ -6,7 +6,7 @@
 
 ```ts
 interface FormSchema {
-  version: 1
+  version: 2
   form: FormGlobalConfig
   children: FieldSchema[]
 }
@@ -25,11 +25,13 @@ interface FormGlobalConfig {
 
 ```ts
 {
-  version: 1,
+  version: 2,
   form: { layout: 'horizontal', labelAlign: 'right', size: 'middle', colon: true },
   children: [],
 }
 ```
+
+> `version` 当前为 `2`。历史 v1 结构由 `parseSchema()` 自动迁移到当前版本，无需手工改库；更高版本会被拒绝并提示升级表单设计器。
 
 ## FieldSchema
 
@@ -137,7 +139,7 @@ interface ValidateRule {
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "form": { "layout": "vertical", "labelAlign": "right", "size": "middle", "colon": true },
   "children": [
     {

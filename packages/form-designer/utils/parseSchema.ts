@@ -28,7 +28,10 @@ export function parseSchema(input: string | unknown): FormSchema {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw))
     throw new Error('表单结构解析失败：应为对象')
 
-  let version = Number(raw.version) || 1
+  const rawVersion = raw.version === undefined ? 1 : Number(raw.version)
+  if (!Number.isInteger(rawVersion) || rawVersion < 1)
+    throw new Error(`表单结构解析失败：表单版本号非法（${String(raw.version)}）`)
+  let version = rawVersion
   if (version > SCHEMA_VERSION)
     throw new Error(`不支持的表单版本 v${version}，请升级表单设计器`)
   while (version < SCHEMA_VERSION) {
@@ -36,7 +39,10 @@ export function parseSchema(input: string | unknown): FormSchema {
     if (!migrate)
       throw new Error(`表单结构解析失败：缺少 v${version} 的迁移`)
     raw = migrate(raw)
-    version = Number(raw.version)
+    const next = Number(raw.version)
+    if (!(next > version))
+      throw new Error(`表单结构解析失败：v${version} 迁移未推进版本`)
+    version = next
   }
 
   if (!Array.isArray(raw.children))

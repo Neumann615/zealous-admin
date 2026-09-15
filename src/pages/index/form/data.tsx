@@ -118,8 +118,8 @@ export default function FormDataPage() {
           try {
             setSchema(parseSchema(res.data.schema))
           }
-          catch {
-            message.warning('表单结构解析失败，已退化为原始数据展示')
+          catch (e: any) {
+            message.warning(e?.message || '表单结构解析失败，已退化为原始数据展示')
           }
         }
       })

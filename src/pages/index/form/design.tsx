@@ -23,8 +23,8 @@ export default function FormDesignPage() {
         try {
           setInitialSchema(parseSchema(res.data.schema))
         }
-        catch {
-          message.warning('已存 schema 解析失败，将重新设计')
+        catch (e: any) {
+          message.warning(e?.message || '已存 schema 解析失败，将重新设计')
           setInitialSchema(createEmptySchema())
         }
       }
