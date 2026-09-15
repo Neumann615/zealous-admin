@@ -24,7 +24,7 @@ export default function FormDesignPage() {
           setInitialSchema(parseSchema(res.data.schema))
         }
         catch (e: any) {
-          message.warning(e?.message || '已存 schema 解析失败，将重新设计')
+          message.warning(`已存 schema 解析失败，将重新设计（${e?.message}）`)
           setInitialSchema(createEmptySchema())
         }
       }

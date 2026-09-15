@@ -28,6 +28,8 @@ describe('parseSchema', () => {
   it('版本号非法时抛错', () => {
     expect(() => parseSchema(JSON.stringify({ version: 0, form: {}, children: [] }))).toThrow('表单版本号非法')
     expect(() => parseSchema(JSON.stringify({ version: 'abc', form: {}, children: [] }))).toThrow('表单版本号非法')
+    expect(() => parseSchema(JSON.stringify({ version: true, form: {}, children: [] }))).toThrow('表单版本号非法')
+    expect(() => parseSchema(JSON.stringify({ version: '2', form: {}, children: [] }))).toThrow('表单版本号非法')
   })
 
   it('缺少 form 时补空模板默认配置', () => {
