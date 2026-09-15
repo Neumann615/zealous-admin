@@ -65,7 +65,7 @@ interface FormDesignerProps {
 
 | 分组 | 出现条件 | 内容 |
 |------|----------|------|
-| 基础 | 总是 | 标题、字段名（值绑定组件才有）、提示、额外说明 |
+| 基础 | 总是 | 标题、字段名（值绑定组件才有）、提示、额外说明；字段名不合法或与同级字段重名时，输入框下方红字提示 |
 | 校验规则 | 非容器且非辅助组件 | `ValidateRule` 列表编辑器 |
 | 组件属性 | `configForm` 非空 | 组件自己声明的配置项 |
 
@@ -78,11 +78,11 @@ interface FormDesignerProps {
 | 操作 | 说明 |
 |------|------|
 | 撤销 / 重做 | 按历史栈可用性自动禁用 |
-| 导入 | 粘贴 `FormSchema` JSON，格式非法则报错且不覆盖当前画布 |
+| 导入 | 粘贴 `FormSchema` JSON，格式非法或字段名不合法（重名 / 为空 / 含空格或点号）则报错并说明原因，不覆盖当前画布 |
 | 导出 | 只读展示当前 schema JSON，聚焦自动全选 |
 | 清空 | 二次确认后清空全部字段（可撤销） |
 | 预览 | 弹窗内用 `FormRenderer` 真实渲染当前 schema，提交后展示 JSON |
-| 保存 | 仅在传入 `onSave` 时出现 |
+| 保存 | 仅在传入 `onSave` 时出现；保存前校验字段名，不通过则提示并中止（不调用 `onSave`） |
 
 ## FormRenderer
 
@@ -93,6 +93,8 @@ interface FormRendererProps {
   onSubmit?: (values: Record<string, any>) => void
   /** 是否显示提交 / 重置按钮，业务页面可自行接管提交 */
   showActions?: boolean // 默认 true
+  /** 外部表单实例，便于业务页提交后 resetFields / setFieldsValue */
+  form?: FormInstance // 默认内部自建
 }
 ```
 
@@ -118,6 +120,7 @@ interface FormRendererProps {
 | `upload` 无后端 | 仅前端收集 `fileList`，service 端尚无上传路由与静态目录 |
 | `tableForm` 细节 | 列宽 / 对齐、行内校验、数组级 min/max 规则（`Form.List` rules）未接入 |
 | 无发布版读取接口 | `GET /form/:id/schema` 暂未实现——渲染演示页需要能看草稿，待有对外填写场景再加 |
+| 历史 schema 的字段名 | 早期保存的 schema 若存在重名字段，重新打开后保存会被拦截，需要先按提示改名 |
 
 ## 相关文档
 

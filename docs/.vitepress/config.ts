@@ -172,6 +172,7 @@ export default defineConfig({
             { text: 'Schema 结构', link: '/form-designer/schema' },
             { text: '组件清单', link: '/form-designer/components' },
             { text: '设计器与渲染器', link: '/form-designer/designer' },
+            { text: '数据落库与查询', link: '/form-designer/data' },
           ],
         },
       ],

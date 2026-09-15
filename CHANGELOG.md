@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-09-15
+
+- ✨ **表单填写数据落库**（`service/src/db/index.ts`、`service/src/routes/formData.ts`、`service/src/db/schema.ts`）：新增 `za_form_data` 表，整份填写值以 JSON 存储，冗余 `form_id` / `form_version` / `submitter` / `status` 列支持查询追溯，幂等建表；新增提交 / 分页查询（按提交人、状态过滤）/ 详情 / 作废恢复 / 删除 5 个接口，`GET /form/list` 相关子查询带出 `dataCount`，删表单级联清数据
+- ✨ **表单数据管理页**（`src/pages/index/form/data.tsx`）：表单列表新增「数据量」列与「数据」入口，管理页按 schema 顶层字段生成动态列、容器值 JSON 化、详情抽屉用 `FormRenderer` 只读回显、作废 / 恢复、删除与带 BOM 的 CSV 导出，schema 解析失败时退化为原始数据列
+- 🔧 **渲染页提交即落库**（`src/pages/index/form/render.tsx`、`packages/form-designer/renderer/FormRenderer.tsx`）：`FormRenderer` 新增可选 `form?: FormInstance` prop（外部实例接管，提交成功后自动清空表单并展示数据编号），兼容不传时的内部实例
+- ✅ **验证**：接口真实后端全链路实测通过（含未鉴权 401、异常分支、级联删除、中文 UTF-8 往返，临时 `DB_PATH` 隔离不污染库文件）；新增 `FormRenderer.form.test.tsx` 2 条交互测试，11 文件 105 用例全绿
+- 📝 **文档**：新增 `docs/form-designer/data.md`，`docs/form-designer/designer.md` 补 `form` prop，设计规格新增 §12.7「填写数据落库」
+- 🛡️ **字段名校验**（`packages/form-designer/utils/fieldName.ts`、`designer/store.ts`、`designer/RightPanel.tsx`、`designer/FormDesigner.tsx`）：同名字段会绑定到 rc-field-form 的同一槽位、静默产生脏数据，现按「命名作用域」校验唯一性——作用域按渲染器实际的前缀下发规则划分，普通容器（`row`/`col`/`card`/`tabs`…）不产生新作用域，故 `row > col > 输入框` 与根层字段同域；格式上禁止空值、空白与点号。属性面板在「字段名」下方红字提示，保存前整体校验、不通过则中止（不再调用 `onSave`），`importSchema` 改为返回 `ImportResult` 并拒绝带字段名问题的 schema（附具体冲突项），导入提示由通用的「JSON 格式不正确」改为精确原因
+- ✅ **验证（字段名校验）**：新增 36 条测试（`utils/fieldName.test.ts` 28 条含作用域展开边界、`store.test.ts` 导入拦截 3 条、设计器交互 4 条含保存拦截与 1 条内置组件无假报守卫）；12 文件 141 用例全绿
+
+## 2026-09-11
+
+- 📝 **表单设计器文档对齐**（`docs/superpowers/plans/2026-09-07-form-designer.md`、`docs/superpowers/specs/2026-09-07-form-designer-design.md`）：P1–P4 计划的 72 个步骤复选框回填为已完成并补状态说明；规格新增 §12「实现偏差与落地状态」，回写分期完成情况、组件数 36→37、接口形态与表结构偏差、后端技术栈纠正、测试覆盖与遗留项，并在 §6 / §7 / §11 加指向 §12 的说明
+
 ## 2026-09-10
 
 - 🔧 **表单设计器画布布局优化**（`Canvas.tsx`、`design.tsx`）：画布改为撑满容器宽度，空态落点撑满整块画布，页面容器高度改为 `100%`

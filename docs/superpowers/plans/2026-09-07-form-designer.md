@@ -2,6 +2,7 @@
 
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
+**状态：** T1–T12（P1–P4）已于 2026-09-07 全部实现并提交（`9379e01`→`7b85b3e`），复选框于 2026-09-11 统一回填。后续 P5（高级组件 + 子表单）见 `docs/superpowers/plans/2026-09-10-form-designer-p5.md`，实现偏差汇总见规格 `docs/superpowers/specs/2026-09-07-form-designer-design.md` §12。
 **目标：** 在 zealous-admin 中新建 `packages/form-designer` 包，实现三栏可视化表单设计器（注册表 + 单一渲染器），并完成后端存取与演示页闭环。
 
 **架构：** 声明式组件注册表（每个组件一个定义：defaultSchema + render + configForm）；Zustand 管理 schema 树与撤销重做快照；`@dnd-kit/react` 拖拽（间隙落点 DropGap 方案）；渲染器 `FormRenderer` 同时服务画布、预览与业务运行时。
@@ -83,7 +84,7 @@ src/pages/index/form/render.tsx     # T12
 - 测试：`packages/form-designer/utils/path.test.ts`
 - 修改：根 `package.json`（加 `test` 脚本）
 
-- [ ] **步骤 0：安装 Vitest（仅开发依赖）**
+- [x] **步骤 0：安装 Vitest（仅开发依赖）**
 
 ```bash
 pnpm add -Dw vitest
@@ -95,7 +96,7 @@ pnpm add -Dw vitest
 "test": "vitest run"
 ```
 
-- [ ] **步骤 1：创建 package.json**
+- [x] **步骤 1：创建 package.json**
 
 ```json
 {
@@ -120,7 +121,7 @@ pnpm add -Dw vitest
 }
 ```
 
-- [ ] **步骤 2：创建 types/schema.ts**
+- [x] **步骤 2：创建 types/schema.ts**
 
 ```ts
 /** 表单全局配置，直接透传给 antd Form */
@@ -176,7 +177,7 @@ export function createEmptySchema(): FormSchema {
 }
 ```
 
-- [ ] **步骤 3：创建 utils/uniqueId.ts**
+- [x] **步骤 3：创建 utils/uniqueId.ts**
 
 ```ts
 let seq = 0
@@ -188,7 +189,7 @@ export function uniqueId(prefix = 'f'): string {
 }
 ```
 
-- [ ] **步骤 4：创建 utils/schemaTree.ts**
+- [x] **步骤 4：创建 utils/schemaTree.ts**
 
 ```ts
 import type { FieldSchema, FormSchema } from '../types/schema'
@@ -261,7 +262,7 @@ export function isDescendant(node: FieldSchema, maybeDescendantId: string): bool
 }
 ```
 
-- [ ] **步骤 5：创建 utils/path.ts**
+- [x] **步骤 5：创建 utils/path.ts**
 
 ```ts
 /** 按点分路径读取，如 'props.placeholder' / 'formItem.tooltip' / 'label' */
@@ -282,7 +283,7 @@ export function setByPath(obj: Record<string, any>, path: string, value: any): v
 }
 ```
 
-- [ ] **步骤 5b：创建 utils/schemaTree.test.ts**
+- [x] **步骤 5b：创建 utils/schemaTree.test.ts**
 
 ```ts
 import type { FieldSchema, FormSchema } from '../types/schema'
@@ -375,7 +376,7 @@ describe('isDescendant', () => {
 })
 ```
 
-- [ ] **步骤 5c：创建 utils/path.test.ts**
+- [x] **步骤 5c：创建 utils/path.test.ts**
 
 ```ts
 import { describe, expect, it } from 'vitest'
@@ -405,12 +406,12 @@ describe('setByPath', () => {
 })
 ```
 
-- [ ] **步骤 5d：运行测试确认通过**
+- [x] **步骤 5d：运行测试确认通过**
 
 运行：`pnpm test`
 预期：2 个测试文件全部 PASS（实现已在步骤 2–5 给出；若 FAIL 先修实现再往下走）
 
-- [ ] **步骤 6：创建 index.ts（初始导出，后续任务追加）**
+- [x] **步骤 6：创建 index.ts（初始导出，后续任务追加）**
 
 ```ts
 export { FormRenderer } from './renderer/FormRenderer'
@@ -421,11 +422,11 @@ export type { FieldSchema, FormSchema, ValidateRule } from './types/schema'
 export { createEmptySchema } from './types/schema'
 ```
 
-- [ ] **步骤 7：验证**
+- [x] **步骤 7：验证**
 
 运行：`pnpm lint -- packages/form-designer`（或 `pnpm lint`，确认无新增错误；此时 FormRenderer/FormDesigner/registry 尚未创建，index.ts 中的导出会报模块不存在——**属预期，任务 2 完成后消失**）
 
-- [ ] **步骤 8：Commit**
+- [x] **步骤 8：Commit**
 
 ```bash
 git add packages/form-designer
@@ -442,7 +443,7 @@ git commit -m "feat: form-designer 包骨架、schema 类型与树操作工具"
 - 创建：`packages/form-designer/renderer/renderField.tsx`
 - 创建：`packages/form-designer/renderer/FormRenderer.tsx`
 
-- [ ] **步骤 1：创建 registry/registry.ts**
+- [x] **步骤 1：创建 registry/registry.ts**
 
 ```tsx
 import type { ReactNode } from 'react'
@@ -504,7 +505,7 @@ export function getMenus(): { name: MenuGroup, title: string, list: ComponentDef
 }
 ```
 
-- [ ] **步骤 2：创建 renderer/renderField.tsx**
+- [x] **步骤 2：创建 renderer/renderField.tsx**
 
 ```tsx
 import type { Rule } from 'antd/es/form'
@@ -563,7 +564,7 @@ export function renderField(
 }
 ```
 
-- [ ] **步骤 3：创建 renderer/FormRenderer.tsx**
+- [x] **步骤 3：创建 renderer/FormRenderer.tsx**
 
 ```tsx
 import type { FormSchema } from '../types/schema'
@@ -608,7 +609,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 }
 ```
 
-- [ ] **步骤 4：创建 registry/components/index.ts（组件注册汇总，暂为空壳，T8–T10 填充）**
+- [x] **步骤 4：创建 registry/components/index.ts（组件注册汇总，暂为空壳，T8–T10 填充）**
 
 ```ts
 // 各组件文件在 import 时完成 registerComponent
@@ -634,11 +635,11 @@ import '../registry/components'
 
 （注册放 import 副作用里，保证任何用到渲染/设计器的入口组件都已注册。）
 
-- [ ] **步骤 5：验证**
+- [x] **步骤 5：验证**
 
 运行：`pnpm lint -- packages/form-designer`。此时 `registry/components/*` 具体文件尚未创建，import 报错属预期，T8 后消失。`tsc` 层面确认已建文件无类型错误（在 `packages/form-designer` 下 `npx tsc --noEmit --jsx react-jsx --module esnext --moduleResolution bundler --target es2022 types/schema.ts utils/*.ts registry/registry.ts`，预期无输出）。
 
-- [ ] **步骤 6：Commit**
+- [x] **步骤 6：Commit**
 
 ```bash
 git add packages/form-designer
@@ -653,7 +654,7 @@ git commit -m "feat: 组件注册表与 FormRenderer 渲染器"
 - 创建：`packages/form-designer/designer/store.ts`
 - 测试：`packages/form-designer/designer/store.test.ts`
 
-- [ ] **步骤 1：创建 designer/store.ts**
+- [x] **步骤 1：创建 designer/store.ts**
 
 ```ts
 import type { FieldSchema, FormSchema } from '../types/schema'
@@ -840,7 +841,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
 export { getByPath }
 ```
 
-- [ ] **步骤 2：验证**
+- [x] **步骤 2：验证**
 
 运行：`npx tsc --noEmit --jsx react-jsx --module esnext --moduleResolution bundler --target es2022 packages/form-designer/designer/store.ts`（工作目录仓库根），预期无输出。注意：`moveField` 中 `sameList` 比较依赖 `childrenOf` 返回的引用与 `findNode` 时一致——`mutate` 内先 `removeNode(draft)` 后 `childrenOf(draft)` 均作用于同一 draft，引用比较成立；但 `located` 取自旧 schema，`located.parentChildren === list` 永远为 false。**修正**：sameList 判断改为比较父 id：
 
@@ -880,7 +881,7 @@ if (!list) return
     },
 ```
 
-- [ ] **步骤 2b：创建 designer/store.test.ts**
+- [x] **步骤 2b：创建 designer/store.test.ts**
 
 ```ts
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -997,12 +998,12 @@ describe('designer store', () => {
 })
 ```
 
-- [ ] **步骤 2c：运行测试确认通过**
+- [x] **步骤 2c：运行测试确认通过**
 
 运行：`pnpm test`
 预期：schemaTree/path/store 三个测试文件全部 PASS
 
-- [ ] **步骤 3：Commit**
+- [x] **步骤 3：Commit**
 
 ```bash
 git add packages/form-designer/designer
@@ -1017,7 +1018,7 @@ git commit -m "feat: 设计器 store（schema 树操作 + 撤销重做，含单�
 - 创建：`packages/form-designer/designer/FormDesigner.tsx`
 - 创建：`packages/form-designer/designer/Toolbar.tsx`
 
-- [ ] **步骤 1：创建 designer/Toolbar.tsx**
+- [x] **步骤 1：创建 designer/Toolbar.tsx**
 
 ```tsx
 import {
@@ -1100,7 +1101,7 @@ export function Toolbar({ onSave }: ToolbarProps) {
 }
 ```
 
-- [ ] **步骤 2：创建 designer/FormDesigner.tsx**
+- [x] **步骤 2：创建 designer/FormDesigner.tsx**
 
 ```tsx
 import type { FormSchema } from '../types/schema'
@@ -1208,11 +1209,11 @@ export function FormDesigner({ initialSchema, onSave }: FormDesignerProps) {
 }
 ```
 
-- [ ] **步骤 3：验证**
+- [x] **步骤 3：验证**
 
 `pnpm lint -- packages/form-designer` 无错误。注释占位在 T5–T7 被替换。
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add packages/form-designer/designer
@@ -1227,7 +1228,7 @@ git commit -m "feat: FormDesigner 三栏骨架与工具栏（撤销/导入/导�
 - 创建：`packages/form-designer/designer/LeftPanel.tsx`
 - 修改：`packages/form-designer/designer/FormDesigner.tsx`（替换左栏占位）
 
-- [ ] **步骤 1：创建 designer/LeftPanel.tsx**
+- [x] **步骤 1：创建 designer/LeftPanel.tsx**
 
 ```tsx
 import type { ComponentDef } from '../registry/registry'
@@ -1313,7 +1314,7 @@ export function LeftPanel() {
 }
 ```
 
-- [ ] **步骤 2：替换 FormDesigner.tsx 左栏占位**
+- [x] **步骤 2：替换 FormDesigner.tsx 左栏占位**
 
 将 `FormDesigner.tsx` 中：
 
@@ -1333,11 +1334,11 @@ export function LeftPanel() {
 import { LeftPanel } from './LeftPanel'
 ```
 
-- [ ] **步骤 3：验证**
+- [x] **步骤 3：验证**
 
 `pnpm lint -- packages/form-designer` 无错误。（拖拽源此时还无法放置，T6 接入落点后联调。）
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add packages/form-designer/designer
@@ -1356,7 +1357,7 @@ git commit -m "feat: 左侧组件面板（分组/搜索/拖拽源）"
 
 **落点设计（先读我）：** 采用"间隙落点"方案避免嵌套 droppable 冲突——每个兄弟列表渲染成交替的 `DropGap / CanvasItem / DropGap …`，容器 body 在 children 为空时整体是一个 DropGap 样式的落点。字段项本身不是 droppable，仅通过选中态浮动条上的拖拽手柄作为 drag source。
 
-- [ ] **步骤 1：创建 designer/DropGap.tsx**
+- [x] **步骤 1：创建 designer/DropGap.tsx**
 
 ```tsx
 import { useDroppable } from '@dnd-kit/react'
@@ -1415,7 +1416,7 @@ export function DropGap({ parentId, index, empty }: DropGapProps) {
 }
 ```
 
-- [ ] **步骤 2：创建 designer/CanvasItem.tsx**
+- [x] **步骤 2：创建 designer/CanvasItem.tsx**
 
 ```tsx
 import type { FieldSchema } from '../types/schema'
@@ -1562,7 +1563,7 @@ export function CanvasItem({ node, parentId, index }: CanvasItemProps) {
 
 注意：`parentId`、`index` props 当前未被组件内直接使用（间隙落点由父级渲染），保留是为了后续扩展（如"在此之前插入"操作）；lint 若报 unused，从 props 接口中移除即可。
 
-- [ ] **步骤 3：创建 designer/Canvas.tsx**
+- [x] **步骤 3：创建 designer/Canvas.tsx**
 
 ```tsx
 import { Form } from 'antd'
@@ -1622,7 +1623,7 @@ export function Canvas() {
 }
 ```
 
-- [ ] **步骤 4：修改 FormDesigner.tsx——接入 Canvas 与 DragDropProvider**
+- [x] **步骤 4：修改 FormDesigner.tsx——接入 Canvas 与 DragDropProvider**
 
 顶部 import 区加入：
 
@@ -1675,11 +1676,11 @@ import { Canvas } from './Canvas'
 
 （`useDesignerStore` 已在 import 中；将 `addField, moveField` 合并进已有的解构行即可。）
 
-- [ ] **步骤 5：手动验证（需先有可拖入的组件，可临时在 T8 完成后一并验证；此处仅验证编译）**
+- [x] **步骤 5：手动验证（需先有可拖入的组件，可临时在 T8 完成后一并验证；此处仅验证编译）**
 
 `pnpm lint -- packages/form-designer` 无错误。
 
-- [ ] **步骤 6：Commit**
+- [x] **步骤 6：Commit**
 
 ```bash
 git add packages/form-designer/designer
@@ -1697,7 +1698,7 @@ git commit -m "feat: 画布拖拽（间隙落点）、选中/复制/删除交互
 - 创建：`packages/form-designer/designer/RightPanel.tsx`
 - 修改：`packages/form-designer/designer/FormDesigner.tsx`（替换右栏占位）
 
-- [ ] **步骤 1：创建 designer/OptionsEditor.tsx（select/radio/checkbox 的选项编辑）**
+- [x] **步骤 1：创建 designer/OptionsEditor.tsx（select/radio/checkbox 的选项编辑）**
 
 ```tsx
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
@@ -1736,7 +1737,7 @@ export function OptionsEditor({ value = [], onChange }: OptionsEditorProps) {
 }
 ```
 
-- [ ] **步骤 2：创建 designer/ValidateEditor.tsx**
+- [x] **步骤 2：创建 designer/ValidateEditor.tsx**
 
 ```tsx
 import type { ValidateRule } from '../types/schema'
@@ -1789,7 +1790,7 @@ export function ValidateEditor({ value = [], onChange }: ValidateEditorProps) {
 }
 ```
 
-- [ ] **步骤 3：创建 designer/ConfigFormRenderer.tsx**
+- [x] **步骤 3：创建 designer/ConfigFormRenderer.tsx**
 
 ```tsx
 import type { ConfigMeta } from '../registry/registry'
@@ -1860,7 +1861,7 @@ export function ConfigFormRenderer({ node, metas }: ConfigFormRendererProps) {
 }
 ```
 
-- [ ] **步骤 4：创建 designer/RightPanel.tsx**
+- [x] **步骤 4：创建 designer/RightPanel.tsx**
 
 ```tsx
 import type { ConfigMeta } from '../registry/registry'
@@ -1986,7 +1987,7 @@ export function RightPanel() {
 }
 ```
 
-- [ ] **步骤 5：替换 FormDesigner.tsx 右栏占位**
+- [x] **步骤 5：替换 FormDesigner.tsx 右栏占位**
 
 ```tsx
         <div className={styles.right}>{/* T7：RightPanel */}</div>
@@ -2000,11 +2001,11 @@ export function RightPanel() {
 
 并加入 import：`import { RightPanel } from './RightPanel'`。
 
-- [ ] **步骤 6：验证**
+- [x] **步骤 6：验证**
 
 `pnpm lint -- packages/form-designer` 无错误。
 
-- [ ] **步骤 7：Commit**
+- [x] **步骤 7：Commit**
 
 ```bash
 git add packages/form-designer/designer
@@ -2023,7 +2024,7 @@ git commit -m "feat: 右侧配置面板（属性/校验/全局表单配置）"
 
 **公共辅助（每个文件都会用到，放在 `registry/components/helpers.ts`，先创建）：**
 
-- [ ] **步骤 1：创建 registry/components/helpers.ts**
+- [x] **步骤 1：创建 registry/components/helpers.ts**
 
 ```ts
 import type { FieldSchema } from '../../types/schema'
@@ -2040,7 +2041,7 @@ export function bareSchema(type: string, props: Record<string, any> = {}, childr
 }
 ```
 
-- [ ] **步骤 2：创建 registry/components/basicInput.tsx**
+- [x] **步骤 2：创建 registry/components/basicInput.tsx**
 
 ```tsx
 import {
@@ -2116,7 +2117,7 @@ registerComponent({
 })
 ```
 
-- [ ] **步骤 3：创建 registry/components/selectFamily.tsx**
+- [x] **步骤 3：创建 registry/components/selectFamily.tsx**
 
 ```tsx
 import { CheckSquareOutlined, DownSquareOutlined, RadioButtonUncheckedOutlined } from '@ant-design/icons'
@@ -2193,7 +2194,7 @@ registerComponent({
 
 注：`RadioButtonUncheckedOutlined` 若不存在则用 `CheckCircleOutlined` 代替（lint/类型检查会暴露，二选一）。
 
-- [ ] **步骤 4：创建 registry/components/dateTime.tsx**
+- [x] **步骤 4：创建 registry/components/dateTime.tsx**
 
 ```tsx
 import { CalendarOutlined, FieldTimeOutlined, SwapRightOutlined } from '@ant-design/icons'
@@ -2250,7 +2251,7 @@ registerComponent({
 })
 ```
 
-- [ ] **步骤 5：创建 registry/components/choice.tsx**
+- [x] **步骤 5：创建 registry/components/choice.tsx**
 
 ```tsx
 import {
@@ -2490,7 +2491,7 @@ function FieldControl({ def, schema, value, onChange }: {
 
 switch 的 `valuePropName: 'checked'` 已由 formItemProps 处理。
 
-- [ ] **步骤 6：更新 registry/components/index.ts**
+- [x] **步骤 6：更新 registry/components/index.ts**
 
 内容保持任务 2 步骤 4 的版本（已 import 全部六个文件），确认 `aide` 和 `layout` 的 import 暂时指向尚不存在的文件——**先注释掉这两行**，T9/T10 再取消注释：
 
@@ -2503,7 +2504,7 @@ import './choice'
 // import './layout'   // T10
 ```
 
-- [ ] **步骤 7：启动开发服务器手动验收（P2 验收）**
+- [x] **步骤 7：启动开发服务器手动验收（P2 验收）**
 
 ```bash
 pnpm dev
@@ -2533,7 +2534,7 @@ export default function FormDesignerTest() {
 
 验收通过后删除临时文件 `src/pages/index/form-designer-test.tsx`。
 
-- [ ] **步骤 8：Commit**
+- [x] **步骤 8：Commit**
 
 ```bash
 git add packages/form-designer
@@ -2548,7 +2549,7 @@ git commit -m "feat: 17 个基础输入组件定义与配置面板"
 - 创建：`packages/form-designer/registry/components/aide.tsx`
 - 修改：`packages/form-designer/registry/components/index.ts`（取消注释 aide 行）
 
-- [ ] **步骤 1：创建 registry/components/aide.tsx**
+- [x] **步骤 1：创建 registry/components/aide.tsx**
 
 ```tsx
 import {
@@ -2673,17 +2674,17 @@ registerComponent({
 
 注：`RobotOutlined`（段落图标）语义不贴切，可用 `FileTextOutlined` 替代——任选其一。
 
-- [ ] **步骤 2：取消 registry/components/index.ts 中 aide 行注释**
+- [x] **步骤 2：取消 registry/components/index.ts 中 aide 行注释**
 
 ```ts
 import './aide'
 ```
 
-- [ ] **步骤 3：验证**
+- [x] **步骤 3：验证**
 
 `pnpm lint` 无错误；在任务 8 的临时验证页（或正式设计页）中拖入 5 个辅助组件，画布展示正确，属性面板可编辑。
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add packages/form-designer
@@ -2700,7 +2701,7 @@ git commit -m "feat: 5 个辅助组件（文本/段落/提示块/按钮/链接�
 
 **容器渲染约定（先读我）：** 容器 `def.render(schema, children)` 收到的 `children` 在画布模式是已嵌好 DropGap 的节点数组（由 CanvasItem 的 renderChildren 生成），在运行时是 `renderField` 渲染的字段节点。Descriptions 因 antd items 结构限制，画布模式仅支持空态落点插入（在计划末尾的验收中确认此行为）。
 
-- [ ] **步骤 1：创建 registry/components/layout.tsx**
+- [x] **步骤 1：创建 registry/components/layout.tsx**
 
 ```tsx
 import {
@@ -2893,13 +2894,13 @@ registerComponent({
 // fieldSchema 在本文件中未使用则从 import 中移除（lint 会提示）
 ```
 
-- [ ] **步骤 2：取消 registry/components/index.ts 中 layout 行注释**
+- [x] **步骤 2：取消 registry/components/index.ts 中 layout 行注释**
 
 ```ts
 import './layout'
 ```
 
-- [ ] **步骤 3：手动验收（P3 验收）**
+- [x] **步骤 3：手动验收（P3 验收）**
 
 临时验证页中：
 1. 拖入"栅格行"，自动生成两个 12 栅格列；拖输入框到列内
@@ -2907,7 +2908,7 @@ import './layout'
 3. 尝试把卡片拖入它自己内部——无反应（isDescendant 防护生效）
 4. 预览模式提交，Row/Col 内字段 values 正常平铺
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add packages/form-designer
@@ -2923,7 +2924,7 @@ git commit -m "feat: 8 个布局组件与容器嵌套拖拽"
 - 创建：`service/src/routes/form.ts`
 - 修改：`service/src/app.ts`（注册路由）
 
-- [ ] **步骤 1：service/src/db/index.ts 加表**
+- [x] **步骤 1：service/src/db/index.ts 加表**
 
 在 `initDb()` 中最后一个 `db.exec(CREATE TABLE …)` 之后追加：
 
@@ -2942,7 +2943,7 @@ git commit -m "feat: 8 个布局组件与容器嵌套拖拽"
   `)
 ```
 
-- [ ] **步骤 2：service/src/db/index.ts 加幂等菜单迁移**
+- [x] **步骤 2：service/src/db/index.ts 加幂等菜单迁移**
 
 在 `initDb()` 的 seed 逻辑（`if` 空库判断块）**之外、函数末尾**追加（对已有数据库也生效）：
 
@@ -2968,7 +2969,7 @@ git commit -m "feat: 8 个布局组件与容器嵌套拖拽"
   }
 ```
 
-- [ ] **步骤 3：创建 service/src/routes/form.ts**
+- [x] **步骤 3：创建 service/src/routes/form.ts**
 
 ```ts
 import { Router } from 'express'
@@ -3093,7 +3094,7 @@ router.post('/form/delete', (req, res) => {
 export default router
 ```
 
-- [ ] **步骤 4：service/src/app.ts 注册路由**
+- [x] **步骤 4：service/src/app.ts 注册路由**
 
 import 区加入：
 
@@ -3107,7 +3108,7 @@ import formRoutes from './routes/form'
 app.use('/', formRoutes)
 ```
 
-- [ ] **步骤 5：验证**
+- [x] **步骤 5：验证**
 
 ```bash
 cd service && pnpm dev
@@ -3119,7 +3120,7 @@ cd service && pnpm dev
 - `POST /form/update` body `{"id":1,"schema":"{\"version\":1,...}"}` → version 变 2
 - 登录前端，侧边菜单出现"表单设计 > 表单管理"
 
-- [ ] **步骤 6：Commit**
+- [x] **步骤 6：Commit**
 
 ```bash
 git add service
@@ -3136,7 +3137,7 @@ git commit -m "feat: 表单 schema 存取接口与菜单迁移"
 - 创建：`src/pages/index/form/design.tsx`
 - 创建：`src/pages/index/form/render.tsx`
 
-- [ ] **步骤 1：创建 src/apis/form.ts**
+- [x] **步骤 1：创建 src/apis/form.ts**
 
 ```ts
 import type { CommonPage, PageParam } from '@zealous-admin/layout/index'
@@ -3176,7 +3177,7 @@ export function deleteFormAPI(id: number) {
 
 注：`CommonPage`/`PageParam` 类型与 `src/apis/dict.ts` 同款从 layout 包导入；若 layout 未导出这两个类型，参照 `src/apis/dict.ts` 第一行的实际导入照抄。
 
-- [ ] **步骤 2：创建 src/pages/index/form/list.tsx**
+- [x] **步骤 2：创建 src/pages/index/form/list.tsx**
 
 ```tsx
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
@@ -3282,7 +3283,7 @@ export default function FormListPage() {
 
 注：`http` 返回值直接是响应 data（拦截器已解包），与 `src/apis/dict.ts` 调用方一致；若 `res.list` 类型对不上，参照 `src/pages/index/system/dict.tsx` 的实际取值方式调整。
 
-- [ ] **步骤 3：创建 src/pages/index/form/design.tsx**
+- [x] **步骤 3：创建 src/pages/index/form/design.tsx**
 
 ```tsx
 import type { FormSchema } from '@zealous-admin/form-designer/index'
@@ -3331,7 +3332,7 @@ export default function FormDesignPage() {
 }
 ```
 
-- [ ] **步骤 4：创建 src/pages/index/form/render.tsx**
+- [x] **步骤 4：创建 src/pages/index/form/render.tsx**
 
 ```tsx
 import type { FormSchema } from '@zealous-admin/form-designer/index'
@@ -3387,7 +3388,7 @@ export default function FormRenderPage() {
 }
 ```
 
-- [ ] **步骤 5：手动验收（P4 验收）**
+- [x] **步骤 5：手动验收（P4 验收）**
 
 1. `pnpm dev` + `cd service && pnpm dev` 同时启动
 2. 侧边菜单"表单设计 > 表单管理"可见可进入
@@ -3396,7 +3397,7 @@ export default function FormRenderPage() {
 5. 点"渲染"，填写并提交，values 结构与 field 命名一致
 6. 删除表单，列表刷新
 
-- [ ] **步骤 6：全量检查 + Commit**
+- [x] **步骤 6：全量检查 + Commit**
 
 ```bash
 pnpm lint
