@@ -1,10 +1,22 @@
-/** 表单全局配置，直接透传给 antd Form */
-export interface FormGlobalConfig {
+/** 可透传给 antd Form 的属性（白名单，须与 pickAntdFormProps 保持一致） */
+export interface AntdFormPassthrough {
   layout?: 'horizontal' | 'vertical' | 'inline'
   labelAlign?: 'left' | 'right'
   size?: 'large' | 'middle' | 'small'
   colon?: boolean
   disabled?: boolean
+}
+
+/** 表单全局配置：antd 透传项 + 设计器自有项 */
+export interface FormGlobalConfig extends AntdFormPassthrough {
+  /** 标签宽度（px），水平布局下转为 labelCol 列宽 */
+  labelWidth?: number
+  /** 隐藏必填星号（true → requiredMark={false}） */
+  hideRequiredAsterisk?: boolean
+  /** 是否渲染提交按钮；FormRenderer 的 showActions 传 false 时优先级更高 */
+  submitBtn?: boolean
+  /** 是否渲染重置按钮 */
+  resetBtn?: boolean
 }
 
 /** 可序列化的校验规则（渲染时转换为 antd Rule） */

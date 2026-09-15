@@ -78,3 +78,41 @@ describe('渲染器外部表单实例（FormRenderer）', () => {
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ [field]: '李四' }))
   })
 })
+
+describe('渲染器全局配置（FormRenderer）', () => {
+  it('全局配置里的非 antd 字段不会透传到 form 元素上', () => {
+    const node = pick('input').defaultSchema()
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical', labelWidth: 120, submitBtn: true },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    const form = container.querySelector('form')!
+    expect(form.hasAttribute('labelwidth')).toBe(false)
+    expect(form.hasAttribute('submitbtn')).toBe(false)
+  })
+
+  it('labelWidth 转成标签列宽', () => {
+    const node = pick('input').defaultSchema()
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'horizontal', labelWidth: 120 },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    const label = container.querySelector('.ant-form-item-label') as HTMLElement
+    expect(label.getAttribute('style')).toContain('120px')
+  })
+
+  it('submitBtn 为 false 时不渲染提交按钮', () => {
+    const node = pick('input').defaultSchema()
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical', submitBtn: false },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    expect(container.querySelector('button[type="submit"]')).toBeNull()
+  })
+})

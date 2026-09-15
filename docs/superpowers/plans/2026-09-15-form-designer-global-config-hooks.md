@@ -288,7 +288,7 @@ git commit -m "feat(form-designer): schema 升到 v2 并收口解析入口"
 
 **背景：** 现在 `FormRenderer` 用 `{...schema.form}` 直接展开到 `<Form>`。一旦加入 `labelWidth` / `submitBtn` 这类**非 antd 属性**，React 会把它们当未知属性透传并告警。必须先立白名单。
 
-- [ ] **步骤 1：编写失败的测试**
+- [x] **步骤 1：编写失败的测试**
 
 ```tsx
 // 追加到 packages/form-designer/renderer/FormRenderer.form.test.tsx
@@ -329,12 +329,12 @@ it('submitBtn 为 false 时不渲染提交按钮', () => {
 })
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/renderer/FormRenderer.form.test.tsx`
 预期：FAIL —— 透视出 `labelwidth` 属性、标签无 120px、`submitBtn: false` 仍渲染按钮
 
-- [ ] **步骤 3：扩展 `FormGlobalConfig` 并实现白名单**
+- [x] **步骤 3：扩展 `FormGlobalConfig` 并实现白名单**
 
 ```ts
 // packages/form-designer/types/schema.ts
@@ -351,8 +351,6 @@ export interface AntdFormPassthrough {
 export interface FormGlobalConfig extends AntdFormPassthrough {
   /** 标签宽度（px），水平布局下转为 labelCol 列宽 */
   labelWidth?: number
-  /** 标签后缀，如「：」 */
-  labelSuffix?: string
   /** 隐藏必填星号（true → requiredMark={false}） */
   hideRequiredAsterisk?: boolean
   /** 是否渲染提交按钮；FormRenderer 的 showActions 传 false 时优先级更高 */
@@ -361,6 +359,8 @@ export interface FormGlobalConfig extends AntdFormPassthrough {
   resetBtn?: boolean
 }
 ```
+
+> **不要加 `labelSuffix`**：那是 Element Plus 的属性（参照实现里的 `config/base/form.js` 有此项），antd 的 `Form` / `Form.Item` / `ConfigProvider` 都没有对应能力（已核 `antd/es/form/Form.d.ts` 与全量 `rg labelSuffix node_modules/antd/es`）。要做得自己遍历 label 拼后缀，需要给 `FieldItem` 引入全局配置上下文，属独立小特性，不在本批次。
 
 ```ts
 // packages/form-designer/renderer/formProps.ts
@@ -379,10 +379,10 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
 }
 ```
 
-- [ ] **步骤 4：`FormRenderer` 消费新配置**
+- [x] **步骤 4：`FormRenderer` 消费新配置**
 
 ```tsx
-  const { labelWidth, labelSuffix, hideRequiredAsterisk, submitBtn, resetBtn, ...passthrough } = schema.form
+  const { labelWidth, hideRequiredAsterisk, submitBtn, resetBtn, ...passthrough } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
   const showReset = showActions && (resetBtn ?? false)
 ```
@@ -393,26 +393,27 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
     <Form
       form={form}
       initialValues={initialValues}
-      onFinish={handleFinish}
+      onFinish={onSubmit}
       labelCol={labelWidth ? { style: { width: `${labelWidth}px` } } : undefined}
-      labelSuffix={labelSuffix}
       requiredMark={hideRequiredAsterisk ? false : undefined}
       {...pickAntdFormProps(passthrough)}
     >
 ```
 
+> 本任务 `onFinish` 仍直接挂 `onSubmit`；任务 5 会把它换成带 `beforeSubmit` / `afterSubmit` / `onSubmitError` 的 `handleFinish`。
+
 按钮区按 `showSubmit` / `showReset` 渲染，两者皆为 false 时整块不渲染。
 
-- [ ] **步骤 5：运行测试验证通过**
+- [x] **步骤 5：运行测试验证通过**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/renderer`
 预期：PASS
 
-- [ ] **步骤 6：右栏「表单」页签补配置项**
+- [x] **步骤 6：右栏「表单」页签补配置项**
 
-`RightPanel.tsx` 的 `FormConfig` 追加：标签宽度（`InputNumber`，20–300）、标签后缀（`Input`）、隐藏必填星号（`Switch`）、提交按钮 / 重置按钮（`Switch`）。写回沿用既有的 `updateFormConfig`。
+`RightPanel.tsx` 的 `FormConfig` 追加：标签宽度（`InputNumber`，20–300）、隐藏必填星号（`Switch`）、提交按钮（`Switch`）、重置按钮（`Switch`）。写回沿用既有的 `updateFormConfig`。
 
-- [ ] **步骤 7：提交**
+- [x] **步骤 7：提交**
 
 ```bash
 git add packages/form-designer/types/schema.ts packages/form-designer/renderer packages/form-designer/designer/RightPanel.tsx

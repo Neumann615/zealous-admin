@@ -1,5 +1,5 @@
 import type { ConfigMeta } from '../registry/registry'
-import { Divider, Radio, Select, Switch, Tabs } from 'antd'
+import { Divider, InputNumber, Radio, Select, Switch, Tabs } from 'antd'
 import { getComponent } from '../registry/registry'
 import { getFieldNameIssue, nodeBindsField } from '../utils/fieldName'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
@@ -110,6 +110,29 @@ function FormConfig() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 12, color: '#666' }}>整体禁用</span>
         <Switch size="small" checked={!!form.disabled} onChange={v => updateFormConfig({ disabled: v })} />
+      </div>
+      <div>
+        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>标签宽度</div>
+        <InputNumber
+          size="small"
+          style={{ width: '100%' }}
+          min={20}
+          max={300}
+          value={form.labelWidth}
+          onChange={v => updateFormConfig({ labelWidth: v ?? undefined })}
+        />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 12, color: '#666' }}>隐藏必填星号</span>
+        <Switch size="small" checked={!!form.hideRequiredAsterisk} onChange={v => updateFormConfig({ hideRequiredAsterisk: v })} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 12, color: '#666' }}>提交按钮</span>
+        <Switch size="small" checked={form.submitBtn ?? true} onChange={v => updateFormConfig({ submitBtn: v })} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontSize: 12, color: '#666' }}>重置按钮</span>
+        <Switch size="small" checked={!!form.resetBtn} onChange={v => updateFormConfig({ resetBtn: v })} />
       </div>
     </div>
   )
