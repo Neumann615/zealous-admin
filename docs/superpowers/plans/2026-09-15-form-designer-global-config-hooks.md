@@ -82,8 +82,9 @@
 - 创建：`packages/form-designer/utils/parseSchema.ts`
 - 创建：`packages/form-designer/utils/parseSchema.test.ts`
 - 修改：`packages/form-designer/types/schema.ts`
+- 修改：`packages/form-designer/index.ts`（导出 `parseSchema`，公共入口）
 - 修改：`packages/form-designer/designer/store.ts:181-207`
-- 修改：`src/pages/index/form/design.tsx:24`、`src/pages/index/form/render.tsx:26`
+- 修改：`src/pages/index/form/design.tsx:24`、`src/pages/index/form/render.tsx:26`、`src/pages/index/form/data.tsx:119`
 
 **背景：** 现在 `JSON.parse(res.data.schema)` 散在 `design.tsx` / `render.tsx` / `data.tsx` / `store.importSchema` 四处，且 `importSchema` 严格拒 `version !== 1`、渲染器完全不看版本。新增 `events` / `dataSources` 段是第一次结构变化，正是把机制建起来的时机。
 

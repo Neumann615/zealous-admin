@@ -1,6 +1,5 @@
 import type { FormSchema } from '@zealous-admin/form-designer/index'
-import { FormRenderer } from '@zealous-admin/form-designer/index'
-import { parseSchema } from '@zealous-admin/form-designer/utils/parseSchema'
+import { FormRenderer, parseSchema } from '@zealous-admin/form-designer/index'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import { Card, Empty, Form, Spin, Tag } from 'antd'
 import { useEffect, useState } from 'react'
