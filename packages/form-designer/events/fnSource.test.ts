@@ -26,11 +26,15 @@ describe('validateFnSource', () => {
   it('形参名非法返回可展示消息', () => {
     expect(validateFnSource({ $type: 'fn', args: ['1bad'], body: '' })).toContain('参数名不合法')
   })
+
+  it('顶层 await 不误判为语法错误', () => {
+    expect(validateFnSource(makeFnSource(['ctx'], 'await Promise.resolve(); return 1'))).toBeNull()
+  })
 })
 
 describe('compileFn', () => {
-  it('编译后可执行并返回值', () => {
-    expect(compileFn(makeFnSource(['a', 'b'], 'return a + b'))(1, 2)).toBe(3)
+  it('编译后可执行并返回值', async () => {
+    await expect(compileFn(makeFnSource(['a', 'b'], 'return a + b'))(1, 2)).resolves.toBe(3)
   })
 
   it('相同 args+body 命中缓存（返回同一函数引用）', () => {
@@ -48,9 +52,7 @@ describe('compileFn', () => {
     expect(spy).toHaveBeenCalledWith('hi')
   })
 
-  it('钩子体允许顶层 await（退化为 AsyncFunction）', async () => {
-    const src = makeFnSource(['ctx'], 'await Promise.resolve(); return 1')
-    expect(validateFnSource(src)).toBeNull()
-    await expect(compileFn(src)()).resolves.toBe(1)
+  it('钩子体允许顶层 await', async () => {
+    await expect(compileFn(makeFnSource(['ctx'], 'await Promise.resolve(); return 1'))()).resolves.toBe(1)
   })
 })

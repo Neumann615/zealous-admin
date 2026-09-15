@@ -9,23 +9,12 @@ const IDENTIFIER = /^[a-z_$][\w$]*$/i
 
 type AnyFn = (...args: any[]) => any
 
-/** AsyncFunction 构造器：钩子体允许顶层 await，普通 Function 编译不过时用它兜底 */
+/** AsyncFunction 构造器：钩子体允许顶层 await；runHooks 侧统一 await 结果，同步体无行为差异 */
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (...args: string[]) => AnyFn
 
-/**
- * 单次编译：优先普通函数，保持同步返回值（关键场景可直接判 false）；
- * 仅当失败原因是顶层 await 时退化为 AsyncFunction（runHooks 侧统一 await 两种形态）
- */
+/** 编译：统一走 AsyncFunction，单一路径；模型 A —— 任意代码执行能力，见计划头部风险说明 */
 function buildFn(args: string[], body: string): AnyFn {
-  try {
-    // eslint-disable-next-line no-new-func -- 模型 A 的既定实现，见计划头部风险说明
-    return new Function(...args, body) as AnyFn
-  }
-  catch (e: any) {
-    if (!/await/.test(String(e?.message)))
-      throw e
-    return new AsyncFunction(...args, body)
-  }
+  return new AsyncFunction(...args, body)
 }
 
 export function isFnSource(value: unknown): value is FnSource {
