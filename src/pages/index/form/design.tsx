@@ -1,5 +1,6 @@
 import type { FormSchema } from '@zealous-admin/form-designer/index'
 import { createEmptySchema, FormDesigner } from '@zealous-admin/form-designer/index'
+import { parseSchema } from '@zealous-admin/form-designer/utils/parseSchema'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import { Empty, Spin } from 'antd'
 import { useEffect, useState } from 'react'
@@ -21,7 +22,7 @@ export default function FormDesignPage() {
       // 无条件重置设计器 store：空 schema 用空模板，避免画布残留上一张表单字段
       if (res.data.schema) {
         try {
-          setInitialSchema(JSON.parse(res.data.schema))
+          setInitialSchema(parseSchema(res.data.schema))
         }
         catch {
           message.warning('已存 schema 解析失败，将重新设计')

@@ -11,7 +11,7 @@ afterEach(cleanup)
 
 function buildSchema(): FormSchema {
   return {
-    version: 1,
+    version: 2,
     form: { layout: 'vertical' },
     children: [
       {

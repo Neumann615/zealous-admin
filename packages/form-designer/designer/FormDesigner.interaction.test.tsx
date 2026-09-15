@@ -27,7 +27,7 @@ function def(type: string) {
 
 function schemaOf(types: string[]): FormSchema {
   return {
-    version: 1,
+    version: 2,
     form: { layout: 'vertical' },
     children: types.map(type => def(type).defaultSchema()),
   }
@@ -50,7 +50,7 @@ function duplicateNameSchema(): { schema: FormSchema, first: FieldSchema, second
   second.field = 'dup'
   second.label = '字段二'
   return {
-    schema: { version: 1, form: { layout: 'vertical' }, children: [first, second] },
+    schema: { version: 2, form: { layout: 'vertical' }, children: [first, second] },
     first,
     second,
   }
@@ -161,7 +161,7 @@ describe('设计器交互（P5 新组件）', () => {
     tableForm.field = 'items'
     tableForm.children = [{ id: 'row-title', type: 'input', field: 'title', label: '品名', props: {} }]
 
-    renderDesigner({ version: 1, form: { layout: 'vertical' }, children: [subForm, tableForm] })
+    renderDesigner({ version: 2, form: { layout: 'vertical' }, children: [subForm, tableForm] })
     const modal = openPreview()
 
     fireEvent.click(within(modal).getByRole('button', { name: /添加一行/ }))
@@ -213,7 +213,7 @@ describe('设计器交互（P5 新组件）', () => {
 
   it('字段名未填写时，属性面板提示不能为空', () => {
     renderDesigner({
-      version: 1,
+      version: 2,
       form: { layout: 'vertical' },
       children: [{ id: 'no-name', type: 'input', label: '姓名', props: {} }],
     })
@@ -242,7 +242,7 @@ describe('设计器交互（P5 新组件）', () => {
   it('存在未填字段名时保存被拦截', () => {
     const onSave = vi.fn()
     renderDesigner({
-      version: 1,
+      version: 2,
       form: { layout: 'vertical' },
       children: [{ id: 'no-name', type: 'input', label: '姓名', props: {} }],
     }, onSave)
@@ -256,6 +256,6 @@ describe('内置组件字段名校验', () => {
   it('全部内置组件的默认 schema 通过校验，不产生误报', () => {
     const children = getMenus().flatMap(g => g.list).map(d => d.defaultSchema())
     expect(children.length).toBeGreaterThan(30)
-    expect(validateSchemaFieldNames({ version: 1, form: {}, children })).toEqual([])
+    expect(validateSchemaFieldNames({ version: 2, form: {}, children })).toEqual([])
   })
 })

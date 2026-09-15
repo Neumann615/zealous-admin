@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { getComponent } from '../registry/registry'
 import { createEmptySchema } from '../types/schema'
 import { validateSchemaFieldNames } from '../utils/fieldName'
+import { parseSchema } from '../utils/parseSchema'
 import { setByPath } from '../utils/path'
 import { childrenOf, cloneNode, findNode, isDescendant, removeNode } from '../utils/schemaTree'
 import { uniqueId } from '../utils/uniqueId'
@@ -179,29 +180,24 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
     clear: () => mutate(draft => void (draft.children = [])),
 
     importSchema: (json) => {
-      const malformed: ImportResult = { ok: false, reason: 'JSON 格式不正确，未导入' }
-      let parsed: any
+      let parsed: FormSchema
       try {
-        parsed = JSON.parse(json)
+        parsed = parseSchema(json)
       }
-      catch {
-        return malformed
+      catch (e: any) {
+        return { ok: false, reason: e?.message || 'JSON 格式不正确，未导入' }
       }
-      if (parsed?.version !== 1 || !Array.isArray(parsed.children))
-        return malformed
-      if (parsed.form !== undefined && (typeof parsed.form !== 'object' || parsed.form === null))
-        return malformed
       // 过滤缺 id/type 的脏节点（深层递归校验留给后续）；校验只针对真正会装载的节点
       const children = parsed.children.filter(
         (c: any) => typeof c?.id === 'string' && typeof c?.type === 'string',
       )
-      const issues = validateSchemaFieldNames({ version: 1, form: parsed.form, children })
+      const issues = validateSchemaFieldNames({ ...parsed, children })
       if (issues.length) {
         const brief = issues.slice(0, 3).join('；')
         return { ok: false, reason: `字段名校验未通过，未导入：${brief}${issues.length > 3 ? ' 等' : ''}` }
       }
       mutate((draft) => {
-        draft.form = { ...createEmptySchema().form, ...parsed.form }
+        draft.form = parsed.form
         draft.children = children
       })
       set({ selectedId: null })

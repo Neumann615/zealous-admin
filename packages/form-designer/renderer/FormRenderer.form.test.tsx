@@ -25,7 +25,7 @@ function pick(type: string) {
 function schemaOf(): { schema: FormSchema, field: string } {
   const node = pick('input').defaultSchema()
   return {
-    schema: { version: 1, form: { layout: 'vertical' }, children: [node] },
+    schema: { version: 2, form: { layout: 'vertical' }, children: [node] },
     field: node.field as string,
   }
 }

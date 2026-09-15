@@ -70,7 +70,7 @@ function container(id: string, type: string, children: FieldSchema[], name?: str
 }
 
 function schemaOf(children: FieldSchema[]): FormSchema {
-  return { version: 1, form: { layout: 'vertical' }, children }
+  return { version: 2, form: { layout: 'vertical' }, children }
 }
 
 describe('nodeBindsField', () => {

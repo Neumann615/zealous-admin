@@ -28,7 +28,7 @@ describe('渲染器冒烟（FormRenderer）', () => {
   })
 
   it.each(defs.map(def => [def.type, def] as const))('%s 用 defaultSchema 渲染不抛错', (_type, def) => {
-    renderOne({ version: 1, form: { layout: 'vertical' }, children: [def.defaultSchema()] })
+    renderOne({ version: 2, form: { layout: 'vertical' }, children: [def.defaultSchema()] })
   })
 
   it('容器嵌套（卡片 > 栅格 > 输入框）渲染不抛错', () => {
@@ -36,12 +36,12 @@ describe('渲染器冒烟（FormRenderer）', () => {
     rowNode.children![0].children = [pick('input').defaultSchema()]
     const cardNode = pick('card').defaultSchema()
     cardNode.children = [rowNode]
-    renderOne({ version: 1, form: {}, children: [cardNode] })
+    renderOne({ version: 2, form: {}, children: [cardNode] })
   })
 
   it('未注册类型降级为警告占位而不崩溃', () => {
     renderOne({
-      version: 1,
+      version: 2,
       form: {},
       children: [{ id: 'x1', type: 'not-registered', props: {} }],
     })

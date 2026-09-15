@@ -87,7 +87,7 @@
 
 **背景：** 现在 `JSON.parse(res.data.schema)` 散在 `design.tsx` / `render.tsx` / `data.tsx` / `store.importSchema` 四处，且 `importSchema` 严格拒 `version !== 1`、渲染器完全不看版本。新增 `events` / `dataSources` 段是第一次结构变化，正是把机制建起来的时机。
 
-- [ ] **步骤 1：编写失败的测试**
+- [x] **步骤 1：编写失败的测试**
 
 ```ts
 // packages/form-designer/utils/parseSchema.test.ts
@@ -134,12 +134,12 @@ describe('parseSchema', () => {
 })
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/utils/parseSchema.test.ts`
 预期：FAIL，报错 `Cannot find module './parseSchema'`
 
-- [ ] **步骤 3：改 `types/schema.ts` 的版本常量**
+- [x] **步骤 3：改 `types/schema.ts` 的版本常量**
 
 ```ts
 /** 当前 schema 版本；新增结构段时递增，并在 parseSchema 里补迁移分支 */
@@ -164,7 +164,7 @@ export function createEmptySchema(): FormSchema {
 
 > `events` / `dataSources` 字段分别在任务 4 / 批次 3 加入，本任务不引入，保证可独立通过。
 
-- [ ] **步骤 4：实现 `parseSchema`**
+- [x] **步骤 4：实现 `parseSchema`**
 
 ```ts
 // packages/form-designer/utils/parseSchema.ts
@@ -223,12 +223,12 @@ export function parseSchema(input: string | unknown): FormSchema {
 }
 ```
 
-- [ ] **步骤 5：运行测试验证通过**
+- [x] **步骤 5：运行测试验证通过**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/utils/parseSchema.test.ts`
 预期：PASS（7 条）
 
-- [ ] **步骤 6：把解析调用点收口**
+- [x] **步骤 6：把解析调用点收口**
 
 `designer/store.ts` 的 `importSchema` 改为（保持既有次序：先迁移解析 → 过滤脏节点 → 字段名校验）：
 
@@ -261,14 +261,14 @@ export function parseSchema(input: string | unknown): FormSchema {
 
 `src/pages/index/form/design.tsx:24` 与 `render.tsx:26` 的 `JSON.parse(res.data.schema)` 改为 `parseSchema(res.data.schema)`，catch 分支沿用现有的「已存 schema 解析失败」提示文案。
 
-- [ ] **步骤 7：批量更新 fixture 版本号**
+- [x] **步骤 7：批量更新 fixture 版本号**
 
 `packages/form-designer` 下 7 个测试文件共 19 处 `version: 1` → `version: 2`（勿动 `packages/layout/store/topBar.ts`，那是无关的 store 版本字段）。
 
 运行：`node ./node_modules/.bin/vitest.CMD run`
 预期：全部 PASS
 
-- [ ] **步骤 8：提交**
+- [x] **步骤 8：提交**
 
 ```bash
 git add packages/form-designer/types/schema.ts packages/form-designer/utils/parseSchema.ts packages/form-designer/utils/parseSchema.test.ts packages/form-designer/designer/store.ts src/pages/index/form/design.tsx src/pages/index/form/render.tsx

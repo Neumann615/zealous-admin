@@ -1,5 +1,6 @@
 import type { FormSchema } from '@zealous-admin/form-designer/index'
 import { FormRenderer } from '@zealous-admin/form-designer/index'
+import { parseSchema } from '@zealous-admin/form-designer/utils/parseSchema'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import { Card, Empty, Form, Spin, Tag } from 'antd'
 import { useEffect, useState } from 'react'
@@ -23,7 +24,7 @@ export default function FormRenderPage() {
       setName(res.data.name)
       if (res.data.schema) {
         try {
-          setSchema(JSON.parse(res.data.schema))
+          setSchema(parseSchema(res.data.schema))
         }
         catch {
           message.warning('表单数据解析失败')

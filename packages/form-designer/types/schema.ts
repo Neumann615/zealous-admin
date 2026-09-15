@@ -37,15 +37,20 @@ export interface FieldSchema {
   children?: FieldSchema[]
 }
 
+/** 当前 schema 版本；新增结构段时递增，并在 parseSchema 里补迁移分支 */
+export const SCHEMA_VERSION = 2
+
+export type SchemaVersion = typeof SCHEMA_VERSION
+
 export interface FormSchema {
-  version: 1
+  version: SchemaVersion
   form: FormGlobalConfig
   children: FieldSchema[]
 }
 
 export function createEmptySchema(): FormSchema {
   return {
-    version: 1,
+    version: SCHEMA_VERSION,
     form: { layout: 'horizontal', labelAlign: 'right', size: 'middle', colon: true },
     children: [],
   }

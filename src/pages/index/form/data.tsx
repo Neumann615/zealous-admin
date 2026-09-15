@@ -2,6 +2,7 @@ import type { FormSchema } from '@zealous-admin/form-designer/index'
 import type { FormDataRecord, FormRecord } from '@/apis/form'
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, ReloadOutlined, RollbackOutlined, StopOutlined } from '@ant-design/icons'
 import { FormRenderer } from '@zealous-admin/form-designer/index'
+import { parseSchema } from '@zealous-admin/form-designer/utils/parseSchema'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import { createDownloadUrl } from '@zealous-admin/utils/index'
 import { Button, Card, Drawer, Empty, Input, Space, Table, Tag, Tooltip } from 'antd'
@@ -116,7 +117,7 @@ export default function FormDataPage() {
         setForm(res.data)
         if (res.data.schema) {
           try {
-            setSchema(JSON.parse(res.data.schema))
+            setSchema(parseSchema(res.data.schema))
           }
           catch {
             message.warning('表单结构解析失败，已退化为原始数据展示')

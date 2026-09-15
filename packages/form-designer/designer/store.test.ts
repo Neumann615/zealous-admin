@@ -108,12 +108,12 @@ describe('designer store', () => {
     expect(store().importSchema(json).ok).toBe(true)
     expect(store().schema.children).toHaveLength(1)
     expect(store().importSchema('{bad json').ok).toBe(false)
-    expect(store().importSchema('{"version":2,"children":[]}').ok).toBe(false)
+    expect(store().importSchema('{"version":99,"children":[]}').ok).toBe(false)
   })
 
   it('importSchema 拒绝同一层级重名的字段名，且不改动当前 schema', () => {
     const result = store().importSchema(JSON.stringify({
-      version: 1,
+      version: 2,
       form: { layout: 'vertical' },
       children: [
         { id: 'a', type: 'input', field: 'userName', props: {} },
@@ -127,7 +127,7 @@ describe('designer store', () => {
 
   it('importSchema 拒绝未填字段名的字段组件', () => {
     const result = store().importSchema(JSON.stringify({
-      version: 1,
+      version: 2,
       form: { layout: 'vertical' },
       children: [{ id: 'a', type: 'input', props: {} }],
     }))
@@ -188,7 +188,7 @@ describe('designer store', () => {
   it('importSchema 拒绝 form 为 null、过滤脏节点', () => {
     expect(store().importSchema('{"version":1,"form":null,"children":[]}').ok).toBe(false)
     const ok = store().importSchema(JSON.stringify({
-      version: 1,
+      version: 2,
       form: { layout: 'vertical' },
       children: [
         { id: 'a', type: 'input', field: 'fa', props: {} },
