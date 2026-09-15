@@ -52,4 +52,17 @@ describe('parseSchema', () => {
   it('也接受已解析的对象（后端可能直出对象快照）', () => {
     expect(parseSchema({ version: 1, form: {}, children: [] } as unknown).version).toBe(2)
   })
+
+  it('events 与 dataSources 能穿过解析', () => {
+    const raw = JSON.stringify({
+      version: 2,
+      form: {},
+      children: [],
+      events: { onFormCreated: [{ fn: { $type: 'fn', args: ['ctx'], body: '' } }] },
+      dataSources: { orgTree: { type: 'static' } },
+    })
+    const schema = parseSchema(raw)
+    expect(schema.events?.onFormCreated).toHaveLength(1)
+    expect(schema.dataSources?.orgTree).toEqual({ type: 'static' })
+  })
 })

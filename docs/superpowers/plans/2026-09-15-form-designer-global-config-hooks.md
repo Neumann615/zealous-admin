@@ -633,7 +633,7 @@ git commit -m "feat(form-designer): 钩子函数信封的编译与校验"
 
 **背景：** 场景命名对齐参照实现但做取舍：保留 `onCreated` / `onChange` / `onReload` / `beforeSubmit`，把 `beforeFetch` 更名为 `beforeLoadData`（批次 3 的声明式数据源叫 loadData，避免与「提交时 fetch」混淆），新增 `onSubmitError` / `onValidateFail`。
 
-- [ ] **步骤 1：编写失败的测试**
+- [x] **步骤 1：编写失败的测试**
 
 ```ts
 // packages/form-designer/events/runHooks.test.ts
@@ -735,12 +735,12 @@ describe('runHooks', () => {
 })
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/events/runHooks.test.ts`
 预期：FAIL，`Cannot find module './runHooks'`
 
-- [ ] **步骤 3：实现 `types.ts`**
+- [x] **步骤 3：实现 `types.ts`**
 
 ```ts
 import type { FormInstance } from 'antd'
@@ -807,7 +807,7 @@ export interface FormHookContext {
 }
 ```
 
-- [ ] **步骤 4：在 `types/schema.ts` 引入 `events` 段并让 `parseSchema` 透传**
+- [x] **步骤 4：在 `types/schema.ts` 引入 `events` 段并让 `parseSchema` 透传**
 
 ```ts
 // types/schema.ts
@@ -826,7 +826,7 @@ export interface FormSchema {
 
 `utils/parseSchema.ts` 的返回值补 `events: raw.events` 与 `dataSources: raw.dataSources`。
 
-- [ ] **步骤 5：实现 `runHooks.ts`**
+- [x] **步骤 5：实现 `runHooks.ts`**
 
 ```ts
 import type { CustomHookDef, FormHookContext, HookRef, HookScene } from './types'
@@ -898,12 +898,12 @@ export async function emitHook(
 }
 ```
 
-- [ ] **步骤 6：运行测试验证通过**
+- [x] **步骤 6：运行测试验证通过**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/events`
 预期：PASS（19 条）
 
-- [ ] **步骤 7：提交**
+- [x] **步骤 7：提交**
 
 ```bash
 git add packages/form-designer/events packages/form-designer/types/schema.ts packages/form-designer/utils/parseSchema.ts

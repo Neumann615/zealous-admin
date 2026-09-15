@@ -47,4 +47,10 @@ describe('compileFn', () => {
     compileFn(makeFnSource(['ctx'], 'ctx.message.success("hi")'))({ message: { success: spy } })
     expect(spy).toHaveBeenCalledWith('hi')
   })
+
+  it('钩子体允许顶层 await（退化为 AsyncFunction）', async () => {
+    const src = makeFnSource(['ctx'], 'await Promise.resolve(); return 1')
+    expect(validateFnSource(src)).toBeNull()
+    await expect(compileFn(src)()).resolves.toBe(1)
+  })
 })

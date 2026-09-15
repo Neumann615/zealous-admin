@@ -1,3 +1,5 @@
+import type { FormEventConfig } from '../events/types'
+
 /** 可透传给 antd Form 的属性（白名单，须与 pickAntdFormProps 保持一致） */
 export interface AntdFormPassthrough {
   layout?: 'horizontal' | 'vertical' | 'inline'
@@ -57,6 +59,10 @@ export type SchemaVersion = typeof SCHEMA_VERSION
 export interface FormSchema {
   version: SchemaVersion
   form: FormGlobalConfig
+  /** 表单级场景钩子与命名公共事件 */
+  events?: FormEventConfig
+  /** 命名全局数据源（批次 3 落地，本任务只占位类型） */
+  dataSources?: Record<string, unknown>
   children: FieldSchema[]
 }
 
