@@ -163,6 +163,57 @@ describe('runHooks', () => {
     expect(spy).toHaveBeenCalledWith(['hi', { x: 1 }])
   })
 
+  it('自 emit 的公共事件不会无限递归，且计数归还后仍可正常执行', async () => {
+    const error = vi.fn()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const calls = trace()
+      const custom = { loop: { fn: makeFnSource(['ctx'], 'globalThis.__trace("tick"); await ctx.emit("loop")') } }
+      const base = ctx({ message: { success: vi.fn(), error, warning: vi.fn(), info: vi.fn() } })
+      base.emit = (name, payload) => emitHook(name, base, custom, payload)
+
+      await base.emit('loop')
+      // 前 5 层正常执行，第 6 层被深度护栏拦下
+      expect(calls).toHaveLength(5)
+      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('递归过深'))
+      expect(error).toHaveBeenCalledWith({
+        content: '表单钩子 emit 递归过深：loop',
+        key: 'form-designer-hook-error',
+      })
+
+      // 计数已在 finally 归还：再触发一次仍能跑到同样的深度上限（不是一次就卡死）
+      calls.length = 0
+      error.mockClear()
+      await base.emit('loop')
+      expect(calls).toHaveLength(5)
+      expect(error).toHaveBeenCalledTimes(1)
+    }
+    finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('两个公共事件互相 emit 同样被深度护栏中断', async () => {
+    const error = vi.fn()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const calls = trace()
+      const custom = {
+        ping: { fn: makeFnSource(['ctx'], 'globalThis.__trace("ping"); await ctx.emit("pong")') },
+        pong: { fn: makeFnSource(['ctx'], 'globalThis.__trace("pong"); await ctx.emit("ping")') },
+      }
+      const base = ctx({ message: { success: vi.fn(), error, warning: vi.fn(), info: vi.fn() } })
+      base.emit = (name, payload) => emitHook(name, base, custom, payload)
+
+      await base.emit('ping')
+      expect(calls).toEqual(['ping', 'pong', 'ping', 'pong', 'ping'])
+      expect(error).toHaveBeenCalledTimes(1)
+    }
+    finally {
+      consoleError.mockRestore()
+    }
+  })
+
   it('同时配 fn 与 hook、引用不存在的公共事件各警告一次（不随触发重复）', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {

@@ -5,6 +5,12 @@ import { CRITICAL_SCENES } from './types'
 /** 上报用的稳定 key：antd 会覆盖同 key 的提示，避免逐键触发时堆叠刷屏 */
 const HOOK_ERROR_KEY = 'form-designer-hook-error'
 
+/** emit 嵌套深度上限：钩子自 emit / 两个公共事件互 emit 会沿微任务无限递归，超过即中断该次 emit */
+const EMIT_DEPTH_LIMIT = 5
+
+/** 当前 emit 嵌套层数；模块级共享，finally 里归还，正常与异常路径都不能漏 */
+let emitDepth = 0
+
 /** 已提示过的配置问题（键形如 both:名 / missing:名），只警告一次，避免逐键触发时重复刷屏 */
 const warnedConfigs = new Set<string>()
 
@@ -85,6 +91,12 @@ export async function emitHook(
     warnOnce(`missing:${name}`, `[form-designer] 公共事件不存在：${name}`)
     return
   }
+  if (emitDepth >= EMIT_DEPTH_LIMIT) {
+    console.error(`[form-designer] 公共事件 emit 递归过深（${name}），已中断`)
+    ctx.message.error({ content: `表单钩子 emit 递归过深：${name}`, key: HOOK_ERROR_KEY })
+    return
+  }
+  emitDepth++
   try {
     // 新建 ctx 投递 payload：不污染调用方的值快照，也不与真实字段名撞名
     await compileFn(def.fn)({ ...ctx, payload })
@@ -92,5 +104,9 @@ export async function emitHook(
   catch (e) {
     console.error(`[form-designer] 公共事件执行失败（${name}）`, e)
     ctx.message.error({ content: `公共事件执行失败：${name}`, key: HOOK_ERROR_KEY })
+  }
+  finally {
+    // 钩子体内 await 时其它 emit 也在计数，这里必须成对归还
+    emitDepth--
   }
 }

@@ -941,7 +941,7 @@ git commit -m "feat(form-designer): 钩子场景、上下文与执行器"
 
 **背景：** 场景触发点收敛在 `FormRenderer`。**画布（设计态）不执行钩子**；预览弹窗与业务渲染页执行 —— 预览是显式动作，也是联调钩子的唯一手段。
 
-- [ ] **步骤 1：编写失败的测试**
+- [x] **步骤 1：编写失败的测试**
 
 ```tsx
 // packages/form-designer/renderer/hooks.test.tsx
@@ -1067,12 +1067,12 @@ describe('FormRenderer 钩子接入', () => {
 })
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/renderer/hooks.test.tsx`
 预期：FAIL —— 场景未实现，`calls` 为空
 
-- [ ] **步骤 3：在 `FormRenderer` 内组装 ctx 并接线场景**
+- [x] **步骤 3：在 `FormRenderer` 内组装 ctx 并接线场景**
 
 先在 `utils/schemaTree.ts` 增加按字段名查找（`getField` 需要，现有 `findNode` 是按 id 查）：
 
@@ -1227,12 +1227,12 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 
 > `onValuesChange` 里不要再用第二个参数（`allValues`）回灌 state：`buildCtx()` 每次都从 `form.getFieldsValue(true)` 现取，避免多一份可能与表单不同步的副本。上面留 `void all` 仅为显式标注该参数未使用（实现时可直接省略形参）。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/renderer`
 预期：PASS
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add packages/form-designer/renderer
@@ -1252,7 +1252,7 @@ git commit -m "feat(form-designer): 渲染器接入表单钩子场景"
 
 **背景：** 编辑器先用 monospace `Input.TextArea`（与既有 `json` 配置项一致），校验走 `validateFnSource`；CodeMirror 升级见「后续」。
 
-- [ ] **步骤 1：编写失败的测试**
+- [x] **步骤 1：编写失败的测试**
 
 ```tsx
 // 追加到 FormDesigner.interaction.test.tsx 末尾
@@ -1279,12 +1279,12 @@ it('表单页签可新增命名公共事件', () => {
 })
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/designer/FormDesigner.interaction.test.tsx`
 预期：FAIL —— `updateEvents is not a function`，找不到「新增公共事件」按钮
 
-- [ ] **步骤 3：store 增加事件写入接口**
+- [x] **步骤 3：store 增加事件写入接口**
 
 ```ts
     updateEvents: (patch: Partial<FormEventConfig>) => mutate((draft) => {
@@ -1295,7 +1295,7 @@ it('表单页签可新增命名公共事件', () => {
     }, true),
 ```
 
-- [ ] **步骤 4：实现 `HookEditor` 与 `FormEventsPanel`**
+- [x] **步骤 4：实现 `HookEditor` 与 `FormEventsPanel`**
 
 ```tsx
 // HookEditor.tsx
@@ -1338,7 +1338,7 @@ export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v
 
 `RightPanel.tsx` 的「表单」页签改为渲染 `FormEventsPanel`（两个页签结构不变）。
 
-- [ ] **步骤 5：保存前拦截**
+- [x] **步骤 5：保存前拦截**
 
 `FormDesigner.tsx` 的 `handleSave` 在字段名校验之后追加：
 
@@ -1368,12 +1368,12 @@ export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v
 
 拦截条件只看 `ref.fn`，与 `resolveFn` 的「内联 fn 优先」对齐：只要 ref 带 `fn`，运行时执行的就是它，`hook` 字段是否存在都不该让坏 `fn` 绕过保存校验。
 
-- [ ] **步骤 6：运行测试验证通过**
+- [x] **步骤 6：运行测试验证通过**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/designer`
 预期：PASS
 
-- [ ] **步骤 7：提交**
+- [x] **步骤 7：提交**
 
 ```bash
 git add packages/form-designer/designer

@@ -65,4 +65,67 @@ describe('parseSchema', () => {
     expect(schema.events?.onFormCreated).toHaveLength(1)
     expect(schema.dataSources?.orgTree).toEqual({ type: 'static' })
   })
+
+  it('合法 events（内联 fn + 按名引用 + custom）通过', () => {
+    const raw = JSON.stringify({
+      version: 2,
+      form: {},
+      children: [],
+      events: {
+        onFormCreated: [{ fn: { $type: 'fn', args: ['ctx'], body: 'return 1' }, watch: ['a'] }],
+        beforeSubmit: [{ hook: 'syncDept' }],
+        custom: { syncDept: { label: '同步部门', fn: { $type: 'fn', args: ['ctx'], body: '' } } },
+      },
+    })
+    const schema = parseSchema(raw)
+    expect(schema.events?.beforeSubmit).toEqual([{ hook: 'syncDept' }])
+    expect(schema.events?.custom?.syncDept.label).toBe('同步部门')
+  })
+
+  it('场景值不是数组时抛错', () => {
+    const raw = JSON.stringify({ version: 2, form: {}, children: [], events: { onFormCreated: { hook: 'x' } } })
+    expect(() => parseSchema(raw)).toThrow('表单结构解析失败：事件钩子格式不正确（onFormCreated）')
+  })
+
+  it('fn 形状不对时抛错（缺 body / fn 非对象 / 既无 fn 也无 hook）', () => {
+    const bad = (events: unknown) => JSON.stringify({ version: 2, form: {}, children: [], events })
+    expect(() => parseSchema(bad({ onFormMounted: [{ fn: { $type: 'fn', args: ['ctx'] } }] })))
+      .toThrow('事件钩子格式不正确（onFormMounted）')
+    expect(() => parseSchema(bad({ onReset: [{ fn: 'oops' }] })))
+      .toThrow('事件钩子格式不正确（onReset）')
+    expect(() => parseSchema(bad({ onReset: [{ watch: ['a'] }] })))
+      .toThrow('事件钩子格式不正确（onReset）')
+    // hook 不是字符串同样拒绝
+    expect(() => parseSchema(bad({ onReset: [{ hook: 1 }] })))
+      .toThrow('事件钩子格式不正确（onReset）')
+  })
+
+  it('钩子正文超长时抛错', () => {
+    const body = 'x'.repeat(20001)
+    const raw = JSON.stringify({
+      version: 2,
+      form: {},
+      children: [],
+      events: { onSubmitError: [{ fn: { $type: 'fn', args: ['ctx'], body } }] },
+    })
+    expect(() => parseSchema(raw)).toThrow('钩子正文过长（onSubmitError）')
+    // 恰好 20000 字符仍可通过
+    const edge = JSON.stringify({
+      version: 2,
+      form: {},
+      children: [],
+      events: { onSubmitError: [{ fn: { $type: 'fn', args: ['ctx'], body: 'x'.repeat(20000) } }] },
+    })
+    expect(parseSchema(edge).events?.onSubmitError).toHaveLength(1)
+  })
+
+  it('custom 里的 fn 非法时抛错', () => {
+    const raw = JSON.stringify({
+      version: 2,
+      form: {},
+      children: [],
+      events: { custom: { syncDept: { label: '同步部门' } } },
+    })
+    expect(() => parseSchema(raw)).toThrow('事件钩子格式不正确（公共事件 syncDept）')
+  })
 })
