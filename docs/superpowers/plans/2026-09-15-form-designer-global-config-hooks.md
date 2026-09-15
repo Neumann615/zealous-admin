@@ -1048,9 +1048,10 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   const { message } = App.useApp()
   const [innerForm] = Form.useForm()
   const form = externalForm ?? innerForm
-  const { labelWidth, labelSuffix, hideRequiredAsterisk, submitBtn, resetBtn, ...passthrough } = schema.form
+  const { labelWidth, hideRequiredAsterisk, submitBtn, resetBtn, ...passthrough } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
-  const showReset = showActions && (resetBtn ?? false)
+  const showReset = showActions && (resetBtn ?? true)
+  const isHorizontal = (schema.form.layout ?? 'horizontal') === 'horizontal'
 
   // 钩子配置经 ref 读取，避免 schema 引用变化时闭包拿到旧事件表
   const eventsRef = useRef(schema.events)
@@ -1131,8 +1132,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
         // 同步一次快照，供 onValuesChange 之后的钩子读到最新值
         void all
       }}
-      labelCol={labelWidth ? { style: { width: `${labelWidth}px` } } : undefined}
-      labelSuffix={labelSuffix}
+      labelCol={labelWidth && isHorizontal ? { style: { width: `${labelWidth}px` } } : undefined}
       requiredMark={hideRequiredAsterisk ? false : undefined}
       {...pickAntdFormProps(passthrough)}
     >
