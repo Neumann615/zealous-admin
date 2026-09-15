@@ -643,6 +643,17 @@ git commit -m "feat(form-designer): 钩子函数信封的编译与校验"
 
 **背景：** 场景命名对齐参照实现但做取舍：保留 `onCreated` / `onChange` / `onReload` / `beforeSubmit`，把 `beforeFetch` 更名为 `beforeLoadData`（批次 3 的声明式数据源叫 loadData，避免与「提交时 fetch」混淆），新增 `onSubmitError` / `onValidateFail`。
 
+> **⚠️ 本节代码块是初稿，最终实现已收敛 —— 以实际文件为准，不要照抄下面。**
+> `packages/form-designer/events/types.ts` 与 `runHooks.ts` 在本任务后又经历两轮审查修正，与下方代码块的差异如下（权威版本见 `git show e5256a6` 或直接读文件）：
+>
+> - `emit` 签名为 `(name, payload?) => Promise<void>`（关键场景可 `await ctx.emit(...)` 后再 `return false`）；
+>   `FormHookContext` 增加 `payload?: any` 与 `scene?: HookScene`；`CRITICAL_SCENES` 为 `readonly HookScene[]`；
+>   `values` 注释写明「触发时刻快照，要最新值走 `getValues()`」
+> - 新增导出 `filterRefsForField(refs, field)`：`onFieldChange` 的 `watch` 过滤唯一实现，任务 5 必须调它
+> - 失败上报共用稳定 message key（`form-designer-hook-error`），避免逐键弹 toast 堆叠
+> - `resolveFn` 保持「内联 `fn` 优先」，并对「同时配了 `fn` 与 `hook`」「引用了不存在的 `hook`」各警告一次
+> - `fnSource.ts` 统一走 `AsyncFunction` 编译（支持顶层 `await`）、空形参名报「参数名不合法：不能为空」
+
 - [x] **步骤 1：编写失败的测试**
 
 ```ts
