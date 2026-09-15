@@ -1,5 +1,6 @@
 import { Form } from 'antd'
 import { createStyles } from 'antd-style'
+import { buildFormProps } from '../renderer/formProps'
 import { CanvasItem } from './CanvasItem'
 import { DropGap } from './DropGap'
 import { useDesignerStore } from './store'
@@ -36,7 +37,7 @@ export function Canvas() {
 
   return (
     <div className={styles.canvas} onClick={() => select(null)}>
-      <Form {...schema.form} component={false}>
+      <Form component={false} {...buildFormProps(schema.form)}>
         {schema.children.length === 0
           ? (
               <div className={styles.empty}>

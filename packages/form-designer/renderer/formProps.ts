@@ -11,3 +11,15 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
   }
   return picked
 }
+
+/** 全局配置 → antd Form 属性（白名单透传 + 设计器自有项的换算），画布与运行时共用 */
+export function buildFormProps(form: FormGlobalConfig) {
+  const { labelWidth, layout } = form
+  // 垂直/行内布局下标签在字段上方占满宽度，labelWidth 不参与（antd 的 layout 默认 horizontal）
+  const isHorizontal = (layout ?? 'horizontal') === 'horizontal'
+  return {
+    ...pickAntdFormProps(form),
+    labelCol: labelWidth && isHorizontal ? { style: { width: `${labelWidth}px` } } : undefined,
+    requiredMark: form.hideRequiredAsterisk ? false : undefined,
+  }
+}

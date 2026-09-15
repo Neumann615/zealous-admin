@@ -90,13 +90,16 @@ describe('渲染器全局配置（FormRenderer）', () => {
     const node = pick('input').defaultSchema()
     const schema: FormSchema = {
       version: 2,
-      form: { layout: 'vertical', labelWidth: 120, submitBtn: true },
+      form: { layout: 'vertical', labelWidth: 120, submitBtn: true, resetBtn: true, hideRequiredAsterisk: true },
       children: [node],
     }
     const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
     const form = container.querySelector('form')!
+    // labelWidth 是数字，泄漏时会真的落到 form 的 DOM 属性上，这条是白名单生效的硬证据
     expect(form.hasAttribute('labelwidth')).toBe(false)
-    expect(form.hasAttribute('submitbtn')).toBe(false)
+    // 布尔型自有键即使泄漏也会被 React 丢弃，所以整体断言「不出现任意自有配置键」
+    const own = ['labelwidth', 'submitbtn', 'resetbtn', 'hiderequiredasterisk']
+    expect([...form.attributes].every(a => !own.includes(a.name.toLowerCase()))).toBe(true)
   })
 
   it('labelWidth 转成标签列宽', () => {
@@ -154,5 +157,40 @@ describe('渲染器全局配置（FormRenderer）', () => {
     const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
     const label = container.querySelector('.ant-form-item-label') as HTMLElement
     expect(label.getAttribute('style') ?? '').not.toContain('120px')
+  })
+
+  it('layout 未设值时按 horizontal 处理，labelWidth 生效', () => {
+    const node = pick('input').defaultSchema()
+    const schema: FormSchema = {
+      version: 2,
+      form: { labelWidth: 120 },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    const label = container.querySelector('.ant-form-item-label') as HTMLElement
+    expect(label.getAttribute('style')).toContain('120px')
+  })
+
+  it('hideRequiredAsterisk 为 true 时必填星号被隐藏', () => {
+    const node = pick('input').defaultSchema()
+    node.formItem = { rules: [{ type: 'required', message: '必填' }] }
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical', hideRequiredAsterisk: true },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    // 星号是 label 上的 ::before 伪元素，jsdom 不渲染伪元素；
+    // 可靠的 DOM 证据是 antd 为「隐藏态」加的类（对照见下）
+    expect(container.querySelector('.ant-form-item-required-mark-hidden')).not.toBeNull()
+    // 对照：未开启配置时同一个必填项只有 ant-form-item-required，没有 mark-hidden
+    const control = render(
+      <FormRenderer
+        schema={{ ...schema, form: { layout: 'vertical' } }}
+        onSubmit={vi.fn()}
+      />,
+    )
+    expect(control.container.querySelector('.ant-form-item-required')).not.toBeNull()
+    expect(control.container.querySelector('.ant-form-item-required-mark-hidden')).toBeNull()
   })
 })

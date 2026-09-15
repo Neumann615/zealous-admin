@@ -284,6 +284,7 @@ git commit -m "feat(form-designer): schema 升到 v2 并收口解析入口"
 - 修改：`packages/form-designer/types/schema.ts`
 - 修改：`packages/form-designer/renderer/FormRenderer.tsx`
 - 修改：`packages/form-designer/designer/RightPanel.tsx:61-120`
+- 修改：`packages/form-designer/designer/Canvas.tsx`（画布与运行时共用同一份全局配置推导）
 - 测试：`packages/form-designer/renderer/FormRenderer.form.test.tsx`
 
 **背景：** 现在 `FormRenderer` 用 `{...schema.form}` 直接展开到 `<Form>`。一旦加入 `labelWidth` / `submitBtn` 这类**非 antd 属性**，React 会把它们当未知属性透传并告警。必须先立白名单。
@@ -301,8 +302,11 @@ it('全局配置里的非 antd 字段不会透传到 form 元素上', () => {
   }
   const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
   const form = container.querySelector('form')!
+  // labelWidth 是数字，泄漏时会真的落到 form 的 DOM 属性上，这条是白名单生效的硬证据
   expect(form.hasAttribute('labelwidth')).toBe(false)
-  expect(form.hasAttribute('submitbtn')).toBe(false)
+  // 布尔型自有键即使泄漏也会被 React 丢弃，所以整体断言「不出现任意自有配置键」
+  const own = ['labelwidth', 'submitbtn', 'resetbtn', 'hiderequiredasterisk']
+  expect([...form.attributes].every(a => !own.includes(a.name.toLowerCase()))).toBe(true)
 })
 
 it('labelWidth 转成标签列宽', () => {
@@ -329,7 +333,9 @@ it('submitBtn 为 false 时不渲染提交按钮', () => {
 })
 ```
 
-> 另补 3 条用例锁住默认行为与生效范围（见 `FormRenderer.form.test.tsx`）：未配置 `resetBtn` 时重置按钮照常渲染、`resetBtn: false` 时不渲染重置按钮、垂直布局下 `labelWidth` 不生效。
+> 另补 5 条用例锁住默认行为与生效范围（见 `FormRenderer.form.test.tsx`）：未配置 `resetBtn` 时重置按钮照常渲染、`resetBtn: false` 时不渲染重置按钮、垂直布局下 `labelWidth` 不生效、`layout` 未设值时按 horizontal 处理、`hideRequiredAsterisk: true` 时必填星号被隐藏。
+>
+> 星号那条的 DOM 证据是 label 上的 `ant-form-item-required-mark-hidden`（antd 用它把 `::before` 星号 `display: none`）——`ant-form-item-required` 在开与不开时都存在，不能用来断言。
 
 - [x] **步骤 2：运行测试验证失败**
 
@@ -379,17 +385,27 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
   }
   return picked
 }
+
+/** 全局配置 → antd Form 属性（白名单透传 + 设计器自有项的换算），画布与运行时共用 */
+export function buildFormProps(form: FormGlobalConfig) {
+  const { labelWidth, layout } = form
+  // 垂直/行内布局下标签在字段上方占满宽度，labelWidth 不参与（antd 的 layout 默认 horizontal）
+  const isHorizontal = (layout ?? 'horizontal') === 'horizontal'
+  return {
+    ...pickAntdFormProps(form),
+    labelCol: labelWidth && isHorizontal ? { style: { width: `${labelWidth}px` } } : undefined,
+    requiredMark: form.hideRequiredAsterisk ? false : undefined,
+  }
+}
 ```
 
 - [x] **步骤 4：`FormRenderer` 消费新配置**
 
 ```tsx
-  const { labelWidth, hideRequiredAsterisk, submitBtn, resetBtn, ...passthrough } = schema.form
+  const { submitBtn, resetBtn } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
   // 重置按钮默认渲染：引入配置项不得顺带改变既有行为（showActions 为真时提交 + 重置都渲染）
   const showReset = showActions && (resetBtn ?? true)
-  // 垂直/行内布局下标签在字段上方占满宽度，labelWidth 不参与（antd 的 layout 默认 horizontal）
-  const isHorizontal = (schema.form.layout ?? 'horizontal') === 'horizontal'
 ```
 
 `<Form>` 传参：
@@ -399,11 +415,11 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
       form={form}
       initialValues={initialValues}
       onFinish={onSubmit}
-      labelCol={labelWidth && isHorizontal ? { style: { width: `${labelWidth}px` } } : undefined}
-      requiredMark={hideRequiredAsterisk ? false : undefined}
-      {...pickAntdFormProps(passthrough)}
+      {...buildFormProps(schema.form)}
     >
 ```
+
+> 「全局配置 → antd Form 属性」的推导收在 `buildFormProps` 里，设计器画布 `Canvas.tsx` 也改成 `<Form component={false} {...buildFormProps(schema.form)}>`：画布与运行时共用同一份 schema、同一套推导，否则 `labelWidth` / `hideRequiredAsterisk` 会变成「预览生效、画布不生效」的设计态与运行态分叉。按钮的 `submitBtn` / `resetBtn` / `showActions` 逻辑与画布无关，留在 `FormRenderer` 内，不进 helper。
 
 > 本任务 `onFinish` 仍直接挂 `onSubmit`；任务 5 会把它换成带 `beforeSubmit` / `afterSubmit` / `onSubmitError` 的 `handleFinish`。
 
