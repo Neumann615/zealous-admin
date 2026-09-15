@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { ConfigMeta } from '../registry/registry'
 import { Divider, InputNumber, Radio, Select, Switch, Tabs } from 'antd'
 import { getComponent } from '../registry/registry'
@@ -5,6 +6,9 @@ import { getFieldNameIssue, nodeBindsField } from '../utils/fieldName'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
 import { useDesignerStore } from './store'
 import { ValidateEditor } from './ValidateEditor'
+
+/** 配置项标题/名称的统一字号与颜色（与 ConfigFormRenderer 的行内写法一致） */
+const fieldLabelStyle: CSSProperties = { fontSize: 12, color: '#666' }
 
 /** 字段组件的通用配置（label/field/tooltip/extra） */
 function getCommonMetas(hasField: boolean): ConfigMeta[] {
@@ -70,7 +74,7 @@ function FormConfig() {
   return (
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div>
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>布局</div>
+        <div style={{ ...fieldLabelStyle, marginBottom: 4 }}>布局</div>
         <Radio.Group
           size="small"
           value={form.layout}
@@ -84,7 +88,7 @@ function FormConfig() {
         />
       </div>
       <div>
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>标签对齐</div>
+        <div style={{ ...fieldLabelStyle, marginBottom: 4 }}>标签对齐</div>
         <Select
           size="small"
           style={{ width: '100%' }}
@@ -94,7 +98,7 @@ function FormConfig() {
         />
       </div>
       <div>
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>尺寸</div>
+        <div style={{ ...fieldLabelStyle, marginBottom: 4 }}>尺寸</div>
         <Select
           size="small"
           style={{ width: '100%' }}
@@ -104,15 +108,15 @@ function FormConfig() {
         />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#666' }}>显示冒号</span>
+        <span style={fieldLabelStyle}>显示冒号</span>
         <Switch size="small" checked={!!form.colon} onChange={v => updateFormConfig({ colon: v })} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#666' }}>整体禁用</span>
+        <span style={fieldLabelStyle}>整体禁用</span>
         <Switch size="small" checked={!!form.disabled} onChange={v => updateFormConfig({ disabled: v })} />
       </div>
       <div>
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>标签宽度</div>
+        <div style={{ ...fieldLabelStyle, marginBottom: 4 }}>标签宽度</div>
         <InputNumber
           size="small"
           style={{ width: '100%' }}
@@ -123,15 +127,15 @@ function FormConfig() {
         />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#666' }}>隐藏必填星号</span>
+        <span style={fieldLabelStyle}>隐藏必填星号</span>
         <Switch size="small" checked={!!form.hideRequiredAsterisk} onChange={v => updateFormConfig({ hideRequiredAsterisk: v })} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#666' }}>提交按钮</span>
+        <span style={fieldLabelStyle}>提交按钮</span>
         <Switch size="small" checked={form.submitBtn ?? true} onChange={v => updateFormConfig({ submitBtn: v })} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#666' }}>重置按钮</span>
+        <span style={fieldLabelStyle}>重置按钮</span>
         <Switch size="small" checked={form.resetBtn ?? true} onChange={v => updateFormConfig({ resetBtn: v })} />
       </div>
     </div>

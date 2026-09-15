@@ -2,7 +2,7 @@ import type { FormInstance } from 'antd'
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { Button, Form, Space } from 'antd'
 import { Fragment } from 'react'
-import { buildFormProps } from './formProps'
+import { buildFormProps, isHorizontalLayout, resolveLabelWidth } from './formProps'
 import { renderField } from './renderField'
 
 export interface FormRendererProps {
@@ -21,6 +21,12 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   const { submitBtn, resetBtn } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
   const showReset = showActions && (resetBtn ?? true)
+  // labelWidth 是像素、offset 是栅格列数，两者无法互相换算；
+  // 设了标签宽度就用 marginLeft 对齐，否则沿用原来的 offset: 4
+  const labelWidth = resolveLabelWidth(schema.form)
+  const actionWrapperCol = labelWidth
+    ? { style: { marginLeft: `${labelWidth}px` } }
+    : (isHorizontalLayout(schema.form) ? { offset: 4 } : undefined)
 
   const renderChild = (child: FieldSchema, parentType?: string): React.ReactNode => (
     <Fragment key={child.id}>{renderField(child, renderChild, parentType)}</Fragment>
@@ -30,7 +36,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     <Form form={form} initialValues={initialValues} onFinish={onSubmit} {...buildFormProps(schema.form)}>
       {schema.children.map(c => renderChild(c))}
       {(showSubmit || showReset) && (
-        <Form.Item wrapperCol={schema.form.layout === 'horizontal' ? { offset: 4 } : undefined}>
+        <Form.Item wrapperCol={actionWrapperCol}>
           <Space>
             {showSubmit && <Button type="primary" htmlType="submit">提交</Button>}
             {showReset && <Button onClick={() => form.resetFields()}>重置</Button>}

@@ -286,6 +286,7 @@ git commit -m "feat(form-designer): schema 升到 v2 并收口解析入口"
 - 修改：`packages/form-designer/designer/RightPanel.tsx:61-120`
 - 修改：`packages/form-designer/designer/Canvas.tsx`（画布与运行时共用同一份全局配置推导）
 - 测试：`packages/form-designer/renderer/FormRenderer.form.test.tsx`
+- 测试：`packages/form-designer/renderer/formProps.test.ts`（`buildFormProps` / layout 推导纯函数单测）
 
 **背景：** 现在 `FormRenderer` 用 `{...schema.form}` 直接展开到 `<Form>`。一旦加入 `labelWidth` / `submitBtn` 这类**非 antd 属性**，React 会把它们当未知属性透传并告警。必须先立白名单。
 
@@ -304,9 +305,23 @@ it('全局配置里的非 antd 字段不会透传到 form 元素上', () => {
   const form = container.querySelector('form')!
   // labelWidth 是数字，泄漏时会真的落到 form 的 DOM 属性上，这条是白名单生效的硬证据
   expect(form.hasAttribute('labelwidth')).toBe(false)
-  // 布尔型自有键即使泄漏也会被 React 丢弃，所以整体断言「不出现任意自有配置键」
-  const own = ['labelwidth', 'submitbtn', 'resetbtn', 'hiderequiredasterisk']
-  expect([...form.attributes].every(a => !own.includes(a.name.toLowerCase()))).toBe(true)
+  // 布尔型自有键即使泄漏也会被 React 丢弃，DOM 上看不见；键集合的覆盖交给 formProps.test.ts
+})
+
+it('全局配置里的 antd 透传键仍能到达 Form', () => {
+  const node = pick('input').defaultSchema()
+  const schema: FormSchema = {
+    version: 2,
+    form: { layout: 'vertical', size: 'small', labelAlign: 'left', colon: false, disabled: true },
+    children: [node],
+  }
+  const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+  const form = container.querySelector('form')!
+  expect(form.classList.contains('ant-form-vertical')).toBe(true)
+  expect(form.classList.contains('ant-form-small')).toBe(true)
+  expect(container.querySelector('.ant-form-item-label-left')).not.toBeNull()
+  expect(container.querySelector('.ant-form-item-no-colon')).not.toBeNull()
+  expect((container.querySelector('input') as HTMLInputElement).disabled).toBe(true)
 })
 
 it('labelWidth 转成标签列宽', () => {
@@ -333,7 +348,7 @@ it('submitBtn 为 false 时不渲染提交按钮', () => {
 })
 ```
 
-> 另补 5 条用例锁住默认行为与生效范围（见 `FormRenderer.form.test.tsx`）：未配置 `resetBtn` 时重置按钮照常渲染、`resetBtn: false` 时不渲染重置按钮、垂直布局下 `labelWidth` 不生效、`layout` 未设值时按 horizontal 处理、`hideRequiredAsterisk: true` 时必填星号被隐藏。
+> 另补 7 条用例锁住默认行为与生效范围（6 条在 `FormRenderer.form.test.tsx`、7 条纯函数用例在 `formProps.test.ts`）：未配置 `resetBtn` 时重置按钮照常渲染、`resetBtn: false` 时不渲染重置按钮、垂直布局下 `labelWidth` 不生效、`layout` 未设值时按 horizontal 处理、`hideRequiredAsterisk: true` 时必填星号被隐藏、五个白名单键仍到达 antd Form；`formProps.test.ts` 覆盖白名单正反向、`labelCol` / `requiredMark` 换算与 `isHorizontalLayout` / `resolveLabelWidth` 归一化。
 >
 > 星号那条的 DOM 证据是 label 上的 `ant-form-item-required-mark-hidden`（antd 用它把 `::before` 星号 `display: none`）——`ant-form-item-required` 在开与不开时都存在，不能用来断言。
 
@@ -372,12 +387,27 @@ export interface FormGlobalConfig extends AntdFormPassthrough {
 
 ```ts
 // packages/form-designer/renderer/formProps.ts
-import type { FormGlobalConfig } from '../types/schema'
+import type { AntdFormPassthrough, FormGlobalConfig } from '../types/schema'
 
-const ANTD_FORM_KEYS = ['layout', 'labelAlign', 'size', 'colon', 'disabled'] as const
+const ANTD_FORM_KEYS = ['layout', 'labelAlign', 'size', 'colon', 'disabled'] as const satisfies readonly (keyof AntdFormPassthrough)[]
 
-/** 只把 antd Form 认识的键透传出去，其余（labelWidth 等）由渲染器自行消费 */
-export function pickAntdFormProps(form: FormGlobalConfig) {
+// 若 AntdFormPassthrough 新增键而未加入上面的数组，此行报错
+type _MissingAntdFormKey = Exclude<keyof AntdFormPassthrough, typeof ANTD_FORM_KEYS[number]>
+const _assertAllKeysCovered: _MissingAntdFormKey extends never ? true : false = true
+void _assertAllKeysCovered
+
+/** layout 归一化（antd 默认 horizontal） */
+export function isHorizontalLayout(form: FormGlobalConfig): boolean {
+  return (form.layout ?? 'horizontal') === 'horizontal'
+}
+
+/** 生效的标签宽度（px），不生效返回 undefined */
+export function resolveLabelWidth(form: FormGlobalConfig): number | undefined {
+  return isHorizontalLayout(form) ? form.labelWidth : undefined
+}
+
+/** 只把 antd Form 认识的键透传出去，其余（labelWidth 等）由渲染器自行消费；模块私有，避免被误用成半份推导 */
+function pickAntdFormProps(form: FormGlobalConfig) {
   const picked: Record<string, unknown> = {}
   for (const key of ANTD_FORM_KEYS) {
     if (form[key] !== undefined)
@@ -388,12 +418,10 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
 
 /** 全局配置 → antd Form 属性（白名单透传 + 设计器自有项的换算），画布与运行时共用 */
 export function buildFormProps(form: FormGlobalConfig) {
-  const { labelWidth, layout } = form
-  // 垂直/行内布局下标签在字段上方占满宽度，labelWidth 不参与（antd 的 layout 默认 horizontal）
-  const isHorizontal = (layout ?? 'horizontal') === 'horizontal'
+  const labelWidth = resolveLabelWidth(form)
   return {
     ...pickAntdFormProps(form),
-    labelCol: labelWidth && isHorizontal ? { style: { width: `${labelWidth}px` } } : undefined,
+    labelCol: labelWidth ? { style: { width: `${labelWidth}px` } } : undefined,
     requiredMark: form.hideRequiredAsterisk ? false : undefined,
   }
 }
@@ -406,6 +434,12 @@ export function buildFormProps(form: FormGlobalConfig) {
   const showSubmit = showActions && (submitBtn ?? true)
   // 重置按钮默认渲染：引入配置项不得顺带改变既有行为（showActions 为真时提交 + 重置都渲染）
   const showReset = showActions && (resetBtn ?? true)
+  // labelWidth 是像素、offset 是栅格列数，两者无法互相换算：
+  // 设了标签宽度就用 marginLeft 对齐，否则沿用原来的 offset: 4
+  const labelWidth = resolveLabelWidth(schema.form)
+  const actionWrapperCol = labelWidth
+    ? { style: { marginLeft: `${labelWidth}px` } }
+    : (isHorizontalLayout(schema.form) ? { offset: 4 } : undefined)
 ```
 
 `<Form>` 传参：
@@ -423,7 +457,7 @@ export function buildFormProps(form: FormGlobalConfig) {
 
 > 本任务 `onFinish` 仍直接挂 `onSubmit`；任务 5 会把它换成带 `beforeSubmit` / `afterSubmit` / `onSubmitError` 的 `handleFinish`。
 
-按钮区按 `showSubmit` / `showReset` 渲染，两者皆为 false 时整块不渲染。
+按钮区按 `showSubmit` / `showReset` 渲染，两者皆为 false 时整块不渲染；动作行的对齐用上面同一份推导（`actionWrapperCol`），避免「layout 判定」与「标签宽度换算」在第二处再推一遍。
 
 - [x] **步骤 5：运行测试验证通过**
 
@@ -1047,7 +1081,7 @@ import { App, Button, Form, Space } from 'antd'
 import { Fragment, useCallback, useEffect, useRef } from 'react'
 import { emitHook, runHooks } from '../events/runHooks'
 import { findNodeByField } from '../utils/schemaTree'
-import { buildFormProps } from './formProps'
+import { buildFormProps, isHorizontalLayout, resolveLabelWidth } from './formProps'
 import { renderField } from './renderField'
 
 export interface FormRendererProps {
@@ -1067,6 +1101,13 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   const { submitBtn, resetBtn } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
   const showReset = showActions && (resetBtn ?? true)
+
+  // labelWidth 是像素、offset 是栅格列数，两者无法互相换算：
+  // 设了标签宽度就用 marginLeft 对齐，否则沿用原来的 offset: 4
+  const labelWidth = resolveLabelWidth(schema.form)
+  const actionWrapperCol = labelWidth
+    ? { style: { marginLeft: `${labelWidth}px` } }
+    : (isHorizontalLayout(schema.form) ? { offset: 4 } : undefined)
 
   // 钩子配置经 ref 读取，避免 schema 引用变化时闭包拿到旧事件表
   const eventsRef = useRef(schema.events)
@@ -1151,7 +1192,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     >
       {schema.children.map(c => renderChild(c))}
       {(showSubmit || showReset) && (
-        <Form.Item wrapperCol={schema.form.layout === 'horizontal' ? { offset: 4 } : undefined}>
+        <Form.Item wrapperCol={actionWrapperCol}>
           <Space>
             {showSubmit && <Button type="primary" htmlType="submit">提交</Button>}
             {showReset && <Button onClick={handleReset}>重置</Button>}

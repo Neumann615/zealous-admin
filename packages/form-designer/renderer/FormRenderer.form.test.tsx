@@ -97,9 +97,22 @@ describe('渲染器全局配置（FormRenderer）', () => {
     const form = container.querySelector('form')!
     // labelWidth 是数字，泄漏时会真的落到 form 的 DOM 属性上，这条是白名单生效的硬证据
     expect(form.hasAttribute('labelwidth')).toBe(false)
-    // 布尔型自有键即使泄漏也会被 React 丢弃，所以整体断言「不出现任意自有配置键」
-    const own = ['labelwidth', 'submitbtn', 'resetbtn', 'hiderequiredasterisk']
-    expect([...form.attributes].every(a => !own.includes(a.name.toLowerCase()))).toBe(true)
+  })
+
+  it('全局配置里的 antd 透传键仍能到达 Form', () => {
+    const node = pick('input').defaultSchema()
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical', size: 'small', labelAlign: 'left', colon: false, disabled: true },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    const form = container.querySelector('form')!
+    expect(form.classList.contains('ant-form-vertical')).toBe(true)
+    expect(form.classList.contains('ant-form-small')).toBe(true)
+    expect(container.querySelector('.ant-form-item-label-left')).not.toBeNull()
+    expect(container.querySelector('.ant-form-item-no-colon')).not.toBeNull()
+    expect((container.querySelector('input') as HTMLInputElement).disabled).toBe(true)
   })
 
   it('labelWidth 转成标签列宽', () => {
