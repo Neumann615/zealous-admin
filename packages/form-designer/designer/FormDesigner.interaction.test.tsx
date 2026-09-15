@@ -2,12 +2,15 @@
 /* eslint-disable perfectionist/sort-imports -- @dnd-kit/dom 在模块加载期就读取 ResizeObserver，兜底必须早于 FormDesigner 的 import */
 import '../test/setupDom'
 import type { FieldSchema, FormSchema } from '../types/schema'
+import type { FormHookContext } from '../events/types'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { App } from 'antd'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { runHooks } from '../events/runHooks'
 import { getComponent, getMenus } from '../registry/registry'
 import { createEmptySchema } from '../types/schema'
 import { validateSchemaFieldNames } from '../utils/fieldName'
+import { parseSchema } from '../utils/parseSchema'
 import { FormDesigner } from './FormDesigner'
 import { useDesignerStore } from './store'
 import '../registry/components'
@@ -327,5 +330,72 @@ describe('设计器全局事件与公共事件', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /删\s*除/ }))
     expect(useDesignerStore.getState().schema.events?.onFormCreated).toHaveLength(0)
+  })
+
+  it('清空钩子正文后仍是合法 schema（存得进、读得回）', () => {
+    const onSave = vi.fn()
+    renderDesigner(createEmptySchema(), onSave)
+    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
+    fireEvent.click(screen.getAllByRole('button', { name: /添加钩子/ })[0])
+
+    // 正文存原文、不 trim：纯空白也要留下来（否则从空正文起手打不进前导空格）
+    const area = screen.getByRole('textbox')
+    fireEvent.change(area, { target: { value: '  ' } })
+    expect(useDesignerStore.getState().schema.events?.onFormCreated?.[0].fn)
+      .toEqual({ $type: 'fn', args: ['ctx'], body: '  ' })
+
+    // 清空正文：空正文 = 合法的「什么都不做」，不能退化成 undefined / {}
+    fireEvent.change(area, { target: { value: '' } })
+    expect(useDesignerStore.getState().schema.events?.onFormCreated?.[0].fn)
+      .toEqual({ $type: 'fn', args: ['ctx'], body: '' })
+
+    clickSave()
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(() => parseSchema(useDesignerStore.getState().exportSchema())).not.toThrow()
+  })
+
+  it('切换为「引用公共事件」后，钩子真的执行公共事件', async () => {
+    renderDesigner(createEmptySchema())
+    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
+    fireEvent.click(screen.getAllByRole('button', { name: /添加钩子/ })[0])
+    fireEvent.click(screen.getByRole('button', { name: /新增公共事件/ }))
+    act(() => {
+      useDesignerStore.getState().updateCustomHooks({
+        event_1: { label: '探针', fn: { $type: 'fn', args: ['ctx'], body: 'globalThis.__trace("hit")' } },
+      })
+    })
+
+    // 引用下拉在全局事件段内（表单配置段还有两个 Select，取最后一个 combobox）
+    const combos = screen.getAllByRole('combobox')
+    fireEvent.mouseDown(combos[combos.length - 1])
+    const option = await waitFor(() => {
+      const el = document.querySelector('.ant-select-item-option') as HTMLElement | null
+      if (!el)
+        throw new Error('引用公共事件下拉未展开')
+      return el
+    })
+    fireEvent.click(option)
+
+    // 互斥：引用生效时内联 fn 必须被清掉，否则 fn 优先会执行空正文
+    expect(useDesignerStore.getState().schema.events?.onFormCreated?.[0]).toEqual({ hook: 'event_1' })
+
+    const calls: any[] = []
+    ;(globalThis as any).__trace = (v: any) => calls.push(v)
+    const events = useDesignerStore.getState().schema.events!
+    const ctx: FormHookContext = {
+      form: {} as any,
+      values: {},
+      getValues: () => ({}),
+      setValue: vi.fn(),
+      setValues: vi.fn(),
+      getField: () => undefined,
+      emit: vi.fn(),
+      reload: async () => {},
+      message: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+    }
+    await act(async () => {
+      await runHooks('onFormCreated', events.onFormCreated, ctx, events.custom)
+    })
+    expect(calls).toEqual(['hit'])
   })
 })

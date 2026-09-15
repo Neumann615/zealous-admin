@@ -3,8 +3,9 @@
 import '../test/setupDom'
 import type { FormEventConfig } from '../events/types'
 import type { FormSchema } from '../types/schema'
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { App } from 'antd'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { makeFnSource } from '../events/fnSource'
 import { FormRenderer } from './FormRenderer'
@@ -44,6 +45,36 @@ describe('渲染器钩子接入（FormRenderer）', () => {
       </App>,
     )
     await waitFor(() => expect(calls).toEqual(['created', 'mounted']))
+  })
+
+  it('父组件重渲染（schema 引用每次都变）不会重跑挂载场景', async () => {
+    const calls = trace()
+    function Host() {
+      const [tick, setTick] = useState(0)
+      return (
+        <App>
+          <FormRenderer
+            schema={schemaWith({
+              onFormCreated: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("created")') }],
+              onFormMounted: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("mounted")') }],
+            })}
+            onSubmit={vi.fn()}
+          />
+          <button onClick={() => setTick(tick + 1)}>rerender</button>
+          <span>{`tick:${tick}`}</span>
+        </App>
+      )
+    }
+    const { getByText } = render(<Host />)
+    await waitFor(() => expect(calls).toEqual(['created', 'mounted']))
+
+    fireEvent.click(getByText('rerender'))
+    await waitFor(() => expect(getByText('tick:1')).toBeTruthy())
+    // 留出微任务窗口：buildCtx 若不稳，会先 onFormUnmount 再重跑 created/mounted
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+    expect(calls).toEqual(['created', 'mounted'])
   })
 
   it('字段变化触发 onFieldChange 并带上字段名', async () => {

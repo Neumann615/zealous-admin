@@ -35,6 +35,10 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   // 钩子配置经 ref 读取，避免 schema 引用变化时闭包拿到旧事件表
   const eventsRef = useRef(schema.events)
   eventsRef.current = schema.events
+  // 同理，getField 也经 ref 读 schema：否则 buildCtx 依赖 schema.children，
+  // 业务页内联传 schema 时父组件每次渲染都会让挂载 effect 重跑一遍
+  const schemaRef = useRef(schema)
+  schemaRef.current = schema
 
   const buildCtx = useCallback((over?: Partial<FormHookContext>): FormHookContext => {
     const current = eventsRef.current
@@ -44,7 +48,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
       getValues: () => form.getFieldsValue(true),
       setValue: (field, value) => form.setFieldsValue({ [field]: value }),
       setValues: patch => form.setFieldsValue(patch),
-      getField: field => findNodeByField(schema.children, field) ?? undefined,
+      getField: field => findNodeByField(schemaRef.current.children, field) ?? undefined,
       // 数据源在批次 3 接入；此处保留空实现，钩子里调用不会抛错
       reload: async () => {},
       message,
@@ -57,7 +61,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     // 的命名公共事件恰恰最需要知道自己被谁触发。
     ctx.emit = (name, payload) => emitHook(name, ctx, current?.custom, payload)
     return ctx
-  }, [form, message, schema.children])
+  }, [form, message])
 
   /** onFieldChange：只触发 watch 命中（或未声明 watch）的引用 */
   const runFieldChange = useCallback((field: string, value: any) => {
@@ -75,26 +79,19 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   }, [buildCtx])
 
   /** 提交链路：beforeSubmit 可改值/可 return false 中断 → onSubmit → afterSubmit / onSubmitError */
-  const handleFinish = (values: Record<string, any>): Promise<void> => {
-    const pending = (async () => {
-      const custom = eventsRef.current?.custom
-      if (!await runHooks('beforeSubmit', eventsRef.current?.beforeSubmit, buildCtx({ values }), custom))
-        return
-      try {
-        await onSubmit?.(values)
-        await runHooks('afterSubmit', eventsRef.current?.afterSubmit, buildCtx({ values }), custom)
-      }
-      catch (e) {
-        await runHooks('onSubmitError', eventsRef.current?.onSubmitError, buildCtx({ values }), custom)
-        // 继续抛出：失败提示仍由 http 拦截器统一弹出，此处不重复弹窗
-        throw e
-      }
-    })()
-    // antd 不消费 onFinish 的返回值，rethrow 会变成 unhandled rejection（浏览器控制台报错、
-    // 测试运行器直接失败）。挂一个空 catch 只为消除噪音，pending 自身仍是 rejected，
-    // 任何 await 它的调用方照旧拿得到该异常。
-    void pending.catch(() => {})
-    return pending
+  const handleFinish = async (values: Record<string, any>) => {
+    const custom = eventsRef.current?.custom
+    if (!await runHooks('beforeSubmit', eventsRef.current?.beforeSubmit, buildCtx({ values }), custom))
+      return
+    try {
+      await onSubmit?.(values)
+      await runHooks('afterSubmit', eventsRef.current?.afterSubmit, buildCtx({ values }), custom)
+    }
+    catch {
+      // 不往外抛：rc-field-form 忽略 onFinish 的返回值，抛出去只会变成没有消费者的 unhandled
+      // rejection（控制台报错 / 测试运行器失败）；业务页的失败提示由 http 拦截器统一负责
+      await runHooks('onSubmitError', eventsRef.current?.onSubmitError, buildCtx({ values }), custom)
+    }
   }
 
   const handleReset = () => {

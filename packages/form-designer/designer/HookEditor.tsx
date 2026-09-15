@@ -13,8 +13,12 @@ export const HOOK_ARGS = ['ctx']
  * 单个钩子的函数体编辑器。
  * 受控（正文直接读 value.body，不另存 state）：引用列表会被上移/删除/切换引用，
  * 本地 state 在这些外部变更下会残留旧正文，受控渲染天然不会读到过期内容。
+ *
+ * 永远产出合法的 FnSource：空正文是合法的「什么都不做」（删除钩子由删除按钮负责），
+ * 产出 undefined 会序列化成 {} —— 保存侧 `if (ref.fn)` 判假放行、回读却过不了 parseSchema。
+ * 正文不做 trim：否则从空正文起手打不进前导空格/换行。
  */
-export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v?: FnSource) => void }) {
+export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v: FnSource) => void }) {
   const error = value ? validateFnSource(value) : null
   return (
     <div>
@@ -25,7 +29,7 @@ export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v
         rows={4}
         value={value?.body ?? ''}
         style={{ fontFamily: 'monospace', fontSize: 12 }}
-        onChange={e => onChange(e.target.value.trim() ? makeFnSource(HOOK_ARGS, e.target.value) : undefined)}
+        onChange={e => onChange(makeFnSource(HOOK_ARGS, e.target.value))}
       />
       {error && <div style={{ fontSize: 12, color: '#ff4d4f', marginTop: 4 }}>{error}</div>}
     </div>

@@ -1227,6 +1227,8 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 
 > `onValuesChange` 里不要再用第二个参数（`allValues`）回灌 state：`buildCtx()` 每次都从 `form.getFieldsValue(true)` 现取，避免多一份可能与表单不同步的副本。上面留 `void all` 仅为显式标注该参数未使用（实现时可直接省略形参）。
 
+> **已知限制（`watch` 与嵌套字段）**：antd 的 `onValuesChange` 交回的是**嵌套结构**的 `changedValues`（rc-field-form 内部走 `cloneByNamePathList(store, [namePath])`），所以子表单 / 表格子表单内的字段变化在这里只能看到**顶层段名**：`contact.name` 变化上报的是 `contact`。因此 `watch: ['contact.name']` **不会命中**，写 `watch: ['contact']` 才会。精确到嵌套字段的上报（展平点分路径）留待数据源联动一并做。
+
 - [x] **步骤 4：运行测试验证通过**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/renderer`
@@ -1289,11 +1291,13 @@ it('表单页签可新增命名公共事件', () => {
 ```ts
     updateEvents: (patch: Partial<FormEventConfig>) => mutate((draft) => {
       draft.events = { ...(draft.events || {}), ...patch }
-    }, true),
+    }, 'events'),
     updateCustomHooks: (custom: Record<string, CustomHookDef>) => mutate((draft) => {
       draft.events = { ...(draft.events || {}), custom }
-    }, true),
+    }, 'events:custom'),
 ```
+
+> `mutate` 的第二参是 `coalesceKey?: string`（不是布尔）：同一个 key 在 500ms 窗口内的连续写入合并为一条历史。钩子编辑是逐键写入，必须带上 key，否则每个按键都会占一条 undo 记录。
 
 - [x] **步骤 4：实现 `HookEditor` 与 `FormEventsPanel`**
 
@@ -1301,14 +1305,19 @@ it('表单页签可新增命名公共事件', () => {
 // HookEditor.tsx
 import type { FnSource } from '../events/fnSource'
 import { Input } from 'antd'
-import { useState } from 'react'
-import { validateFnSource } from '../events/fnSource'
+import { makeFnSource, validateFnSource } from '../events/fnSource'
 
 /** 钩子可用形参：模型 A 下由配置声明，运行时按声明顺序注入 */
 export const HOOK_ARGS = ['ctx']
 
-export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v?: FnSource) => void }) {
-  const [text, setText] = useState(value?.body ?? '')
+/**
+ * 受控（正文直接读 value.body，不另存 state）：引用列表会被上移/删除/切换引用，
+ * 本地 state 在这些外部变更下会残留旧正文。
+ * 永远产出合法的 FnSource：空正文 = 合法的「什么都不做」，删除由删除按钮负责；
+ * 产出 undefined 会序列化成 {}（保存侧 if (ref.fn) 放行、回读过不了 parseSchema）。
+ * 正文不 trim，否则从空正文起手打不进前导空格/换行。
+ */
+export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v: FnSource) => void }) {
   const error = value ? validateFnSource(value) : null
   return (
     <div>
@@ -1317,12 +1326,9 @@ export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v
       </div>
       <Input.TextArea
         rows={4}
-        value={text}
+        value={value?.body ?? ''}
         style={{ fontFamily: 'monospace', fontSize: 12 }}
-        onChange={(e) => {
-          setText(e.target.value)
-          onChange(e.target.value.trim() ? { $type: 'fn', args: HOOK_ARGS, body: e.target.value } : undefined)
-        }}
+        onChange={e => onChange(makeFnSource(HOOK_ARGS, e.target.value))}
       />
       {error && <div style={{ fontSize: 12, color: '#ff4d4f', marginTop: 4 }}>{error}</div>}
     </div>
@@ -1335,6 +1341,11 @@ export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v
 - 「表单配置」段：复用任务 2 的既有配置项
 - 「全局事件」段：按场景清单（场景名 + 中文说明 + 入参提示）逐场景渲染；每场景一个「添加钩子」按钮与已添加列表（`HookEditor` + 引用公共事件的下拉 + 上移 / 删除）
 - 「公共事件」段：命名表，每项 `label` + `HookEditor` + 删除；「新增公共事件」按钮生成 `event_${n}` 键名
+
+> 「全局事件」段两条必须守住的规则：
+>
+> 1. **内联正文与按名引用互斥**：`resolveFn` 以 `fn` 优先，只写 `hook` 而不清 `fn` 会继续执行旧的内联正文（空正文时公共事件一次都不跑）。选公共事件时写 `{ hook: v, fn: undefined }`；在 `HookEditor` 里输入时写 `{ fn: src, hook: undefined }`。
+> 2. `onFieldChange` 的场景说明里要写明**嵌套字段只上报顶层段名**（子表单内 `contact.name` 变化 → `ctx.changed.field === 'contact'`，`watch: ['contact.name']` 不命中），见任务 5 的同名限制说明。
 
 `RightPanel.tsx` 的「表单」页签改为渲染 `FormEventsPanel`（两个页签结构不变）。
 

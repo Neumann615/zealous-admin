@@ -13,7 +13,11 @@ const SCENES: ReadonlyArray<{ scene: HookScene, label: string, hint: string }> =
   { scene: 'onFormCreated', label: '表单创建后', hint: '已创建、未挂载' },
   { scene: 'onFormMounted', label: '表单挂载后', hint: '可在此拉取初始数据' },
   { scene: 'onFormUnmount', label: '表单卸载前', hint: '清理副作用' },
-  { scene: 'onFieldChange', label: '字段值变化', hint: 'ctx.changed 带字段与值；可用 watch 限定字段' },
+  {
+    scene: 'onFieldChange',
+    label: '字段值变化',
+    hint: '可用 watch 限定字段；嵌套字段（子表单/表格子表单内）变化只上报顶层段名，watch 写 contact.name 不会命中',
+  },
   { scene: 'beforeLoadData', label: '加载数据前', hint: '返回 false 中断加载（数据源接入后生效）' },
   { scene: 'afterLoadData', label: '加载数据后', hint: '数据源接入后生效' },
   { scene: 'beforeSubmit', label: '提交前', hint: '返回 false 中断提交' },
@@ -176,7 +180,8 @@ export function FormEventsPanel() {
                 >
                   <HookEditor
                     value={ref.fn}
-                    onChange={fn => patchRef(scene, index, { fn })}
+                    // 内联正文与按名引用互斥：resolveFn 以 fn 优先，留着旧的 fn 会让公共事件永远不执行
+                    onChange={fn => patchRef(scene, index, { fn, hook: undefined })}
                   />
                   <Space size={4} style={{ marginTop: 8, width: '100%' }}>
                     <Select
@@ -185,7 +190,7 @@ export function FormEventsPanel() {
                       allowClear
                       placeholder="引用公共事件"
                       value={ref.hook}
-                      onChange={v => patchRef(scene, index, { hook: v })}
+                      onChange={v => patchRef(scene, index, { hook: v, fn: undefined })}
                       options={customNames.map(name => ({ label: custom[name]?.label || name, value: name }))}
                     />
                     <Button size="small" disabled={index === 0} onClick={() => moveUp(scene, index)}>上移</Button>
@@ -215,7 +220,7 @@ export function FormEventsPanel() {
             </Space>
             <HookEditor
               value={custom[name]?.fn}
-              onChange={fn => patchCustom(name, { fn: fn ?? makeFnSource(HOOK_ARGS, '') })}
+              onChange={fn => patchCustom(name, { fn })}
             />
           </div>
         ))}
