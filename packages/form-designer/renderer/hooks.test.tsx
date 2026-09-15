@@ -1,0 +1,201 @@
+// @vitest-environment jsdom
+/* eslint-disable perfectionist/sort-imports -- dnd-kit 兜底需先于其它 import */
+import '../test/setupDom'
+import type { FormEventConfig } from '../events/types'
+import type { FormSchema } from '../types/schema'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { App } from 'antd'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { makeFnSource } from '../events/fnSource'
+import { FormRenderer } from './FormRenderer'
+import '../registry/components'
+
+afterEach(cleanup)
+
+/** 钩子通过 globalThis.__trace 回传，避免依赖 ctx 上的测试专用方法 */
+function trace() {
+  const calls: any[] = []
+  ;(globalThis as any).__trace = (v: any) => calls.push(v)
+  return calls
+}
+
+function schemaWith(events: FormEventConfig, children: FormSchema['children'] = [
+  { id: 'a', type: 'input', field: 'name', label: '姓名', props: {} },
+]): FormSchema {
+  return { version: 2, form: { layout: 'vertical' }, events, children }
+}
+
+function submitButton(container: HTMLElement) {
+  return container.querySelector('button[type="submit"]')!
+}
+
+describe('渲染器钩子接入（FormRenderer）', () => {
+  it('挂载时依次触发 onFormCreated 与 onFormMounted', async () => {
+    const calls = trace()
+    render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({
+            onFormCreated: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("created")') }],
+            onFormMounted: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("mounted")') }],
+          })}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+    await waitFor(() => expect(calls).toEqual(['created', 'mounted']))
+  })
+
+  it('字段变化触发 onFieldChange 并带上字段名', async () => {
+    const calls = trace()
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({ onFieldChange: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace(ctx.changed.field)') }] })}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+    fireEvent.change(container.querySelector('input')!, { target: { value: '张三' } })
+    await waitFor(() => expect(calls).toEqual(['name']))
+  })
+
+  it('watch 未命中的字段变化不触发钩子，命中后触发', async () => {
+    const calls = trace()
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith(
+            { onFieldChange: [{ watch: ['a'], fn: makeFnSource(['ctx'], 'globalThis.__trace(ctx.changed.field)') }] },
+            [
+              { id: 'a', type: 'input', field: 'a', label: '甲', props: {} },
+              { id: 'b', type: 'input', field: 'b', label: '乙', props: {} },
+            ],
+          )}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+    fireEvent.change(container.querySelectorAll('input')[1], { target: { value: 'bee' } })
+    await waitFor(() => expect(container.querySelectorAll('input')[1].value).toBe('bee'))
+    expect(calls).toEqual([])
+
+    fireEvent.change(container.querySelectorAll('input')[0], { target: { value: 'aye' } })
+    await waitFor(() => expect(calls).toEqual(['a']))
+  })
+
+  it('beforeSubmit 返回 false 时不调用 onSubmit', async () => {
+    const onSubmit = vi.fn()
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({ beforeSubmit: [{ fn: makeFnSource(['ctx'], 'return false') }] })}
+          onSubmit={onSubmit}
+        />
+      </App>,
+    )
+    fireEvent.click(submitButton(container))
+    await waitFor(() => expect(onSubmit).not.toHaveBeenCalled())
+  })
+
+  it('onSubmit 解析后触发 afterSubmit', async () => {
+    const calls = trace()
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({ afterSubmit: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("after")') }] })}
+          onSubmit={onSubmit}
+        />
+      </App>,
+    )
+    fireEvent.click(submitButton(container))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(calls).toEqual(['after']))
+  })
+
+  it('onSubmit 拒绝时触发 onSubmitError', async () => {
+    const calls = trace()
+    const fail = vi.fn().mockRejectedValue(new Error('boom'))
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({ onSubmitError: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("error")') }] })}
+          onSubmit={fail}
+        />
+      </App>,
+    )
+    fireEvent.click(submitButton(container))
+    await waitFor(() => expect(calls).toEqual(['error']))
+  })
+
+  it('非关键场景钩子抛错不影响提交', async () => {
+    const onSubmit = vi.fn()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const { container } = render(
+        <App>
+          <FormRenderer
+            schema={schemaWith({ onFormMounted: [{ fn: makeFnSource(['ctx'], 'throw new Error("boom")') }] })}
+            onSubmit={onSubmit}
+          />
+        </App>,
+      )
+      fireEvent.click(submitButton(container))
+      await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    }
+    finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('按名引用公共事件表', async () => {
+    const calls = trace()
+    render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({
+            custom: { ping: { label: '探针', fn: makeFnSource(['ctx'], 'globalThis.__trace("pong")') } },
+            onFormMounted: [{ hook: 'ping' }],
+          })}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+    await waitFor(() => expect(calls).toEqual(['pong']))
+  })
+
+  it('resetFields 后触发 onReset', async () => {
+    const calls = trace()
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({ onReset: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("reset")') }] })}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+    fireEvent.change(container.querySelector('input')!, { target: { value: '张三' } })
+    await waitFor(() => expect(container.querySelector('input')!.value).toBe('张三'))
+
+    fireEvent.click(container.querySelector('button:not([type="submit"])')!)
+    await waitFor(() => expect(calls).toEqual(['reset']))
+    expect(container.querySelector('input')!.value).toBe('')
+  })
+
+  it('ctx.emit 触发的公共事件能读到触发场景（ctx.scene）', async () => {
+    const calls = trace()
+    render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({
+            custom: { probe: { fn: makeFnSource(['ctx'], 'globalThis.__trace(ctx.scene)') } },
+            onFormMounted: [{ fn: makeFnSource(['ctx'], 'await ctx.emit("probe")') }],
+          })}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+    await waitFor(() => expect(calls).toEqual(['onFormMounted']))
+  })
+})

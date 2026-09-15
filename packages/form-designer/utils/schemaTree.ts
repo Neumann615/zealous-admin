@@ -27,6 +27,20 @@ export function findNode(children: FieldSchema[], id: string): LocatedNode | nul
   return null
 }
 
+/** 按字段名在树中查找节点（容器内字段也可命中）；只读用途，不返回位置 */
+export function findNodeByField(children: FieldSchema[], field: string): FieldSchema | null {
+  for (const node of children) {
+    if (node.field === field)
+      return node
+    if (node.children) {
+      const found = findNodeByField(node.children, field)
+      if (found)
+        return found
+    }
+  }
+  return null
+}
+
 /**
  * 取指定父节点的 children 数组。
  * parentId 为 null 时表示根；目标节点没有 children 时初始化为空数组。
