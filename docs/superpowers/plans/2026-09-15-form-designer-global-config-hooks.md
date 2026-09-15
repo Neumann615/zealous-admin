@@ -1136,21 +1136,23 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 
   const buildCtx = useCallback((over?: Partial<FormHookContext>): FormHookContext => {
     const current = eventsRef.current
-    const base: FormHookContext = {
+    const ctx: FormHookContext = {
       form,
       values: form.getFieldsValue(true),
       getValues: () => form.getFieldsValue(true),
       setValue: (field, value) => form.setFieldsValue({ [field]: value }),
       setValues: patch => form.setFieldsValue(patch),
       getField: field => findNodeByField(schema.children, field) ?? undefined,
-      // 返回 Promise：钩子里可 await ctx.emit(...) 之后再决定是否 return false；
-      // payload 由 emitHook 以新建 ctx 传入，不写进 values（避免污染值快照/撞字段名）
-      emit: (name, payload) => emitHook(name, buildCtx(), current?.custom, payload),
       // 数据源在批次 3 接入；此处保留空实现，钩子里调用不会抛错
       reload: async () => {},
       message,
+      ...over,
     }
-    return { ...base, ...over }
+    // emit 必须转发「接收者自身」而不是新建 ctx：scene（以及 onFieldChange 的 changed）
+    // 是 runHooks 写在它收到的那份 ctx 上的，另建一份就会全丢——而「写一次、多场景复用」
+    // 的命名公共事件恰恰最需要知道自己被谁触发。
+    ctx.emit = (name, payload) => emitHook(name, ctx, current?.custom, payload)
+    return ctx
   }, [form, message, schema.children])
 
   /** onFieldChange：只触发 watch 命中（或未声明 watch）的引用 */
