@@ -488,7 +488,7 @@ git commit -m "feat(form-designer): 全局配置项补齐并隔离 antd 透传�
 
 **背景：** 钩子的持久化形态与执行引擎。参考实现把源码包进 PREFIX 字符串，我们改用结构化信封（差异 1）。
 
-- [ ] **步骤 1：编写失败的测试**
+- [x] **步骤 1：编写失败的测试**
 
 ```ts
 // packages/form-designer/events/fnSource.test.ts
@@ -544,12 +544,12 @@ describe('compileFn', () => {
 })
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/events/fnSource.test.ts`
 预期：FAIL，`Cannot find module './fnSource'`
 
-- [ ] **步骤 3：实现 `fnSource.ts`**
+- [x] **步骤 3：实现 `fnSource.ts`**
 
 ```ts
 /** 可序列化函数信封：schema 里只存源码，运行时编译 */
@@ -609,12 +609,12 @@ export function compileFn(src: FnSource): (...args: any[]) => any {
 }
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/events/fnSource.test.ts`
 预期：PASS（10 条）
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add packages/form-designer/events
