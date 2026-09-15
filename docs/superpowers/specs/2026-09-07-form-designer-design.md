@@ -303,3 +303,34 @@ P1–P4 构成完整可用闭环；P5 逐组件增量添加，互不影响。
 **验证**：新增 36 条测试，覆盖作用域展开边界（布局容器多层嵌套、值绑定容器内外同名、数组容器内部重名、空字段名不参与判定、无值容器残留字段不参与判定）、导入拦截与回滚、保存拦截，并以 37 个内置组件的默认 schema 做无假报守卫；前端测试合计 12 文件 141 用例全绿。
 
 **遗留**：校验只在设计器侧（提示 + 保存 / 导入拦截），`POST /form/update` 对 `schema` 字符串不做结构校验，绕过设计器直接调接口仍可写入重名字段。待有第三方写入场景时再补服务端校验。
+
+### 12.9 全局配置与事件钩子（2026-09-15 新增）
+
+§3 / §4 只覆盖「字段 + 少量全局配置」，未定义全局配置命名空间，也没有任何事件能力。本批次把 `schema.form` 升级为真正的**全局配置命名空间**，并新增**可序列化的表单级场景钩子 + 命名公共事件表**。实现计划见 `docs/superpowers/plans/2026-09-15-form-designer-global-config-hooks.md`（批次 1–2），使用文档见 `docs/form-designer/events.md`。
+
+**schema v2 与解析收口**：`SCHEMA_VERSION` 抬到 `2`，新增 `events` / `dataSources` 两个**可选**段；新增 `utils/parseSchema.ts` 作为**唯一解析入口**（接受字符串或已解析对象），内含 v1→v2 迁移（纯增量，只抬版本号）、未知高版本拒绝、`children` / `form` 形状校验与 `events` 形状校验。设计器 `importSchema`、页面装载与测试夹具统一走它，不再各自 `JSON.parse`。
+
+**全局配置**：`FormGlobalConfig` 拆为 `AntdFormPassthrough`（`layout` / `labelAlign` / `size` / `colon` / `disabled`，白名单透传，`renderer/formProps.ts` 用类型级断言防止新增键漏进白名单）与设计器自有项（`labelWidth` → `labelCol`、`hideRequiredAsterisk` → `requiredMark`、`submitBtn` / `resetBtn`）。换算集中在 `buildFormProps`，画布与运行时共用。设计器右栏「表单」页签由单段改为 表单配置 / 全局事件 / 公共事件 三段。
+
+**与参照实现的偏差**（只对齐数据模型与能力，不复制其实现代码；参照软件为商业授权版）：
+
+| 参照实现（form-create Pro） | 本项目 | 原因 |
+|---|---|---|
+| 钩子以 `[[FORM-CREATE-PREFIX-…]]` 字符串前后缀标记序列化 | 结构化信封 `{ $type: 'fn', args, body }` | 无正则剥壳、不与用户正文混淆、可结构化校验 |
+| 每次触发重新 `new Function` | `compileFn` 按 `args + body` 记忆化（上限 500 条，超出整体清空） | 同一钩子反复触发不重复编译 |
+| 场景名 `beforeFetch` | 更名 `beforeLoadData` | 批次 3 的声明式数据源叫 loadData，避免与「提交时 fetch」混淆 |
+| 9 个场景：`onSubmit` / `onReset` / `onCreated` / `onMounted` / `onBeforeUnmount` / `onReload` / `onChange` / `beforeSubmit` / `beforeFetch` | 12 个场景：前四者更名为 `onFormCreated` / `onFormMounted` / `onFormUnmount` / `onFieldChange`，再加 `beforeLoadData`、`afterSubmit`、`onValidateFail`、`onSubmitError` | 提交动作归宿主（`FormRenderer` 的 `onSubmit` prop），钩子只做前 / 后置：参照实现的 `onSubmit` 落到 `afterSubmit`；另补校验失败与提交失败两条分支 |
+| 字段级 `$GLOBAL:事件名` 引用 | 表单级 `{ hook: '名字' }` 引用 | 字段级入口留到后续增量 |
+| 同步编译、同步调用 | 统一 `AsyncFunction` 编译，`runHooks` 侧统一 `await` 结果 | 钩子体允许顶层 `await`；同步体无行为差异 |
+
+**执行语义**：`CRITICAL_SCENES = ['beforeSubmit', 'beforeLoadData']`——关键场景钩子 `return false` 或抛错即**中断**（`beforeSubmit` 中断后不调用 `onSubmit`、不触发 `afterSubmit`）；非关键场景 `return false` 被忽略、抛错只跳过该条并提示。同场景内按 `order` 升序执行（`Array.sort` 稳定）。`watch` 过滤的**唯一实现**是 `runHooks.ts` 的 `filterRefsForField`（未声明 `watch` 的引用对任意字段触发），面板与渲染器都只经这一处，避免两边口径分叉。`ctx.emit` **返回 `Promise<void>`**，命名公共事件可被 `await` 串联；递归深度按 ctx 副本（`WeakMap`）记账、上限 5 层，自 emit 或两个事件互 emit 会被截断并提示。错误上报：弹窗按稳定 key 覆盖（不逐键刷屏）、`console.error` 按场景 / 公共事件名去重、上报失败不影响控制流。
+
+**模型 A（已接受的风险）**：钩子以 `AsyncFunction` 编译、**无沙箱**，等价于让有表单设计权限者在所有终端用户浏览器执行任意 JS——这是权限提升，不只是 XSS，2026-09-15 确认接受。缓解：保存前试编译、失败红字提示且阻止保存；运行时逐条 `try/catch`；钩子只接收单一 `ctx` 入参（降低误用，不构成沙箱）。两个**无护栏**边界已写入文档：同步死循环（`while (true)`）锁死页面、`beforeSubmit` 里永不 resolve 的 promise 让表单无法提交，均无超时机制。**重新评估条件**：表单设计权限开放给更多角色，或表单定义支持外部导入，届时改用具名钩子注册表（模型 B）。
+
+**设计器**：`HookEditor` 只写函数体（形参固定 `ctx`）、受控（引用列表上移 / 删除 / 切换后不残留旧正文）、**空正文合法**（删除钩子由删除按钮负责，避免产出 `{}` 这种存得进、读不回的引用）；保存前与字段名校验并列执行钩子校验（形状 + 语法 + 正文 ≤ 20000 字符），任一不过即拼接提示并中止。画布（设计态）**不执行**钩子，预览弹窗与业务渲染页执行。
+
+**服务端现状（§12.8 遗留不变）**：`parseSchema` 已校验 `events` 形状，但服务端 `POST /form/update` 仍只把 `schema` 当字符串存，不做结构校验——绕过设计器直接调接口仍可写入不合规的 `events`。
+
+**验证**：Vitest 18 文件 / 243 用例全绿；`eslint packages/form-designer src/pages/index/form` 0 error（两条既有 `react/no-array-index-key` warning 除外）；`tsc --noEmit` 本批次文件 0 条新增（既有报错集中在 `packages/layout` 等无关文件）；`pnpm docs:build` 通过。
+
+**遗留**：数据源三场景（`beforeLoadData` / `afterLoadData` / `onReload`）与 `ctx.reload()` 待批次 3 落地（当前不触发、空实现）；字段级钩子（`field.hooks`）与字段级按名引用未接入；`HookEditor` 计划升级 CodeMirror 6（语法高亮 + `ctx` 补全 + lint）；其余已知限制（嵌套字段 `onFieldChange` 只上报顶层段名导致 `watch` 不命中、`onReset` / `onValidateFail` 只覆盖渲染器自身路径、删除公共事件后 `event_${n}` 键名复用会让旧引用静默改绑）见 `docs/form-designer/events.md`。

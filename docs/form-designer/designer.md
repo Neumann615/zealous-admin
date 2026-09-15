@@ -71,7 +71,27 @@ interface FormDesignerProps {
 
 值绑定容器（`subForm` / `tableForm`）同样显示「字段名」——它决定提交结构的 key；但容器不挂 `Form.Item`，因此不开放校验规则。
 
-「表单」页签编辑全局配置：布局（水平/垂直/行内）、标签对齐、尺寸、显示冒号、整体禁用，直接透传给 antd `Form`。
+「表单」页签分三段（`FormEventsPanel.tsx`）：
+
+| 段 | 内容 |
+|------|------|
+| 表单配置 | 布局（水平 / 垂直 / 行内）、标签对齐、尺寸、显示冒号、整体禁用、标签宽度、隐藏必填星号、提交 / 重置按钮开关 |
+| 全局事件 | 12 个场景各一条，点「添加钩子」加一条引用，可上移 / 删除；每条引用是「内联函数体」或「引用公共事件」二选一（`fn` 与 `hook` 互斥，切换时会清掉另一个，避免 `fn` 优先把公共事件顶掉） |
+| 公共事件 | 命名公共事件表：键名 + 显示名 + 函数体，可新增 / 删除；上面场景里的引用下拉读的就是这张表 |
+
+表单配置里只有 `layout` / `labelAlign` / `size` / `colon` / `disabled` 这 5 个键透传给 antd `Form`（白名单在 `renderer/formProps.ts`），`labelWidth` / `hideRequiredAsterisk` / `submitBtn` / `resetBtn` 由渲染器与画布自行换算。
+
+场景引用上的 `watch`（仅 `onFieldChange`）与 `order` **没有面板入口**，只能来自导入的 JSON；面板里切换或清空引用不会把它们抹掉——清空引用会回落成空正文，保持 schema 合法可回读。
+
+### 写钩子（HookEditor）
+
+只写函数体，形参固定 `ctx`（编辑器顶部提示「可用参数：ctx」），语法与 `ctx` API 见[事件钩子](/form-designer/events)。编辑器受控：正文直接读 `value.body`，引用列表上移 / 删除 / 切换后不会残留旧正文；**空正文合法**，表示「什么都不做」；正文不做 `trim`，否则从空正文起手打不进前导空格。
+
+红字提示与保存拦截共用同一套口径（`events/validateEvents.ts` / `events/fnSource.ts`）：形参是合法标识符、正文能试编译、长度 ≤ 20000 字符。**红字能提示的，保存一定也能拦**。
+
+### 画布不执行钩子
+
+设计态画布只做视觉呈现（`Canvas` 用 `component={false}` 的 `Form` 承载样式，`CanvasItem` 直接调 `canvasRender ?? render`），**不跑任何钩子**。真正执行钩子的是预览弹窗与业务渲染页里的 `FormRenderer`——所以在画布上改钩子不会有运行反馈，要看效果得开预览。
 
 ### 工具栏
 
@@ -82,7 +102,7 @@ interface FormDesignerProps {
 | 导出 | 只读展示当前 schema JSON，聚焦自动全选 |
 | 清空 | 二次确认后清空全部字段（可撤销） |
 | 预览 | 弹窗内用 `FormRenderer` 真实渲染当前 schema，提交后展示 JSON |
-| 保存 | 仅在传入 `onSave` 时出现；保存前校验字段名，不通过则提示并中止（不调用 `onSave`） |
+| 保存 | 仅在传入 `onSave` 时出现；保存前校验字段名与事件钩子（形状 + 语法 + 正文长度），任一不过即拼成一条提示并中止（不调用 `onSave`） |
 
 ## FormRenderer
 
@@ -125,4 +145,5 @@ interface FormRendererProps {
 ## 相关文档
 
 - [Schema 结构与名路径](/form-designer/schema)
+- [事件钩子](/form-designer/events) — 场景清单、`ctx` API、公共事件复用与风险边界
 - [组件清单与注册](/form-designer/components)

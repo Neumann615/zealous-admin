@@ -8,11 +8,27 @@
 interface FormSchema {
   version: 2
   form: FormGlobalConfig
+  /** 表单级场景钩子与命名公共事件 */
+  events?: FormEventConfig
+  /** 命名全局数据源（批次 3 落地，当前只是占位类型） */
+  dataSources?: Record<string, unknown>
   children: FieldSchema[]
 }
 
-/** 表单全局配置，直接透传给 antd Form */
-interface FormGlobalConfig {
+/** 表单全局配置：antd 透传项 + 设计器自有项 */
+interface FormGlobalConfig extends AntdFormPassthrough {
+  /** 标签宽度（px），水平布局下生效 */
+  labelWidth?: number
+  /** 隐藏必填星号（true → requiredMark={false}） */
+  hideRequiredAsterisk?: boolean
+  /** 是否渲染提交按钮；FormRenderer 的 showActions 传 false 时优先级更高 */
+  submitBtn?: boolean
+  /** 是否渲染重置按钮 */
+  resetBtn?: boolean
+}
+
+/** 直接透传给 antd Form 的白名单 */
+interface AntdFormPassthrough {
   layout?: 'horizontal' | 'vertical' | 'inline'
   labelAlign?: 'left' | 'right'
   size?: 'large' | 'middle' | 'small'
@@ -31,7 +47,67 @@ interface FormGlobalConfig {
 }
 ```
 
-> `version` 当前为 `2`。历史 v1 结构由 `parseSchema()` 自动迁移到当前版本，无需手工改库；更高版本会被拒绝并提示升级表单设计器。
+三个段的分工：
+
+| 段 | 必填 | 说明 |
+|------|------|------|
+| `version` | 是 | 当前为 `2`；见[解析与迁移](#解析与迁移) |
+| `form` | 是 | 全局配置。只有 `AntdFormPassthrough` 的 5 个键会透传给 antd，其余由渲染器自行换算（如 `labelWidth` → `labelCol`、`hideRequiredAsterisk` → `requiredMark`），画布与运行时共用同一套换算 |
+| `events` | 否 | 表单级场景钩子 + 命名公共事件，见 [`events` 段](#events-段)与[事件钩子](/form-designer/events) |
+| `dataSources` | 否 | 命名全局数据源，批次 3 落地，当前仅占位（写入什么就原样存回） |
+| `children` | 是 | 字段树，见 [FieldSchema](#fieldschema) |
+
+> `version` 当前为 `2`。历史 v1 结构由 `parseSchema()` 自动迁移，无需手工改库；更高版本会被拒绝并提示升级表单设计器。
+
+## `events` 段
+
+两个部分：12 个场景键各挂一个引用数组，`custom` 是命名公共事件表。
+
+```ts
+type FormEventConfig = Partial<Record<HookScene, HookRef[]>> & {
+  custom?: Record<string, { label?: string, fn: FnSource }>
+}
+
+interface HookRef {
+  /** 内联函数体；与 hook 同时存在时 fn 优先 */
+  fn?: FnSource
+  /** 按名引用 custom 里的公共事件 */
+  hook?: string
+  /** 仅 onFieldChange 生效：只在这些字段变化时触发；不填 = 任意字段 */
+  watch?: string[]
+  /** 同场景内的执行顺序，升序 */
+  order?: number
+}
+
+/** 可序列化的函数信封：schema 里只存源码，运行时编译 */
+interface FnSource {
+  $type: 'fn'
+  args: string[]
+  body: string
+}
+```
+
+场景名共 12 个（`HookScene`），分关键场景与非关键场景：`beforeSubmit` / `beforeLoadData` 是**关键场景**，钩子 `return false` 或抛错会中断流程；其余场景的返回值不参与控制流。完整清单、`ctx` API、公共事件复用写法与运行语义见[事件钩子](/form-designer/events)。
+
+### 形状约束
+
+`events` 段的校验只有一份实现（`events/validateEvents.ts`），设计器保存拦截与 `parseSchema()` 共用，任何一条不通过都会被拒：
+
+| 约束 | 失败提示 |
+|------|----------|
+| `events` 是对象（不是数组 / null） | `events 应为对象` |
+| 除 `custom` 外每个场景的值是数组 | `事件钩子格式不正确（<场景>）` |
+| 引用对象带 `fn` 时必须是合法信封（`$type` / `args` / `body` 齐备且类型正确） | `事件钩子格式不正确（<场景>）` |
+| 引用既没有合法 `fn`，也没有字符串 `hook` | `事件钩子格式不正确（<场景>）` |
+| `custom` 是对象，且每项**必须有**合法 `fn`（公共事件表没有 `hook` 回退） | `事件钩子格式不正确（公共事件 <名字>）` |
+| 每个 `fn.body` 长度 ≤ 20000 字符 | `钩子正文过长…：最多 20000 字符` |
+| `fn.args` 都是合法标识符，且 `body` 能试编译通过 | `参数名不合法：<名字>` / `语法错误：<原因>` |
+
+这份校验同时挂在**设计器保存前**与 **`parseSchema()` 解析时**：前者拼成红字提示并中止保存，后者抛第一条问题。两边共用一份实现，不会出现「保存放行、回读拒绝」。
+
+## `dataSources` 段
+
+命名全局数据源，批次 3 落地。当前 `FormSchema` 里只有占位类型 `Record<string, unknown>`，`parseSchema()` 不做任何校验，设计器也不提供编辑入口——导入的 JSON 里带 `dataSources` 会原样保留，导出 / 保存后不丢。
 
 ## FieldSchema
 
@@ -135,12 +211,37 @@ interface ValidateRule {
 }
 ```
 
+## 解析与迁移
+
+`parseSchema()`（`utils/parseSchema.ts`，包根导出）是**唯一解析入口**：接受 JSON 字符串或已解析对象，返回当前版本的 `FormSchema`，失败一律抛错、消息面向用户可直接展示。数据库里的 `schema` 文本、导入的 JSON 都该走它，不要自己 `JSON.parse` 后直接使用。
+
+| 步骤 | 行为 |
+|------|------|
+| 1 | 字符串入参先 `JSON.parse`，失败抛「表单结构解析失败：不是合法的 JSON」 |
+| 2 | 非对象或数组抛「应为对象」 |
+| 3 | `version` 缺失按 `1` 处理；非正整数抛「表单版本号非法」 |
+| 4 | 高于 `SCHEMA_VERSION` 直接拒绝：`不支持的表单版本 v<n>，请升级表单设计器` |
+| 5 | 低于当前版本逐级迁移（`MIGRATIONS` 表），每步迁移必须推进版本号，否则抛「迁移未推进版本」 |
+| 6 | 校验 `children` 为数组、`form` 为对象，再按 [`events` 段的形状约束](#形状约束)校验 `events`（取第一条问题抛错） |
+| 7 | 与 `createEmptySchema()` 合并后返回：`form` 缺的键补默认值，`events` / `dataSources` 原样保留 |
+
+当前迁移表只有 **v1 → v2** 一条，且是纯增量：新增的 `events` / `dataSources` 都是可选段，迁移只抬版本号。`MIGRATIONS` 是后续结构变更的挂载点——新增结构段时抬 `SCHEMA_VERSION` 并补一条对应分支。
+
+解析与迁移都发生在**客户端**：服务端 `POST /form/update` 只把 `schema` 当字符串存（传了就 `version + 1`），不做结构校验。绕过设计器直接调接口仍可写入不合规的 schema——这与字段名校验的现状一致，见设计规格 §12.9。
+
 ## 完整示例
 
 ```json
 {
   "version": 2,
   "form": { "layout": "vertical", "labelAlign": "right", "size": "middle", "colon": true },
+  "events": {
+    "custom": {
+      "logSubmit": { "label": "记录提交", "fn": { "$type": "fn", "args": ["ctx"], "body": "globalThis.track?.('submit')" } }
+    },
+    "onFormMounted": [{ "hook": "logSubmit" }],
+    "beforeSubmit": [{ "fn": { "$type": "fn", "args": ["ctx"], "body": "ctx.setValue('submittedAt', Date.now())" } }]
+  },
   "children": [
     {
       "id": "f1",
@@ -190,4 +291,4 @@ interface ValidateRule {
 }
 ```
 
-> 设计器工具栏的「导出」直接给出当前画布的 schema JSON，「导入」粘贴回来即可复原，可当作模板复用手段。
+> 设计器工具栏的「导出」直接给出当前画布的 schema JSON（含 `events` / `dataSources`），「导入」粘贴回来即可复原，可当作模板复用手段。导入会走 `parseSchema()` 做版本迁移与形状校验，字段名或钩子不过关会报错并保留当前画布。

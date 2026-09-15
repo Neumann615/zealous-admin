@@ -9,6 +9,14 @@
 - 📝 **文档**：新增 `docs/form-designer/data.md`，`docs/form-designer/designer.md` 补 `form` prop，设计规格新增 §12.7「填写数据落库」
 - 🛡️ **字段名校验**（`packages/form-designer/utils/fieldName.ts`、`designer/store.ts`、`designer/RightPanel.tsx`、`designer/FormDesigner.tsx`）：同名字段会绑定到 rc-field-form 的同一槽位、静默产生脏数据，现按「命名作用域」校验唯一性——作用域按渲染器实际的前缀下发规则划分，普通容器（`row`/`col`/`card`/`tabs`…）不产生新作用域，故 `row > col > 输入框` 与根层字段同域；格式上禁止空值、空白与点号。属性面板在「字段名」下方红字提示，保存前整体校验、不通过则中止（不再调用 `onSave`），`importSchema` 改为返回 `ImportResult` 并拒绝带字段名问题的 schema（附具体冲突项），导入提示由通用的「JSON 格式不正确」改为精确原因
 - ✅ **验证（字段名校验）**：新增 36 条测试（`utils/fieldName.test.ts` 28 条含作用域展开边界、`store.test.ts` 导入拦截 3 条、设计器交互 4 条含保存拦截与 1 条内置组件无假报守卫）；12 文件 141 用例全绿
+- 🔧 **schema v2 与解析迁移收口**（`packages/form-designer/types/schema.ts`、`utils/parseSchema.ts`）：`SCHEMA_VERSION` 抬到 2，新增 `events` / `dataSources` 两个可选段；新增 `parseSchema()` 作为唯一解析入口（字符串 / 对象皆可），含 v1→v2 迁移、未知高版本拒绝、`children` / `form` / `events` 形状校验，设计器导入与页面装载统一走它，不再各自 `JSON.parse`
+- 🔧 **全局配置项与 antd 透传白名单**（`types/schema.ts`、`renderer/formProps.ts`、`designer/FormEventsPanel.tsx`）：`FormGlobalConfig` 拆为透传白名单（`layout` / `labelAlign` / `size` / `colon` / `disabled`，类型级断言防止漏键）与设计器自有项（`labelWidth` → `labelCol`、`hideRequiredAsterisk` → `requiredMark`、`submitBtn` / `resetBtn`），换算集中到 `buildFormProps` 供画布与运行时共用
+- ✨ **事件钩子引擎**（`events/fnSource.ts`、`events/types.ts`、`events/runHooks.ts`、`events/validateEvents.ts`）：钩子以结构化信封 `{ $type: 'fn', args, body }` 持久化、按 `args + body` 记忆化编译（统一 `AsyncFunction`，支持顶层 `await`）；12 个表单级场景 + 命名公共事件表（场景用 `{ hook: '名字' }` 引用、钩子内 `await ctx.emit('名字', payload)` 复用），关键场景 `beforeSubmit` / `beforeLoadData` 的 `return false` 或抛错中断流程，其余场景返回值不影响控制流；`watch` 按 `filterRefsForField` 单一实现过滤
+- ✨ **渲染器场景接线**（`renderer/FormRenderer.tsx`、`utils/schemaTree.ts`）：挂载 / 卸载 / 字段变化 / 提交前后 / 校验失败 / 重置逐场景触发，`ctx` 提供 `values`（触发时刻快照）/ `getValues()`（实时）/ `setValue` / `setValues` / `getField` / `emit` / `reload` / `message`，宿主未挂 antd `<App>` 时提示降级到静态 message
+- ✨ **设计器事件面板**（`designer/FormEventsPanel.tsx`、`designer/HookEditor.tsx`、`designer/FormDesigner.tsx`、`designer/store.ts`）：「表单」页签拆为 表单配置 / 全局事件 / 公共事件 三段，钩子只写函数体、受控渲染、空正文合法（表示「什么都不做」）；保存前与字段名校验并列执行钩子校验（形状 + 语法 + 正文 ≤ 20000 字符），任一不过即中止
+- 🛡️ **事件形状与 emit 递归加固**（`events/validateEvents.ts`、`events/runHooks.ts`、`designer/FormEventsPanel.tsx`、`renderer/FormRenderer.tsx`）：保存与解析共用同一份 events 校验（消除「保存放行、回读拒绝」）；`ctx.emit` 递归深度上限 5 层、超限截断并按事件名提示一次，错误弹窗按稳定 key 覆盖、`console.error` 按场景 / 事件名去重；清空引用回落空正文并保留 `watch` / `order`，提交取值收回「仅已注册字段」语义
+- ✅ **验证（全局配置与事件钩子）**：Vitest 18 文件 243 用例全绿；`eslint packages/form-designer src/pages/index/form` 0 error（两条既有 `react/no-array-index-key` warning 除外）；`tsc --noEmit` 本批次文件 0 条新增；`pnpm docs:build` 通过
+- 📝 **文档（全局配置与事件钩子）**：新增 `docs/form-designer/events.md`（场景清单 / `ctx` API / 公共事件复用 / 模型 A 风险与已知限制），`schema.md` 补 schema v2、`events` / `dataSources` 段、解析迁移与形状校验，`designer.md` 补「表单」页签三段与 `HookEditor` 写法，设计规格新增 §12.9
 
 ## 2026-09-11
 

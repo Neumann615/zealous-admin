@@ -1412,19 +1412,19 @@ git commit -m "feat(form-designer): 全局事件与公共事件编辑面板"
 - 修改：`docs/superpowers/specs/2026-09-07-form-designer-design.md`（新增 §12.9）
 - 修改：`CHANGELOG.md`、`docs/CHANGELOG.md`（`## 2026-09-15` 追加条目）
 
-- [ ] **步骤 1：写文档**（`events.md` 需含完整场景表、`ctx` API 表、公共事件复用写法、模型 A 的风险与重新评估条件）
+- [x] **步骤 1：写文档**（`events.md` 需含完整场景表、`ctx` API 表、公共事件复用写法、模型 A 的风险与重新评估条件）
 
-- [ ] **步骤 2：验证文档站构建**
+- [x] **步骤 2：验证文档站构建**
 
 运行：`pnpm docs:build`
 预期：`✓ building client + server bundles` / `✓ rendering pages`
 
-- [ ] **步骤 3：全量验证**
+- [x] **步骤 3：全量验证**
 
 运行：`node ./node_modules/.bin/vitest.CMD run`、`node ./node_modules/.bin/eslint.CMD packages/form-designer src/pages/index/form`
 预期：测试全绿；lint 0 error（`OptionsEditor` / `ValidateEditor` 两条既有 warning 除外）
 
-- [ ] **步骤 4：提交**
+- [x] **步骤 4：提交**
 
 ```bash
 git add docs CHANGELOG.md
