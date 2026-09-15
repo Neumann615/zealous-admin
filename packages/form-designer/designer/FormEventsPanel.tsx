@@ -125,7 +125,9 @@ export function FormEventsPanel() {
       const next = { ...ref, ...patch }
       // 归一化：清空引用（Select 的 allowClear 回传 undefined）后既无 fn 也无 hook 的引用会被
       // 序列化成 {}，保存侧放行、回读时整张表单解析失败。空正文是合法的「什么都不做」。
-      return next.fn || next.hook ? next : { fn: makeFnSource(HOOK_ARGS, '') }
+      // 回落必须保留 ref 上原有字段（watch / order 没有面板入口，只能来自导入的 JSON），
+      // 否则在面板里点一下引用下拉就会把它们静默抹掉
+      return next.fn || next.hook ? next : { ...next, fn: makeFnSource(HOOK_ARGS, '') }
     }))
   }
 

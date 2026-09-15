@@ -187,18 +187,22 @@ describe('渲染器钩子接入（FormRenderer）', () => {
     expect(calls).toEqual(['before'])
   })
 
-  it('beforeSubmit 里改的值会进入 onSubmit', async () => {
+  it('beforeSubmit 里改的值会进入 onSubmit，且提交值只含已注册字段', async () => {
     const onSubmit = vi.fn()
     const { container } = render(
       <App>
         <FormRenderer
-          schema={schemaWith({ beforeSubmit: [{ fn: makeFnSource(['ctx'], 'ctx.setValue("name", "李四")') }] })}
+          schema={schemaWith({
+            // ghost 没有对应的注册字段：只会进 store，不应进提交报文
+            beforeSubmit: [{ fn: makeFnSource(['ctx'], 'ctx.setValue("name", "李四"); ctx.setValue("ghost", 1)') }],
+          })}
           onSubmit={onSubmit}
         />
       </App>,
     )
     fireEvent.click(submitButton(container))
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ name: '李四' }))
+    expect(onSubmit.mock.calls[0][0]).not.toHaveProperty('ghost')
   })
 
   it('onSubmit 解析后触发 afterSubmit', async () => {

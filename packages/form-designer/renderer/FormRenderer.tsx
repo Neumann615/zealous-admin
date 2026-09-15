@@ -91,8 +91,10 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     if (!await runHooks('beforeSubmit', events?.beforeSubmit, buildCtx({ values }), custom))
       return
     // beforeSubmit 里可能用 ctx.setValue / ctx.setValues 改过值：antd 传进来的 values 只是校验时的
-    // 快照，这里重新取一次，钩子的改值才真的进 onSubmit
-    const submitted = form.getFieldsValue(true)
+    // 快照，这里重新取一次，钩子的改值才真的进 onSubmit。
+    // 不传 true：无参取值只回已注册字段，与改造前 onFinish 收到的值一致；传 true 会把整个 store
+    // （未注册字段、preserve 保留值、钩子注入的键）带进提交报文
+    const submitted = form.getFieldsValue()
     try {
       await onSubmit?.(submitted)
       await runHooks('afterSubmit', schemaRef.current.events?.afterSubmit, buildCtx({ values: submitted }), custom)

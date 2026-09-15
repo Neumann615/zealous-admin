@@ -436,6 +436,44 @@ describe('设计器全局事件与公共事件', () => {
     expect(() => parseSchema(useDesignerStore.getState().exportSchema())).not.toThrow()
   })
 
+  it('切换 / 清空引用后保留 watch 与 order（只能来自导入 JSON 的附加字段）', async () => {
+    renderDesigner(createEmptySchema())
+    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
+    fireEvent.click(screen.getByRole('button', { name: /新增公共事件/ }))
+    act(() => {
+      useDesignerStore.getState().updateEvents({
+        onFieldChange: [{ fn: { $type: 'fn', args: ['ctx'], body: '' }, watch: ['name'], order: 3 }],
+      })
+    })
+
+    // 引用下拉在全局事件段内（表单配置段还有两个 Select，取最后一个 combobox）
+    const combos = screen.getAllByRole('combobox')
+    fireEvent.mouseDown(combos[combos.length - 1])
+    const option = await waitFor(() => {
+      const el = document.querySelector('.ant-select-item-option') as HTMLElement | null
+      if (!el)
+        throw new Error('引用公共事件下拉未展开')
+      return el
+    })
+    fireEvent.click(option)
+    expect(useDesignerStore.getState().schema.events?.onFieldChange?.[0])
+      .toEqual({ hook: 'event_1', watch: ['name'], order: 3 })
+
+    // allowClear 的 × 回传 undefined：回落成空正文，但 watch / order 不能被顺手抹掉
+    const clear = await waitFor(() => {
+      const el = document.querySelector('.ant-select-clear') as HTMLElement | null
+      if (!el)
+        throw new Error('清除按钮未出现')
+      return el
+    })
+    fireEvent.mouseDown(clear)
+    fireEvent.click(clear)
+    await waitFor(() => {
+      expect(useDesignerStore.getState().schema.events?.onFieldChange?.[0])
+        .toEqual({ fn: { $type: 'fn', args: ['ctx'], body: '' }, watch: ['name'], order: 3 })
+    })
+  })
+
   it('正文超长的钩子在保存侧也被拦截（与 parseSchema 同一口径）', async () => {
     const onSave = vi.fn()
     renderDesigner(schemaOf(['input']), onSave)
