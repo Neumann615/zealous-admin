@@ -154,3 +154,5 @@ import type {
 - [Schema 结构与名路径](/form-designer/schema) — 数据结构、校验规则、嵌套提交结构
 - [组件清单与注册](/form-designer/components) — 37 个内置组件与 `registerComponent` 扩展
 - [设计器与渲染器](/form-designer/designer) — 交互、快捷键、配置面板、已知限制
+- [事件钩子](/form-designer/events) — 12 个表单级场景、命名公共事件、`ctx` API 与风险边界
+- [数据落库与查询](/form-designer/data) — `za_form_data` 表、接口与数据管理页
