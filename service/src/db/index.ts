@@ -108,6 +108,21 @@ export function initDb() {
     )
   `)
 
+  // 表单填写数据：整份 values 以 JSON 存储，仅抽出查询/追溯所需的冗余列
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS za_form_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      form_id INTEGER NOT NULL,
+      form_version INTEGER DEFAULT 1,
+      submitter TEXT,
+      status INTEGER DEFAULT 1,
+      data TEXT NOT NULL,
+      create_time TEXT
+    )
+  `)
+
+  db.exec('CREATE INDEX IF NOT EXISTS idx_form_data_form ON za_form_data (form_id, id)')
+
   const row = db.prepare('SELECT id FROM za_admin WHERE username = ?').get('admin')
   if (!row) {
     const nowStr = now()

@@ -68,3 +68,13 @@ export interface RoleMenuRelation {
   roleId: number
   menuId: number
 }
+
+export interface FormData {
+  id: number
+  formId: number
+  formVersion: number
+  submitter: string | null
+  status: number
+  data: string
+  createTime: string | null
+}

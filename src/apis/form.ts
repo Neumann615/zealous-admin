@@ -10,6 +10,22 @@ export interface FormRecord {
   version: number
   createTime: string
   updateTime: string
+  /** 已收集的填写数据条数 */
+  dataCount: number
+}
+
+/** 表单填写数据记录 */
+export interface FormDataRecord {
+  id: number
+  formId: number
+  /** 提交时的表单版本号 */
+  formVersion: number
+  submitter: string
+  /** 1 有效，0 已作废 */
+  status: number
+  /** 整份填写值的 JSON 字符串 */
+  data: string
+  createTime: string
 }
 
 /** 分页获取表单列表 */
@@ -48,10 +64,55 @@ export function updateFormAPI(data: { id: number, name?: string, description?: s
   })
 }
 
-/** 删除表单 */
+/** 删除表单（后端级联清理该表单的填写数据） */
 export function deleteFormAPI(id: number) {
   return http({
     url: '/form/delete',
+    method: 'post',
+    data: { id },
+  })
+}
+
+/** 提交表单填写数据 */
+export function submitFormDataAPI(data: { formId: number, data: Record<string, any> }) {
+  return http<{ id: number }>({
+    url: '/form/data/submit',
+    method: 'post',
+    data,
+  })
+}
+
+/** 分页获取表单填写数据 */
+export function getFormDataListAPI(params: PageParam & { formId: number, submitter?: string, status?: number }) {
+  return http<CommonPage<FormDataRecord>>({
+    url: '/form/data/list',
+    method: 'get',
+    params,
+  })
+}
+
+/** 获取单条填写数据详情 */
+export function getFormDataDetailAPI(id: number) {
+  return http<FormDataRecord>({
+    url: '/form/data/detail',
+    method: 'get',
+    params: { id },
+  })
+}
+
+/** 作废 / 恢复填写数据 */
+export function updateFormDataStatusAPI(data: { id: number, status: number }) {
+  return http({
+    url: '/form/data/updateStatus',
+    method: 'post',
+    data,
+  })
+}
+
+/** 删除填写数据 */
+export function deleteFormDataAPI(id: number) {
+  return http({
+    url: '/form/data/delete',
     method: 'post',
     data: { id },
   })

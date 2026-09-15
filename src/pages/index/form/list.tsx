@@ -1,5 +1,5 @@
 import type { FormRecord } from '@/apis/form'
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import { DatabaseOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
 import { useAppMessage, useControlTab } from '@zealous-admin/layout/index'
 import { Button, Card, Input, Modal, Space, Table, Tag } from 'antd'
 import { createStyles } from 'antd-style'
@@ -95,6 +95,7 @@ export default function FormListPage() {
     { title: 'ID', dataIndex: 'id', key: 'id', width: 70, align: 'center' as const },
     { title: '名称', dataIndex: 'name', key: 'name' },
     { title: '描述', dataIndex: 'description', key: 'description', ellipsis: true },
+    { title: '数据量', dataIndex: 'dataCount', key: 'dataCount', width: 90, align: 'center' as const },
     { title: '版本', dataIndex: 'version', key: 'version', width: 70, align: 'center' as const },
     {
       title: '状态',
@@ -115,12 +116,13 @@ export default function FormListPage() {
     {
       title: '操作',
       key: 'actions',
-      width: 280,
+      width: 340,
       align: 'center' as const,
       render: (_: any, row: FormRecord) => (
         <Space size="small">
           <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openTab({ key: `/form/design?id=${row.id}`, label: `设计-${row.name}` })}>设计</Button>
           <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => openTab({ key: `/form/render?id=${row.id}`, label: `渲染-${row.name}` })}>渲染</Button>
+          <Button size="small" type="link" icon={<DatabaseOutlined />} onClick={() => openTab({ key: `/form/data?id=${row.id}`, label: `数据-${row.name}` })}>数据</Button>
           <Button size="small" type="link" icon={row.status === 1 ? <StopOutlined /> : <SendOutlined />} onClick={() => handleToggleStatus(row)}>
             {row.status === 1 ? '下线' : '发布'}
           </Button>

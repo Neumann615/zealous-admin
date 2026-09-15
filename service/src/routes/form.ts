@@ -8,6 +8,10 @@ import { authMiddleware } from '../middleware/auth'
 const router = Router()
 const db = getDb()
 
+// 列表字段 + 已收集数据条数（相关子查询）
+const LIST_COLUMNS = 'id, name, description, status, version, create_time, update_time'
+const DATA_COUNT = '(SELECT COUNT(*) FROM za_form_data d WHERE d.form_id = za_form.id) AS data_count'
+
 router.use(authMiddleware)
 
 router.get('/form/list', (req, res) => {
@@ -23,13 +27,13 @@ router.get('/form/list', (req, res) => {
       const like = `%${keyword}%`
       total = (db.prepare('SELECT COUNT(*) AS count FROM za_form WHERE name LIKE ?').get(like) as any).count
       list = toCamelCaseList(db.prepare(
-        'SELECT id, name, description, status, version, create_time, update_time FROM za_form WHERE name LIKE ? ORDER BY update_time DESC LIMIT ? OFFSET ?',
+        `SELECT ${LIST_COLUMNS}, ${DATA_COUNT} FROM za_form WHERE name LIKE ? ORDER BY update_time DESC LIMIT ? OFFSET ?`,
       ).all(like, pageSize, offset) as any[])
     }
     else {
       total = (db.prepare('SELECT COUNT(*) AS count FROM za_form').get() as any).count
       list = toCamelCaseList(db.prepare(
-        'SELECT id, name, description, status, version, create_time, update_time FROM za_form ORDER BY update_time DESC LIMIT ? OFFSET ?',
+        `SELECT ${LIST_COLUMNS}, ${DATA_COUNT} FROM za_form ORDER BY update_time DESC LIMIT ? OFFSET ?`,
       ).all(pageSize, offset) as any[])
     }
     res.json(success({ list, total, pageSize, pageNum }))
@@ -109,6 +113,8 @@ router.post('/form/delete', (req, res) => {
       res.json(failed('缺少 id'))
       return
     }
+    // 级联清理该表单已收集的填写数据
+    db.prepare('DELETE FROM za_form_data WHERE form_id = ?').run(id)
     db.prepare('DELETE FROM za_form WHERE id = ?').run(id)
     res.json(success(null, '删除成功'))
   }

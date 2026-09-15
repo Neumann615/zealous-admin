@@ -1,3 +1,4 @@
+import type { FormInstance } from 'antd'
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { Button, Form, Space } from 'antd'
 import { Fragment } from 'react'
@@ -9,10 +10,13 @@ export interface FormRendererProps {
   onSubmit?: (values: Record<string, any>) => void
   /** 是否显示提交/重置按钮，业务页面可自行接管提交 */
   showActions?: boolean
+  /** 外部表单实例，便于业务页提交后 resetFields / setFieldsValue */
+  form?: FormInstance
 }
 
-export function FormRenderer({ schema, initialValues, onSubmit, showActions = true }: FormRendererProps) {
-  const [form] = Form.useForm()
+export function FormRenderer({ schema, initialValues, onSubmit, showActions = true, form: externalForm }: FormRendererProps) {
+  const [innerForm] = Form.useForm()
+  const form = externalForm ?? innerForm
 
   const renderChild = (child: FieldSchema, parentType?: string): React.ReactNode => (
     <Fragment key={child.id}>{renderField(child, renderChild, parentType)}</Fragment>
