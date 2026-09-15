@@ -32,7 +32,7 @@ DDL 在 `service/src/db/index.ts` 的 `initDb()` 里，`CREATE TABLE IF NOT EXIS
 
 - `data` 必须是非数组对象，否则返回「提交数据格式不正确」；`formId` 查不到表单返回「表单不存在」。
 - 提交不校验发布态，草稿也能收数据，方便设计期联调。
-- `list` 按 `id DESC` 排序，`data` 以字符串下发，前端自行 `JSON.parse`（和 `schema` 的处理方式一致）。
+- `list` 按 `id DESC` 排序，`data` 以字符串下发，前端自行 `JSON.parse`。
 - `GET /form/list` 会额外带出 `dataCount`（相关子查询统计已收集条数）。
 
 ## 前端

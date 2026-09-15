@@ -323,9 +323,9 @@ P1–P4 构成完整可用闭环；P5 逐组件增量添加，互不影响。
 | 字段级 `$GLOBAL:事件名` 引用 | 表单级 `{ hook: '名字' }` 引用 | 字段级入口留到后续增量 |
 | 同步编译、同步调用 | 统一 `AsyncFunction` 编译，`runHooks` 侧统一 `await` 结果 | 钩子体允许顶层 `await`；同步体无行为差异 |
 
-**执行语义**：`CRITICAL_SCENES = ['beforeSubmit', 'beforeLoadData']`——关键场景钩子 `return false` 或抛错即**中断**（`beforeSubmit` 中断后不调用 `onSubmit`、不触发 `afterSubmit`）；非关键场景 `return false` 被忽略、抛错只跳过该条并提示。同场景内按 `order` 升序执行（`Array.sort` 稳定）。`watch` 过滤的**唯一实现**是 `runHooks.ts` 的 `filterRefsForField`（未声明 `watch` 的引用对任意字段触发），面板与渲染器都只经这一处，避免两边口径分叉。`ctx.emit` **返回 `Promise<void>`**，命名公共事件可被 `await` 串联；递归深度按 ctx 副本（`WeakMap`）记账、上限 5 层，自 emit 或两个事件互 emit 会被截断并提示。错误上报：弹窗按稳定 key 覆盖（不逐键刷屏）、`console.error` 按场景 / 公共事件名去重、上报失败不影响控制流。
+**执行语义**：`CRITICAL_SCENES = ['beforeSubmit', 'beforeLoadData']`——关键场景钩子 `return false` 或抛错即**中断**（`beforeSubmit` 中断后不调用 `onSubmit`、不触发 `afterSubmit`）；非关键场景 `return false` 被忽略、抛错只跳过该条并提示。同场景内按 `order` 升序执行（`Array.sort` 稳定）。`watch` 过滤的**唯一实现**是 `runHooks.ts` 的 `filterRefsForField`（未声明 `watch` 的引用对任意字段触发），面板与渲染器都只经这一处，避免两边口径分叉。`ctx.emit` **返回 `Promise<void>`**，命名公共事件可被 `await` 串联；递归深度按 ctx 副本（`WeakMap`）记账、上限 5 层，自 emit 或两个事件互 emit 会被截断并提示。错误上报：弹窗按稳定 key 覆盖（不逐键刷屏）、`console.error` 按场景 / 公共事件名去重、上报失败不影响控制流。提交报文只含**已注册字段**（`FormRenderer` 用无参 `form.getFieldsValue()` 取值），钩子里写未注册字段不会进 `onSubmit`。
 
-**模型 A（已接受的风险）**：钩子以 `AsyncFunction` 编译、**无沙箱**，等价于让有表单设计权限者在所有终端用户浏览器执行任意 JS——这是权限提升，不只是 XSS，2026-09-15 确认接受。缓解：保存前试编译、失败红字提示且阻止保存；运行时逐条 `try/catch`；钩子只接收单一 `ctx` 入参（降低误用，不构成沙箱）。两个**无护栏**边界已写入文档：同步死循环（`while (true)`）锁死页面、`beforeSubmit` 里永不 resolve 的 promise 让表单无法提交，均无超时机制。**重新评估条件**：表单设计权限开放给更多角色，或表单定义支持外部导入，届时改用具名钩子注册表（模型 B）。
+**模型 A（已接受的风险）**：钩子以 `AsyncFunction` 编译、**无沙箱**，等价于让有表单设计权限者在所有终端用户浏览器执行任意 JS——这是权限提升，不只是 XSS，2026-09-15 确认接受。缓解：保存前试编译、失败红字提示且阻止保存；运行时逐条 `try/catch`；钩子只接收单一 `ctx` 入参（降低误用，不构成沙箱）。两个**无护栏**边界已写入文档：同步死循环（`while (true)`）锁死页面、`beforeSubmit` 里永不 resolve 的 promise 让表单无法提交，均无超时机制。**重新评估条件**：表单设计权限开放给更多角色，或表单定义开始接受外部来源 / 不受信任的导入（设计器自带的 JSON 导入是自家导出、属受信来源，不算），届时改用具名钩子注册表（模型 B）。
 
 **设计器**：`HookEditor` 只写函数体（形参固定 `ctx`）、受控（引用列表上移 / 删除 / 切换后不残留旧正文）、**空正文合法**（删除钩子由删除按钮负责，避免产出 `{}` 这种存得进、读不回的引用）；保存前与字段名校验并列执行钩子校验（形状 + 语法 + 正文 ≤ 20000 字符），任一不过即拼接提示并中止。画布（设计态）**不执行**钩子，预览弹窗与业务渲染页执行。
 

@@ -50,7 +50,10 @@ await ctx.emit('refreshOrgTree', { deptId: ctx.getValues().deptId })
 
 被触发的事件拿到的是**新的 ctx 副本**：`payload` 换成 `ctx.emit` 投递的载荷（不会写回表单值，也不与真实字段名撞名），`scene` / `changed` / `values` 等其余字段沿用调用方。因此公共事件里用 `ctx.scene` 就能知道自己是被哪个场景触发的，「写一次、多场景复用」时尤其有用。
 
-引用不存在的公共事件、或同时配了 `fn` 与 `hook`，运行时 `console.warn` 提示一次（不逐键刷屏），该条跳过、不影响其余钩子。
+两种情况运行时各 `console.warn` 提示一次（不逐键刷屏），都不影响其余钩子：
+
+- **引用了不存在的公共事件**：这一条**整条跳过**（没有可执行的正文）
+- **同时配了 `fn` 与 `hook`**：**不跳过**，按 `fn` 执行、只忽略 `hook`——与上面「以 `fn` 为准」是同一条规则
 
 ## 12 个场景
 
@@ -59,11 +62,11 @@ await ctx.emit('refreshOrgTree', { deptId: ctx.getValues().deptId })
 | `onFormCreated` | 渲染器挂载 effect 内、`onFormMounted` 之前 | 表单实例已创建；设计器画布**不执行** |
 | `onFormMounted` | `onFormCreated` 之后 | 可在此拉取初始数据 |
 | `onFormUnmount` | 组件卸载的清理阶段 | 清理副作用 |
-| `onFieldChange` | 任意已注册字段的值变化 | `ctx.changed` 带 `field` / `value`；可用 `watch` 限定字段 |
+| `onFieldChange` | 任意已注册字段的值变化 | `ctx.changed` 带 `field` / `value`；可用 `watch` 限定字段；嵌套字段只上报顶层段名，见[已知限制](#已知限制) |
 | `beforeLoadData` | 加载数据前 | **关键场景**；数据源接入后生效（批次 3） |
 | `afterLoadData` | 加载数据后 | 数据源接入后生效（批次 3） |
 | `onReload` | 重跑数据源时 | 数据源接入后生效（批次 3） |
-| `beforeSubmit` | 提交校验通过、调用 `onSubmit` 之前 | **关键场景**；可改值、可 `return false` 中断 |
+| `beforeSubmit` | 提交校验通过、调用 `onSubmit` 之前 | **关键场景**；可改值（只对已注册字段生效，见[改值与提交报文](#改值与提交报文)）、可 `return false` 中断 |
 | `onValidateFail` | 提交校验未通过 | 只覆盖提交这条路径，见[已知限制](#已知限制) |
 | `afterSubmit` | `onSubmit` 正常返回后 | 业务页提交失败的提示由 http 拦截器负责 |
 | `onSubmitError` | `onSubmit` 抛错时 | `onSubmit` 的 rejection 不会外抛 |
@@ -122,6 +125,14 @@ if (!ctx.getValues().agree) {
 
 `values` 与 `getValues()` 的差别是这套 API 里最容易踩的一处：`values` 是钩子被调用那一刻的快照，`getValues()` 每次都重新向表单取值。在一条钩子里先 `setValue` 再读，读到的还是旧快照。
 
+### 改值与提交报文
+
+`setValue` / `setValues` 改的是表单 store，而**提交报文只含已注册字段**：`FormRenderer` 在 `beforeSubmit` 通过后用 `form.getFieldsValue()`（无参）取值，只回当前挂载着 `Form.Item` 的字段。于是：
+
+- 改**已注册字段**的值会进 `onSubmit`，这正是「`beforeSubmit` 可改值」的含义
+- 钩子里新写的**未注册字段**不会进报文；组件已卸载、仅靠 `preserve` 留在 store 里的值同样不会。要把额外数据带进报文，得先在 `schema.children` 里放一个同名字段的组件，不能靠 `ctx.setValue` 塞进去
+- 读数时别被 store 迷惑：`getValues()`（以及顶层场景的 `values`）看到的是整份 store，包含这些未注册的键，只有提交报文按「已注册字段」收窄
+
 ### `ctx.emit` 的递归护栏
 
 `emit` 的嵌套深度上限是 **5 层**（按 `ctx` 副本逐层记账）。自己 emit 自己、或两个公共事件互相 emit，都会在超过上限时被截断：该次 `emit` 直接返回，并按事件名提示一次 `表单钩子 emit 递归过深：<名字>`，不会无限递归下去。
@@ -149,7 +160,7 @@ if (!ctx.getValues().agree) {
 - 运行时逐条 `try/catch`，单条钩子抛错不拖垮表单
 - 钩子只接收单一 `ctx` 入参，API 面文档化（降低误用，**不构成沙箱**）
 
-**重新评估的触发条件**：如果「表单设计」权限将来开放给更多角色，或表单定义支持外部导入，就需要改用具名钩子注册表（模型 B）——那时任意 JS 的可达面不再受信任边界约束。触发任一条件时重新评估，不要沿用本节的结论。
+**重新评估的触发条件**：如果「表单设计」权限将来开放给更多角色，或表单定义开始接受**外部来源 / 不受信任的导入**（设计器自带的 JSON 导入是自家导出、属受信来源，不算），就需要改用具名钩子注册表（模型 B）——那时任意 JS 的可达面不再受信任边界约束。触发任一条件时重新评估，不要沿用本节的结论。
 
 两个**不受护栏保护**的边界（无超时机制，写钩子时自己避免）：
 
@@ -197,7 +208,7 @@ if (!ctx.getValues().agree) {
     ],
     "beforeSubmit": [
       { "fn": { "$type": "fn", "args": ["ctx"], "body": "if (!ctx.getValues().agree) {\n  ctx.message.warning('请先勾选同意')\n  return false\n}" }, "order": 0 },
-      { "fn": { "$type": "fn", "args": ["ctx"], "body": "ctx.setValue('submittedAt', Date.now())" }, "order": 1 }
+      { "fn": { "$type": "fn", "args": ["ctx"], "body": "ctx.setValue('deptId', String(ctx.getValues().deptId ?? '').trim())" }, "order": 1 }
     ]
   },
   "children": [
@@ -211,7 +222,7 @@ if (!ctx.getValues().agree) {
 
 - 表单挂载后 `onFormCreated` 与 `onFormMounted` 各触发一次 `logVisit`，公共事件里用 `ctx.scene` 区分来源
 - `deptId` 变化时（`watch` 只放行这个字段）内联钩子 emit `refreshOrgTree`，被触发的事件从 `ctx.payload` 拿参数
-- 提交前两条钩子按 `order` 依次执行：先检查 `agree`，未勾选就 `return false` 中断（后面的钩子不再跑，`onSubmit` 也不会被调用）；通过后第二条往表单里写一个 `submittedAt` 字段
+- 提交前两条钩子按 `order` 依次执行：先检查 `agree`，未勾选就 `return false` 中断（后面的钩子不再跑，`onSubmit` 也不会被调用）；通过后第二条把 `deptId` 的首尾空格去掉——它写的是**已注册字段**，所以改值会进提交报文（未注册字段的写入不会，见[改值与提交报文](#改值与提交报文)）
 
 ## 延伸阅读
 

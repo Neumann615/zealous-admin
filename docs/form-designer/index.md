@@ -73,14 +73,16 @@ export default function DesignPage() {
 ### 渲染器
 
 ```tsx
-import { FormRenderer } from '@zealous-admin/form-designer/index'
+import { FormRenderer, parseSchema } from '@zealous-admin/form-designer/index'
 
 <FormRenderer
-  schema={JSON.parse(record.schema)}
+  schema={parseSchema(record.schema)}
   initialValues={{ name: '张三' }}
   onSubmit={values => console.log(values)}
 />
 ```
+
+`record.schema` 是服务端下发的 JSON 字符串，不要自己 `JSON.parse` 后直接用：`parseSchema` 会做版本迁移与形状校验（见[解析与迁移](/form-designer/schema#解析与迁移)）。
 
 ## 导出清单
 
@@ -92,7 +94,7 @@ import { FormDesigner, FormRenderer } from '@zealous-admin/form-designer/index'
 import { getComponent, getMenus, registerComponent } from '@zealous-admin/form-designer/index'
 
 // schema
-import { createEmptySchema } from '@zealous-admin/form-designer/index'
+import { createEmptySchema, parseSchema, SCHEMA_VERSION } from '@zealous-admin/form-designer/index'
 
 // 类型
 import type {
