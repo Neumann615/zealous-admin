@@ -27,6 +27,12 @@ describe('validateFnSource', () => {
     expect(validateFnSource({ $type: 'fn', args: ['1bad'], body: '' })).toContain('参数名不合法')
   })
 
+  it('空形参名返回可展示消息（不被空串真值判断绕过）', () => {
+    const msg = validateFnSource({ $type: 'fn', args: [''], body: '' })
+    expect(msg).toContain('参数名不合法')
+    expect(msg).toBe('参数名不合法：不能为空')
+  })
+
   it('顶层 await 不误判为语法错误', () => {
     expect(validateFnSource(makeFnSource(['ctx'], 'await Promise.resolve(); return 1'))).toBeNull()
   })

@@ -523,8 +523,8 @@ describe('validateFnSource', () => {
 })
 
 describe('compileFn', () => {
-  it('编译后可执行并返回值', () => {
-    expect(compileFn(makeFnSource(['a', 'b'], 'return a + b'))(1, 2)).toBe(3)
+  it('编译后可执行并返回值', async () => {
+    await expect(compileFn(makeFnSource(['a', 'b'], 'return a + b'))(1, 2)).resolves.toBe(3)
   })
 
   it('相同 args+body 命中缓存（返回同一函数引用）', () => {
@@ -559,7 +559,17 @@ export interface FnSource {
   body: string
 }
 
-const IDENTIFIER = /^[A-Za-z_$][\w$]*$/
+const IDENTIFIER = /^[a-z_$][\w$]*$/i
+
+type AnyFn = (...args: any[]) => any
+
+/** AsyncFunction 构造器：钩子体允许顶层 await；runHooks 侧统一 await 结果，同步体无行为差异 */
+const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor as new (...args: string[]) => AnyFn
+
+/** 编译：统一走 AsyncFunction，单一路径；模型 A —— 任意代码执行能力，见计划头部风险说明 */
+function buildFn(args: string[], body: string): AnyFn {
+  return new AsyncFunction(...args, body)
+}
 
 export function isFnSource(value: unknown): value is FnSource {
   if (!value || typeof value !== 'object')
@@ -578,11 +588,11 @@ export function makeFnSource(args: string[], body: string): FnSource {
 /** 形参名与语法校验，通过返回 null（保存拦截与内联提示共用） */
 export function validateFnSource(src: FnSource): string | null {
   const bad = src.args.find(a => !IDENTIFIER.test(a))
-  if (bad)
-    return `参数名不合法：${bad}`
+  // 用 !== undefined 判别：find 返回的空串是 falsy，用真值判断会漏掉空形参名
+  if (bad !== undefined)
+    return bad === '' ? '参数名不合法：不能为空' : `参数名不合法：${bad}`
   try {
-    // eslint-disable-next-line no-new-func -- 模型 A 的既定实现，见计划头部风险说明
-    new Function(...src.args, src.body)
+    buildFn(src.args, src.body)
     return null
   }
   catch (e: any) {
@@ -590,18 +600,18 @@ export function validateFnSource(src: FnSource): string | null {
   }
 }
 
-const cache = new Map<string, (...args: any[]) => any>()
+const cache = new Map<string, AnyFn>()
 /** 缓存上限，超出整体清空（表单钩子数量级很小，无需 LRU） */
 const CACHE_LIMIT = 500
 
-/** 编译并记忆化（与参照实现的差异 2） */
-export function compileFn(src: FnSource): (...args: any[]) => any {
+/** 编译并记忆化（与参照实现的差异 2：参照实现每次触发都重新 new Function） */
+export function compileFn(src: FnSource): AnyFn {
+  // 已知：该键对 args 非单射（['a,b'] 与 ['a','b'] 同键），但构造器同样按逗号重解析形参表，行为无差异
   const key = `${src.args.join(',')}\u0000${src.body}`
   const hit = cache.get(key)
   if (hit)
     return hit
-  // eslint-disable-next-line no-new-func -- 模型 A 的既定实现，见计划头部风险说明
-  const fn = new Function(...src.args, src.body) as (...args: any[]) => any
+  const fn = buildFn(src.args, src.body)
   if (cache.size >= CACHE_LIMIT)
     cache.clear()
   cache.set(key, fn)

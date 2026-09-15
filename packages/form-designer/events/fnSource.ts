@@ -34,8 +34,9 @@ export function makeFnSource(args: string[], body: string): FnSource {
 /** 形参名与语法校验，通过返回 null（保存拦截与内联提示共用） */
 export function validateFnSource(src: FnSource): string | null {
   const bad = src.args.find(a => !IDENTIFIER.test(a))
-  if (bad)
-    return `参数名不合法：${bad}`
+  // 用 !== undefined 判别：find 返回的空串是 falsy，用真值判断会漏掉空形参名
+  if (bad !== undefined)
+    return bad === '' ? '参数名不合法：不能为空' : `参数名不合法：${bad}`
   try {
     buildFn(src.args, src.body)
     return null
@@ -51,6 +52,7 @@ const CACHE_LIMIT = 500
 
 /** 编译并记忆化（与参照实现的差异 2：参照实现每次触发都重新 new Function） */
 export function compileFn(src: FnSource): AnyFn {
+  // 已知：该键对 args 非单射（['a,b'] 与 ['a','b'] 同键），但构造器同样按逗号重解析形参表，行为无差异
   const key = `${src.args.join(',')}\u0000${src.body}`
   const hit = cache.get(key)
   if (hit)
