@@ -639,7 +639,7 @@ git commit -m "feat(form-designer): 钩子函数信封的编译与校验"
 - 创建：`packages/form-designer/events/runHooks.ts`
 - 创建：`packages/form-designer/events/runHooks.test.ts`
 - 修改：`packages/form-designer/types/schema.ts`（引入 `events` 段）
-- 修改：`packages/form-designer/utils/parseSchema.ts`（透传 `events`）
+- 补测试：`packages/form-designer/utils/parseSchema.test.ts`（证明 `events` / `dataSources` 透传；`parseSchema.ts` 的 `...raw` 已覆盖，无需改代码）
 
 **背景：** 场景命名对齐参照实现但做取舍：保留 `onCreated` / `onChange` / `onReload` / `beforeSubmit`，把 `beforeFetch` 更名为 `beforeLoadData`（批次 3 的声明式数据源叫 loadData，避免与「提交时 fetch」混淆），新增 `onSubmitError` / `onValidateFail`。
 
@@ -834,7 +834,7 @@ export interface FormSchema {
 }
 ```
 
-`utils/parseSchema.ts` 的返回值补 `events: raw.events` 与 `dataSources: raw.dataSources`。
+`utils/parseSchema.ts` 无需改代码：返回值里的 `...raw` 本就把 `events` / `dataSources` 原样带出，只补一条测试证明透传。
 
 - [x] **步骤 5：实现 `runHooks.ts`**
 
@@ -1085,11 +1085,11 @@ export function findNodeByField(children: FieldSchema[], field: string): FieldSc
 
 ```tsx
 import type { FormInstance } from 'antd'
-import type { FormHookContext, HookRef } from '../events/types'
+import type { FormHookContext } from '../events/types'
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { App, Button, Form, Space } from 'antd'
 import { Fragment, useCallback, useEffect, useRef } from 'react'
-import { emitHook, runHooks } from '../events/runHooks'
+import { emitHook, filterRefsForField, runHooks } from '../events/runHooks'
 import { findNodeByField } from '../utils/schemaTree'
 import { buildFormProps, isHorizontalLayout, resolveLabelWidth } from './formProps'
 import { renderField } from './renderField'
@@ -1132,9 +1132,9 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
       setValue: (field, value) => form.setFieldsValue({ [field]: value }),
       setValues: patch => form.setFieldsValue(patch),
       getField: field => findNodeByField(schema.children, field) ?? undefined,
-      emit: (name, payload) => {
-        void emitHook(name, buildCtx({ values: { ...base.values, payload } }), current?.custom)
-      },
+      // 返回 Promise：钩子里可 await ctx.emit(...) 之后再决定是否 return false；
+      // payload 由 emitHook 以新建 ctx 传入，不写进 values（避免污染值快照/撞字段名）
+      emit: (name, payload) => emitHook(name, buildCtx(), current?.custom, payload),
       // 数据源在批次 3 接入；此处保留空实现，钩子里调用不会抛错
       reload: async () => {},
       message,
@@ -1144,9 +1144,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 
   /** onFieldChange：只触发 watch 命中（或未声明 watch）的引用 */
   const runFieldChange = useCallback((field: string, value: any) => {
-    const refs = (eventsRef.current?.onFieldChange || []).filter(
-      (ref: HookRef) => !ref.watch?.length || ref.watch.includes(field),
-    )
+    const refs = filterRefsForField(eventsRef.current?.onFieldChange, field)
     if (refs.length) {
       void runHooks('onFieldChange', refs, buildCtx({ changed: { field, value } }), eventsRef.current?.custom)
     }
@@ -1337,7 +1335,7 @@ export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v
       if (scene === 'custom')
         continue
       for (const ref of (refs as HookRef[]) || []) {
-        if (ref.fn && !ref.hook) {
+        if (ref.fn) {
           const issue = validateFnSource(ref.fn)
           if (issue)
             hookIssues.push(`${scene}：${issue}`)
@@ -1354,6 +1352,8 @@ export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v
       return
     }
 ```
+
+拦截条件只看 `ref.fn`，与 `resolveFn` 的「内联 fn 优先」对齐：只要 ref 带 `fn`，运行时执行的就是它，`hook` 字段是否存在都不该让坏 `fn` 绕过保存校验。
 
 - [ ] **步骤 6：运行测试验证通过**
 

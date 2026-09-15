@@ -1,7 +1,7 @@
 import type { FormHookContext } from './types'
 import { describe, expect, it, vi } from 'vitest'
 import { makeFnSource } from './fnSource'
-import { emitHook, runHooks } from './runHooks'
+import { emitHook, filterRefsForField, runHooks } from './runHooks'
 
 const message = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }
 
@@ -63,6 +63,16 @@ describe('runHooks', () => {
     expect(await runHooks('onFormCreated', [{ fn: makeFnSource(['ctx'], 'return false') }], ctx())).toBe(true)
   })
 
+  it('非关键场景 return false 后继续执行后续钩子', async () => {
+    const calls = trace()
+    const refs = [
+      { fn: makeFnSource(['ctx'], 'return false') },
+      { fn: makeFnSource(['ctx'], 'globalThis.__trace("next")') },
+    ]
+    await runHooks('onFormCreated', refs, ctx())
+    expect(calls).toEqual(['next'])
+  })
+
   it('非关键场景钩子抛错：继续执行后续钩子', async () => {
     const spy = vi.fn()
     ;(globalThis as any).__trace = spy
@@ -85,6 +95,18 @@ describe('runHooks', () => {
     const custom = { syncDept: { label: '同步部门', fn: makeFnSource(['ctx'], 'globalThis.__trace("synced")') } }
     await runHooks('onFieldChange', [{ hook: 'syncDept' }], ctx(), custom)
     expect(spy).toHaveBeenCalledWith('synced')
+  })
+
+  it('同时配置 fn 与 hook 时以 fn 为准', async () => {
+    const calls = trace()
+    const custom = { ping: { fn: makeFnSource(['ctx'], 'globalThis.__trace("hook")') } }
+    await runHooks(
+      'onFormCreated',
+      [{ hook: 'ping', fn: makeFnSource(['ctx'], 'globalThis.__trace("fn")') }],
+      ctx(),
+      custom,
+    )
+    expect(calls).toEqual(['fn'])
   })
 
   it('引用不存在的公共事件不抛错', async () => {
@@ -111,5 +133,70 @@ describe('runHooks', () => {
     await expect(emitHook('ghost', ctx(), {})).resolves.toBeUndefined()
     const custom = { bad: { fn: makeFnSource(['ctx'], 'throw new Error("boom")') } }
     await expect(emitHook('bad', ctx(), custom)).resolves.toBeUndefined()
+  })
+
+  it('钩子失败时以稳定 key 上报 error 提示并打 console.error', async () => {
+    const error = vi.fn()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await runHooks(
+        'onFormCreated',
+        [{ fn: makeFnSource(['ctx'], 'throw new Error("boom")') }],
+        ctx({ message: { success: vi.fn(), error, warning: vi.fn(), info: vi.fn() } }),
+      )
+      expect(error).toHaveBeenCalledWith({
+        content: '表单钩子执行失败：onFormCreated',
+        key: 'form-designer-hook-error',
+      })
+      expect(consoleError).toHaveBeenCalled()
+    }
+    finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('emit 的 payload 经 ctx 投递且不写入 values', async () => {
+    const spy = vi.fn()
+    ;(globalThis as any).__trace = spy
+    const custom = { echo: { fn: makeFnSource(['ctx'], 'globalThis.__trace([ctx.payload, ctx.values])') } }
+    await emitHook('echo', ctx({ values: { x: 1 } }), custom, 'hi')
+    expect(spy).toHaveBeenCalledWith(['hi', { x: 1 }])
+  })
+
+  it('同时配 fn 与 hook、引用不存在的公共事件各警告一次（不随触发重复）', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const refs = [
+        { hook: 'both', fn: makeFnSource(['ctx'], 'return 1') },
+        { hook: 'missingX' },
+      ]
+      const custom = { both: { fn: makeFnSource(['ctx'], 'return 1') } }
+      await runHooks('onFormCreated', refs, ctx(), custom)
+      await runHooks('onFormCreated', refs, ctx(), custom)
+      expect(warn).toHaveBeenCalledTimes(2)
+      expect(warn.mock.calls[0][0]).toContain('以 fn 为准')
+      expect(warn.mock.calls[1][0]).toContain('不存在的公共事件')
+    }
+    finally {
+      warn.mockRestore()
+    }
+  })
+})
+
+describe('filterRefsForField', () => {
+  it('未声明 watch 的引用对任意字段都触发', () => {
+    const refs = [{ fn: makeFnSource([], '') }, { watch: [], fn: makeFnSource([], '') }]
+    expect(filterRefsForField(refs, 'any')).toHaveLength(2)
+    expect(filterRefsForField(undefined, 'any')).toEqual([])
+  })
+
+  it('声明了 watch 的引用只在命中的字段触发', () => {
+    const refs = [
+      { watch: ['a'], fn: makeFnSource([], '') },
+      { watch: ['a', 'b'], fn: makeFnSource([], '') },
+    ]
+    expect(filterRefsForField(refs, 'a')).toHaveLength(2)
+    expect(filterRefsForField(refs, 'b')).toHaveLength(1)
+    expect(filterRefsForField(refs, 'c')).toHaveLength(0)
   })
 })

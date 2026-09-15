@@ -52,6 +52,14 @@ describe('compileFn', () => {
     expect(compileFn(makeFnSource([], 'return 1'))).not.toBe(compileFn(makeFnSource([], 'return 2')))
   })
 
+  it('缓存超限后同一 key 重新编译（返回新引用）', () => {
+    const src = makeFnSource(['a'], 'return a')
+    const first = compileFn(src)
+    for (let i = 0; i < 500; i++)
+      compileFn(makeFnSource([], `return ${i}`))
+    expect(compileFn(src)).not.toBe(first)
+  })
+
   it('入参对象可用', () => {
     const spy = vi.fn()
     compileFn(makeFnSource(['ctx'], 'ctx.message.success("hi")'))({ message: { success: spy } })
