@@ -100,15 +100,39 @@ describe('designer store', () => {
     expect(store().schema.children).toHaveLength(1)
   })
 
-  it('导出导入往返一致，非法 JSON 导入返回 false', () => {
+  it('导出导入往返一致，非法 JSON 导入被拒绝', () => {
     store().addField('input', { parentId: null, index: 0 })
     const json = store().exportSchema()
     store().clear()
     expect(store().schema.children).toHaveLength(0)
-    expect(store().importSchema(json)).toBe(true)
+    expect(store().importSchema(json).ok).toBe(true)
     expect(store().schema.children).toHaveLength(1)
-    expect(store().importSchema('{bad json')).toBe(false)
-    expect(store().importSchema('{"version":2,"children":[]}')).toBe(false)
+    expect(store().importSchema('{bad json').ok).toBe(false)
+    expect(store().importSchema('{"version":2,"children":[]}').ok).toBe(false)
+  })
+
+  it('importSchema 拒绝同一层级重名的字段名，且不改动当前 schema', () => {
+    const result = store().importSchema(JSON.stringify({
+      version: 1,
+      form: { layout: 'vertical' },
+      children: [
+        { id: 'a', type: 'input', field: 'userName', props: {} },
+        { id: 'b', type: 'input', field: 'userName', props: {} },
+      ],
+    }))
+    expect(result.ok).toBe(false)
+    expect(result.ok ? '' : result.reason).toContain('userName')
+    expect(store().schema.children).toHaveLength(0)
+  })
+
+  it('importSchema 拒绝未填字段名的字段组件', () => {
+    const result = store().importSchema(JSON.stringify({
+      version: 1,
+      form: { layout: 'vertical' },
+      children: [{ id: 'a', type: 'input', props: {} }],
+    }))
+    expect(result.ok).toBe(false)
+    expect(result.ok ? '' : result.reason).toContain('字段名不能为空')
   })
 
   it('no-op 操作不推历史、不清 future', () => {
@@ -162,17 +186,17 @@ describe('designer store', () => {
   })
 
   it('importSchema 拒绝 form 为 null、过滤脏节点', () => {
-    expect(store().importSchema('{"version":1,"form":null,"children":[]}')).toBe(false)
+    expect(store().importSchema('{"version":1,"form":null,"children":[]}').ok).toBe(false)
     const ok = store().importSchema(JSON.stringify({
       version: 1,
       form: { layout: 'vertical' },
       children: [
-        { id: 'a', type: 'input', props: {} },
+        { id: 'a', type: 'input', field: 'fa', props: {} },
         { type: 'input' }, // 缺 id，应被过滤
         { id: 'b' }, // 缺 type，应被过滤
       ],
     }))
-    expect(ok).toBe(true)
+    expect(ok.ok).toBe(true)
     expect(store().schema.children).toHaveLength(1)
     expect(store().schema.form.layout).toBe('vertical')
     expect(store().schema.form.colon).toBe(true) // 默认值补齐

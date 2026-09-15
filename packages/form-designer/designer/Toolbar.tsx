@@ -29,14 +29,14 @@ export function Toolbar({ onSave }: ToolbarProps) {
   const [submitted, setSubmitted] = useState<string | null>(null)
 
   const handleImport = () => {
-    if (importSchema(importText)) {
-      message.success('导入成功')
-      setImportOpen(false)
-      setImportText('')
+    const result = importSchema(importText)
+    if (!result.ok) {
+      message.error(result.reason)
+      return
     }
-    else {
-      message.error('JSON 格式不正确，未导入')
-    }
+    message.success('导入成功')
+    setImportOpen(false)
+    setImportText('')
   }
 
   const handleClear = () => {

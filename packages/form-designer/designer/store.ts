@@ -2,6 +2,7 @@ import type { FieldSchema, FormSchema } from '../types/schema'
 import { create } from 'zustand'
 import { getComponent } from '../registry/registry'
 import { createEmptySchema } from '../types/schema'
+import { validateSchemaFieldNames } from '../utils/fieldName'
 import { setByPath } from '../utils/path'
 import { childrenOf, cloneNode, findNode, isDescendant, removeNode } from '../utils/schemaTree'
 import { uniqueId } from '../utils/uniqueId'
@@ -11,6 +12,9 @@ export interface DropTarget {
   parentId: string | null
   index: number
 }
+
+/** 导入结果：失败时 reason 直接面向用户展示 */
+export type ImportResult = { ok: true } | { ok: false, reason: string }
 
 const HISTORY_LIMIT = 50
 /** 相同 coalesceKey 的连续编辑在该时间窗内合并为一条历史 */
@@ -34,7 +38,7 @@ interface DesignerState {
   undo: () => void
   redo: () => void
   clear: () => void
-  importSchema: (json: string) => boolean
+  importSchema: (json: string) => ImportResult
   exportSchema: () => string
   setSchema: (schema: FormSchema) => void
   getSelected: () => FieldSchema | null
@@ -175,25 +179,33 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
     clear: () => mutate(draft => void (draft.children = [])),
 
     importSchema: (json) => {
+      const malformed: ImportResult = { ok: false, reason: 'JSON 格式不正确，未导入' }
+      let parsed: any
       try {
-        const parsed = JSON.parse(json)
-        if (parsed?.version !== 1 || !Array.isArray(parsed.children))
-          return false
-        if (parsed.form !== undefined && (typeof parsed.form !== 'object' || parsed.form === null))
-          return false
-        mutate((draft) => {
-          draft.form = { ...createEmptySchema().form, ...parsed.form }
-          // 过滤缺 id/type 的脏节点（深层递归校验留给后续）
-          draft.children = parsed.children.filter(
-            (c: any) => typeof c?.id === 'string' && typeof c?.type === 'string',
-          )
-        })
-        set({ selectedId: null })
-        return true
+        parsed = JSON.parse(json)
       }
       catch {
-        return false
+        return malformed
       }
+      if (parsed?.version !== 1 || !Array.isArray(parsed.children))
+        return malformed
+      if (parsed.form !== undefined && (typeof parsed.form !== 'object' || parsed.form === null))
+        return malformed
+      // 过滤缺 id/type 的脏节点（深层递归校验留给后续）；校验只针对真正会装载的节点
+      const children = parsed.children.filter(
+        (c: any) => typeof c?.id === 'string' && typeof c?.type === 'string',
+      )
+      const issues = validateSchemaFieldNames({ version: 1, form: parsed.form, children })
+      if (issues.length) {
+        const brief = issues.slice(0, 3).join('；')
+        return { ok: false, reason: `字段名校验未通过，未导入：${brief}${issues.length > 3 ? ' 等' : ''}` }
+      }
+      mutate((draft) => {
+        draft.form = { ...createEmptySchema().form, ...parsed.form }
+        draft.children = children
+      })
+      set({ selectedId: null })
+      return { ok: true }
     },
 
     exportSchema: () => JSON.stringify(get().schema, null, 2),

@@ -1,6 +1,7 @@
 import type { ConfigMeta } from '../registry/registry'
 import { Divider, Radio, Select, Switch, Tabs } from 'antd'
 import { getComponent } from '../registry/registry'
+import { getFieldNameIssue, nodeBindsField } from '../utils/fieldName'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
 import { useDesignerStore } from './store'
 import { ValidateEditor } from './ValidateEditor'
@@ -20,7 +21,7 @@ function getCommonMetas(hasField: boolean): ConfigMeta[] {
 }
 
 function FieldConfig() {
-  const { getSelected, updateField } = useDesignerStore()
+  const { getSelected, updateField, schema } = useDesignerStore()
   const node = getSelected()
   if (!node)
     return <div style={{ color: '#999', padding: 12 }}>在画布中点击选择一个字段</div>
@@ -30,15 +31,20 @@ function FieldConfig() {
     return <div style={{ color: '#999', padding: 12 }}>未注册的组件类型</div>
 
   // 值绑定容器（嵌套对象/数组）同样需要配置字段名；校验规则仍只对挂 Form.Item 的非容器开放
-  const isValueContainer = !!def.nestObject || !!def.nestList
-  const hasField = !def.noFormItem && (!def.isContainer || isValueContainer)
+  const hasField = nodeBindsField(node)
   const hasRules = !def.isContainer && !def.noFormItem
   const commonMetas = getCommonMetas(hasField)
+  const nameIssue = getFieldNameIssue(schema, node.id)
 
   return (
     <div style={{ padding: 12 }}>
       <Divider titlePlacement="start" plain style={{ margin: '4px 0 12px' }}>基础</Divider>
-      <ConfigFormRenderer key={node.id} node={node} metas={commonMetas} />
+      <ConfigFormRenderer
+        key={node.id}
+        node={node}
+        metas={commonMetas}
+        errorOf={field => (field === 'field' ? nameIssue : null)}
+      />
       {hasRules && (
         <>
           <Divider titlePlacement="start" plain style={{ margin: '16px 0 12px' }}>校验规则</Divider>

@@ -4,9 +4,10 @@ import '../test/setupDom'
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { App } from 'antd'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getComponent, getMenus } from '../registry/registry'
 import { createEmptySchema } from '../types/schema'
+import { validateSchemaFieldNames } from '../utils/fieldName'
 import { FormDesigner } from './FormDesigner'
 import { useDesignerStore } from './store'
 import '../registry/components'
@@ -32,12 +33,31 @@ function schemaOf(types: string[]): FormSchema {
   }
 }
 
-function renderDesigner(schema: FormSchema) {
+function renderDesigner(schema: FormSchema, onSave?: (schema: FormSchema) => void) {
   return render(
     <App>
-      <FormDesigner initialSchema={schema} />
+      <FormDesigner initialSchema={schema} onSave={onSave} />
     </App>,
   )
+}
+
+/** 两个字段名相同的输入框：重名场景的通用夹具 */
+function duplicateNameSchema(): { schema: FormSchema, first: FieldSchema, second: FieldSchema } {
+  const first = def('input').defaultSchema()
+  first.field = 'dup'
+  first.label = '字段一'
+  const second = def('input').defaultSchema()
+  second.field = 'dup'
+  second.label = '字段二'
+  return {
+    schema: { version: 1, form: { layout: 'vertical' }, children: [first, second] },
+    first,
+    second,
+  }
+}
+
+function clickSave() {
+  fireEvent.click(screen.getByRole('button', { name: /保\s*存/ }))
 }
 
 /** 选中画布里第一个该类型节点，返回节点 */
@@ -178,5 +198,64 @@ describe('设计器交互（P5 新组件）', () => {
 
     act(() => useDesignerStore.getState().undo())
     expect(useDesignerStore.getState().schema.children).toHaveLength(1)
+  })
+
+  it('字段名与同级字段重复时，属性面板对两个字段都给出提示', () => {
+    const { schema, first, second } = duplicateNameSchema()
+    renderDesigner(schema)
+
+    act(() => useDesignerStore.getState().select(first.id))
+    expect(screen.getByText('字段名「dup」已被同级字段占用')).toBeTruthy()
+
+    act(() => useDesignerStore.getState().select(second.id))
+    expect(screen.getByText('字段名「dup」已被同级字段占用')).toBeTruthy()
+  })
+
+  it('字段名未填写时，属性面板提示不能为空', () => {
+    renderDesigner({
+      version: 1,
+      form: { layout: 'vertical' },
+      children: [{ id: 'no-name', type: 'input', label: '姓名', props: {} }],
+    })
+
+    act(() => useDesignerStore.getState().select('no-name'))
+    expect(screen.getByText('字段名不能为空')).toBeTruthy()
+  })
+
+  it('字段名合法时保存正常触发', () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+
+    clickSave()
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
+
+  it('存在重名字段时保存被拦截并提示', async () => {
+    const onSave = vi.fn()
+    renderDesigner(duplicateNameSchema().schema, onSave)
+
+    clickSave()
+    expect(onSave).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByText(/字段名.*重复/)).toBeTruthy())
+  })
+
+  it('存在未填字段名时保存被拦截', () => {
+    const onSave = vi.fn()
+    renderDesigner({
+      version: 1,
+      form: { layout: 'vertical' },
+      children: [{ id: 'no-name', type: 'input', label: '姓名', props: {} }],
+    }, onSave)
+
+    clickSave()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+})
+
+describe('内置组件字段名校验', () => {
+  it('全部内置组件的默认 schema 通过校验，不产生误报', () => {
+    const children = getMenus().flatMap(g => g.list).map(d => d.defaultSchema())
+    expect(children.length).toBeGreaterThan(30)
+    expect(validateSchemaFieldNames({ version: 1, form: {}, children })).toEqual([])
   })
 })

@@ -1,8 +1,10 @@
 import type { DragEndEvent } from '@dnd-kit/react'
 import type { FormSchema } from '../types/schema'
 import { DragDropProvider } from '@dnd-kit/react'
+import { App } from 'antd'
 import { createStyles } from 'antd-style'
 import { useEffect, useRef } from 'react'
+import { validateSchemaFieldNames } from '../utils/fieldName'
 import { Canvas } from './Canvas'
 import { LeftPanel } from './LeftPanel'
 import { RightPanel } from './RightPanel'
@@ -58,9 +60,20 @@ export interface FormDesignerProps {
 
 export function FormDesigner({ initialSchema, onSave }: FormDesignerProps) {
   const { styles } = useStyles()
+  const { message } = App.useApp()
   const { setSchema, schema } = useDesignerStore()
   const rootRef = useRef<HTMLDivElement>(null)
   const removeField = useRemoveField()
+
+  // 保存前拦截字段名问题：不一致的字段名会静默产生脏数据（同名绑定到同一 store 槽位）
+  function handleSave() {
+    const issues = validateSchemaFieldNames(schema)
+    if (issues.length) {
+      message.error(issues.join('；'))
+      return
+    }
+    onSave?.(schema)
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     if (event.canceled)
@@ -128,7 +141,7 @@ export function FormDesigner({ initialSchema, onSave }: FormDesignerProps) {
   return (
     <div ref={rootRef} className={styles.root}>
       <div className={styles.toolbar}>
-        <Toolbar onSave={onSave ? () => onSave(schema) : undefined} />
+        <Toolbar onSave={onSave ? handleSave : undefined} />
       </div>
       <DragDropProvider onDragEnd={handleDragEnd}>
         <div className={styles.body}>
