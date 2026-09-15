@@ -132,7 +132,7 @@ function FormConfig() {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 12, color: '#666' }}>重置按钮</span>
-        <Switch size="small" checked={!!form.resetBtn} onChange={v => updateFormConfig({ resetBtn: v })} />
+        <Switch size="small" checked={form.resetBtn ?? true} onChange={v => updateFormConfig({ resetBtn: v })} />
       </div>
     </div>
   )

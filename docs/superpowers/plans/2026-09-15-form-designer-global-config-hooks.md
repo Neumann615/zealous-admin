@@ -329,6 +329,8 @@ it('submitBtn 为 false 时不渲染提交按钮', () => {
 })
 ```
 
+> 另补 3 条用例锁住默认行为与生效范围（见 `FormRenderer.form.test.tsx`）：未配置 `resetBtn` 时重置按钮照常渲染、`resetBtn: false` 时不渲染重置按钮、垂直布局下 `labelWidth` 不生效。
+
 - [x] **步骤 2：运行测试验证失败**
 
 运行：`node ./node_modules/.bin/vitest.CMD run packages/form-designer/renderer/FormRenderer.form.test.tsx`
@@ -384,7 +386,10 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
 ```tsx
   const { labelWidth, hideRequiredAsterisk, submitBtn, resetBtn, ...passthrough } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
-  const showReset = showActions && (resetBtn ?? false)
+  // 重置按钮默认渲染：引入配置项不得顺带改变既有行为（showActions 为真时提交 + 重置都渲染）
+  const showReset = showActions && (resetBtn ?? true)
+  // 垂直/行内布局下标签在字段上方占满宽度，labelWidth 不参与（antd 的 layout 默认 horizontal）
+  const isHorizontal = (schema.form.layout ?? 'horizontal') === 'horizontal'
 ```
 
 `<Form>` 传参：
@@ -394,7 +399,7 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
       form={form}
       initialValues={initialValues}
       onFinish={onSubmit}
-      labelCol={labelWidth ? { style: { width: `${labelWidth}px` } } : undefined}
+      labelCol={labelWidth && isHorizontal ? { style: { width: `${labelWidth}px` } } : undefined}
       requiredMark={hideRequiredAsterisk ? false : undefined}
       {...pickAntdFormProps(passthrough)}
     >
@@ -412,6 +417,8 @@ export function pickAntdFormProps(form: FormGlobalConfig) {
 - [x] **步骤 6：右栏「表单」页签补配置项**
 
 `RightPanel.tsx` 的 `FormConfig` 追加：标签宽度（`InputNumber`，20–300）、隐藏必填星号（`Switch`）、提交按钮（`Switch`）、重置按钮（`Switch`）。写回沿用既有的 `updateFormConfig`。
+
+两个按钮开关的 `checked` 用生效值而非原始值：`form.submitBtn ?? true`、`form.resetBtn ?? true`，与渲染器口径一致，避免「开关显示关闭但画布上有按钮」。
 
 - [x] **步骤 7：提交**
 

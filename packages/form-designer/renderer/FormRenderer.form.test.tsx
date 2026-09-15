@@ -40,6 +40,12 @@ function submit(container: HTMLElement) {
   fireEvent.click(container.querySelector('button[type="submit"]') as HTMLElement)
 }
 
+/** antd 会在两个中文字符之间插空格，比较文案时去掉空白 */
+function hasResetButton(container: HTMLElement) {
+  return Array.from(container.querySelectorAll('form button'))
+    .some(b => (b.textContent ?? '').replace(/\s/g, '') === '重置')
+}
+
 describe('渲染器外部表单实例（FormRenderer）', () => {
   it('传入 form 时由外部实例接管取值，且提交后能被外部重置', async () => {
     const { schema, field } = schemaOf()
@@ -114,5 +120,39 @@ describe('渲染器全局配置（FormRenderer）', () => {
     }
     const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
     expect(container.querySelector('button[type="submit"]')).toBeNull()
+  })
+
+  it('未配置 resetBtn 时重置按钮照常渲染', () => {
+    const node = pick('input').defaultSchema()
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical' },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    expect(hasResetButton(container)).toBe(true)
+  })
+
+  it('resetBtn 为 false 时不渲染重置按钮', () => {
+    const node = pick('input').defaultSchema()
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical', resetBtn: false },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    expect(hasResetButton(container)).toBe(false)
+  })
+
+  it('垂直布局下 labelWidth 不生效', () => {
+    const node = pick('input').defaultSchema()
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical', labelWidth: 120 },
+      children: [node],
+    }
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+    const label = container.querySelector('.ant-form-item-label') as HTMLElement
+    expect(label.getAttribute('style') ?? '').not.toContain('120px')
   })
 })

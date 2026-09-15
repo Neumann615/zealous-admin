@@ -20,7 +20,9 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   const form = externalForm ?? innerForm
   const { labelWidth, hideRequiredAsterisk, submitBtn, resetBtn, ...passthrough } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
-  const showReset = showActions && (resetBtn ?? false)
+  const showReset = showActions && (resetBtn ?? true)
+  // 垂直/行内布局下标签在字段上方占满宽度，labelWidth 不参与（antd 的 layout 默认 horizontal）
+  const isHorizontal = (schema.form.layout ?? 'horizontal') === 'horizontal'
 
   const renderChild = (child: FieldSchema, parentType?: string): React.ReactNode => (
     <Fragment key={child.id}>{renderField(child, renderChild, parentType)}</Fragment>
@@ -31,7 +33,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
       form={form}
       initialValues={initialValues}
       onFinish={onSubmit}
-      labelCol={labelWidth ? { style: { width: `${labelWidth}px` } } : undefined}
+      labelCol={labelWidth && isHorizontal ? { style: { width: `${labelWidth}px` } } : undefined}
       requiredMark={hideRequiredAsterisk ? false : undefined}
       {...pickAntdFormProps(passthrough)}
     >
