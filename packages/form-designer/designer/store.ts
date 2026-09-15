@@ -1,3 +1,4 @@
+import type { CustomHookDef, FormEventConfig } from '../events/types'
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { create } from 'zustand'
 import { getComponent } from '../registry/registry'
@@ -36,6 +37,8 @@ interface DesignerState {
   /** 按点分路径更新字段属性，如 updateField(id, 'props.placeholder', '请输入')；coalesce 为 true 时同字段连续编辑合并历史 */
   updateField: (id: string, path: string, value: any, coalesce?: boolean) => void
   updateFormConfig: (patch: Partial<FormSchema['form']>) => void
+  updateEvents: (patch: Partial<FormEventConfig>) => void
+  updateCustomHooks: (custom: Record<string, CustomHookDef>) => void
   undo: () => void
   redo: () => void
   clear: () => void
@@ -150,6 +153,15 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
     },
 
     updateFormConfig: patch => mutate(draft => void Object.assign(draft.form, patch)),
+
+    // coalesceKey：钩子编辑是逐键写入，合并 500ms 窗口内的连续编辑，避免每个按键占一条历史
+    updateEvents: patch => mutate((draft) => {
+      draft.events = { ...(draft.events || {}), ...patch }
+    }, 'events'),
+
+    updateCustomHooks: custom => mutate((draft) => {
+      draft.events = { ...(draft.events || {}), custom }
+    }, 'events:custom'),
 
     undo: () => {
       const { past, schema, future } = get()

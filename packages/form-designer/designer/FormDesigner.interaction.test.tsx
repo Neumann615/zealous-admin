@@ -259,3 +259,73 @@ describe('内置组件字段名校验', () => {
     expect(validateSchemaFieldNames({ version: 2, form: {}, children })).toEqual([])
   })
 })
+
+describe('设计器全局事件与公共事件', () => {
+  it('全局事件里写入语法错误的钩子时保存被拦截', async () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+    act(() => {
+      useDesignerStore.getState().updateEvents({
+        onFormCreated: [{ fn: { $type: 'fn', args: ['ctx'], body: 'ctx.' } }],
+      })
+    })
+
+    clickSave()
+    expect(onSave).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByText(/语法错误/)).toBeTruthy())
+  })
+
+  it('同时带坏 fn 与 hook 的引用同样被拦截（fn 优先）', async () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+    act(() => {
+      useDesignerStore.getState().updateEvents({
+        beforeSubmit: [{ hook: 'ping', fn: { $type: 'fn', args: ['ctx'], body: 'return (' } }],
+      })
+    })
+
+    clickSave()
+    expect(onSave).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByText(/语法错误/)).toBeTruthy())
+  })
+
+  it('语法合法的钩子不拦截保存', () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+    act(() => {
+      useDesignerStore.getState().updateEvents({
+        onFormMounted: [{ fn: { $type: 'fn', args: ['ctx'], body: 'ctx.setValue("a", 1)' } }],
+      })
+    })
+
+    clickSave()
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
+
+  it('表单页签可新增命名公共事件', () => {
+    renderDesigner(createEmptySchema())
+    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
+    fireEvent.click(screen.getByRole('button', { name: /新增公共事件/ }))
+
+    const custom = useDesignerStore.getState().schema.events?.custom
+    expect(custom).toBeTruthy()
+    expect(Object.keys(custom!)).toHaveLength(1)
+  })
+
+  it('全局事件里新增钩子后，编辑函数体写回 store，删除后清空', () => {
+    renderDesigner(createEmptySchema())
+    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
+
+    // 场景按固定顺序渲染，第一个「添加钩子」对应 onFormCreated
+    fireEvent.click(screen.getAllByRole('button', { name: /添加钩子/ })[0])
+    expect(useDesignerStore.getState().schema.events?.onFormCreated).toHaveLength(1)
+
+    // 此时面板里只有这一个钩子编辑器
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'return 1' } })
+    const ref = useDesignerStore.getState().schema.events?.onFormCreated?.[0]
+    expect(ref?.fn).toEqual({ $type: 'fn', args: ['ctx'], body: 'return 1' })
+
+    fireEvent.click(screen.getByRole('button', { name: /删\s*除/ }))
+    expect(useDesignerStore.getState().schema.events?.onFormCreated).toHaveLength(0)
+  })
+})

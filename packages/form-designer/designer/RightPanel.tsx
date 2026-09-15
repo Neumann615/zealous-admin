@@ -1,14 +1,11 @@
-import type { CSSProperties } from 'react'
 import type { ConfigMeta } from '../registry/registry'
-import { Divider, InputNumber, Radio, Select, Switch, Tabs } from 'antd'
+import { Divider, Tabs } from 'antd'
 import { getComponent } from '../registry/registry'
 import { getFieldNameIssue, nodeBindsField } from '../utils/fieldName'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
+import { FormEventsPanel } from './FormEventsPanel'
 import { useDesignerStore } from './store'
 import { ValidateEditor } from './ValidateEditor'
-
-/** 配置项标题/名称的统一字号与颜色（与 ConfigFormRenderer 的行内写法一致） */
-const fieldLabelStyle: CSSProperties = { fontSize: 12, color: '#666' }
 
 /** 字段组件的通用配置（label/field/tooltip/extra） */
 function getCommonMetas(hasField: boolean): ConfigMeta[] {
@@ -68,80 +65,6 @@ function FieldConfig() {
   )
 }
 
-function FormConfig() {
-  const { schema, updateFormConfig } = useDesignerStore()
-  const { form } = schema
-  return (
-    <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div>
-        <div style={{ ...fieldLabelStyle, marginBottom: 4 }}>布局</div>
-        <Radio.Group
-          size="small"
-          value={form.layout}
-          onChange={e => updateFormConfig({ layout: e.target.value })}
-          options={[
-            { label: '水平', value: 'horizontal' },
-            { label: '垂直', value: 'vertical' },
-            { label: '行内', value: 'inline' },
-          ]}
-          optionType="button"
-        />
-      </div>
-      <div>
-        <div style={{ ...fieldLabelStyle, marginBottom: 4 }}>标签对齐</div>
-        <Select
-          size="small"
-          style={{ width: '100%' }}
-          value={form.labelAlign}
-          onChange={v => updateFormConfig({ labelAlign: v })}
-          options={[{ label: '右对齐', value: 'right' }, { label: '左对齐', value: 'left' }]}
-        />
-      </div>
-      <div>
-        <div style={{ ...fieldLabelStyle, marginBottom: 4 }}>尺寸</div>
-        <Select
-          size="small"
-          style={{ width: '100%' }}
-          value={form.size}
-          onChange={v => updateFormConfig({ size: v })}
-          options={[{ label: '大', value: 'large' }, { label: '中', value: 'middle' }, { label: '小', value: 'small' }]}
-        />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={fieldLabelStyle}>显示冒号</span>
-        <Switch size="small" checked={!!form.colon} onChange={v => updateFormConfig({ colon: v })} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={fieldLabelStyle}>整体禁用</span>
-        <Switch size="small" checked={!!form.disabled} onChange={v => updateFormConfig({ disabled: v })} />
-      </div>
-      <div>
-        <div style={{ ...fieldLabelStyle, marginBottom: 4 }}>标签宽度</div>
-        <InputNumber
-          size="small"
-          style={{ width: '100%' }}
-          min={20}
-          max={300}
-          value={form.labelWidth}
-          onChange={v => updateFormConfig({ labelWidth: v ?? undefined })}
-        />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={fieldLabelStyle}>隐藏必填星号</span>
-        <Switch size="small" checked={!!form.hideRequiredAsterisk} onChange={v => updateFormConfig({ hideRequiredAsterisk: v })} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={fieldLabelStyle}>提交按钮</span>
-        <Switch size="small" checked={form.submitBtn ?? true} onChange={v => updateFormConfig({ submitBtn: v })} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={fieldLabelStyle}>重置按钮</span>
-        <Switch size="small" checked={form.resetBtn ?? true} onChange={v => updateFormConfig({ resetBtn: v })} />
-      </div>
-    </div>
-  )
-}
-
 export function RightPanel() {
   return (
     <Tabs
@@ -150,7 +73,7 @@ export function RightPanel() {
       style={{ height: '100%' }}
       items={[
         { key: 'field', label: '属性', children: <FieldConfig /> },
-        { key: 'form', label: '表单', children: <FormConfig /> },
+        { key: 'form', label: '表单', children: <FormEventsPanel /> },
       ]}
     />
   )
