@@ -398,4 +398,86 @@ describe('设计器全局事件与公共事件', () => {
     })
     expect(calls).toEqual(['hit'])
   })
+
+  it('清空「引用公共事件」下拉后仍是合法 schema（存得进、读得回）', async () => {
+    const onSave = vi.fn()
+    renderDesigner(createEmptySchema(), onSave)
+    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
+    fireEvent.click(screen.getAllByRole('button', { name: /添加钩子/ })[0])
+    fireEvent.click(screen.getByRole('button', { name: /新增公共事件/ }))
+
+    const combos = screen.getAllByRole('combobox')
+    fireEvent.mouseDown(combos[combos.length - 1])
+    const option = await waitFor(() => {
+      const el = document.querySelector('.ant-select-item-option') as HTMLElement | null
+      if (!el)
+        throw new Error('引用公共事件下拉未展开')
+      return el
+    })
+    fireEvent.click(option)
+    expect(useDesignerStore.getState().schema.events?.onFormCreated?.[0]).toEqual({ hook: 'event_1' })
+
+    // allowClear 的 × 回传 undefined：归一化后应回落成空正文，而不是被序列化成 {}
+    const clear = await waitFor(() => {
+      const el = document.querySelector('.ant-select-clear') as HTMLElement | null
+      if (!el)
+        throw new Error('清除按钮未出现')
+      return el
+    })
+    fireEvent.mouseDown(clear)
+    fireEvent.click(clear)
+    await waitFor(() => {
+      expect(useDesignerStore.getState().schema.events?.onFormCreated?.[0])
+        .toEqual({ fn: { $type: 'fn', args: ['ctx'], body: '' } })
+    })
+
+    clickSave()
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(() => parseSchema(useDesignerStore.getState().exportSchema())).not.toThrow()
+  })
+
+  it('正文超长的钩子在保存侧也被拦截（与 parseSchema 同一口径）', async () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+    act(() => {
+      useDesignerStore.getState().updateEvents({
+        onFormCreated: [{ fn: { $type: 'fn', args: ['ctx'], body: 'x'.repeat(20001) } }],
+      })
+    })
+
+    clickSave()
+    expect(onSave).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByText(/钩子正文过长/)).toBeTruthy())
+    // 同一份 schema 在解析侧也被拒（此前是「保存放行、回读拒绝」）
+    expect(() => parseSchema(useDesignerStore.getState().exportSchema())).toThrow('钩子正文过长')
+  })
+
+  it('导入 schema 不丢事件与数据源（导出 → 清空 → 导入）', () => {
+    const source: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical' },
+      children: [{ id: 'a', type: 'input', field: 'name', label: '姓名', props: {} }],
+      events: {
+        custom: { event_1: { label: '探针', fn: { $type: 'fn', args: ['ctx'], body: 'return 1' } } },
+        onFormCreated: [{ hook: 'event_1' }],
+      },
+      dataSources: { orgTree: { type: 'static' } },
+    }
+    const dumped = JSON.stringify(source)
+
+    renderDesigner(createEmptySchema())
+    expect(useDesignerStore.getState().schema.events).toBeUndefined()
+
+    let result: { ok: boolean } = { ok: false }
+    act(() => {
+      result = useDesignerStore.getState().importSchema(dumped)
+    })
+    expect(result.ok).toBe(true)
+
+    const after = useDesignerStore.getState().schema
+    expect(after.events?.custom?.event_1?.label).toBe('探针')
+    expect(after.events?.onFormCreated).toEqual([{ hook: 'event_1' }])
+    expect(after.dataSources).toEqual({ orgTree: { type: 'static' } })
+    expect(after.children).toHaveLength(1)
+  })
 })

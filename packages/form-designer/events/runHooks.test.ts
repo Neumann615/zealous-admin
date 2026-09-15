@@ -140,15 +140,47 @@ describe('runHooks', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
       await runHooks(
-        'onFormCreated',
+        'onReset',
         [{ fn: makeFnSource(['ctx'], 'throw new Error("boom")') }],
         ctx({ message: { success: vi.fn(), error, warning: vi.fn(), info: vi.fn() } }),
       )
       expect(error).toHaveBeenCalledWith({
-        content: '表单钩子执行失败：onFormCreated',
+        content: '表单钩子执行失败：onReset',
         key: 'form-designer-hook-error',
       })
       expect(consoleError).toHaveBeenCalled()
+    }
+    finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('同一场景重复失败只打一次 console.error，toast 每次照发', async () => {
+    const error = vi.fn()
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const refs = [{ fn: makeFnSource(['ctx'], 'throw new Error("boom")') }]
+      const c = ctx({ message: { success: vi.fn(), error, warning: vi.fn(), info: vi.fn() } })
+      await runHooks('onFormUnmount', refs, c)
+      await runHooks('onFormUnmount', refs, c)
+      await runHooks('onFormUnmount', refs, c)
+      expect(consoleError).toHaveBeenCalledTimes(1)
+      expect(error).toHaveBeenCalledTimes(3)
+    }
+    finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('宿主未挂 <App>（message 是空对象）时，错误上报失败也不改变控制流', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const broken = ctx({ message: {} as any })
+      await expect(
+        runHooks('onValidateFail', [{ fn: makeFnSource(['ctx'], 'throw new Error("boom")') }], broken),
+      ).resolves.toBe(true)
+      const custom = { boomHook: { fn: makeFnSource(['ctx'], 'throw new Error("boom")') } }
+      await expect(emitHook('boomHook', broken, custom)).resolves.toBeUndefined()
     }
     finally {
       consoleError.mockRestore()
@@ -212,6 +244,25 @@ describe('runHooks', () => {
     finally {
       consoleError.mockRestore()
     }
+  })
+
+  it('多表单并发 emit 互不干扰（深度按调用链记账）', async () => {
+    const error = vi.fn()
+    const calls = trace()
+    const custom = {
+      signal: {
+        fn: makeFnSource(['ctx'], 'globalThis.__trace(ctx.payload); await Promise.resolve(); await Promise.resolve()'),
+      },
+    }
+    const inFlight = Array.from({ length: 8 }, (_, i) => {
+      const base = ctx({ message: { success: vi.fn(), error, warning: vi.fn(), info: vi.fn() } })
+      base.emit = (name, payload) => emitHook(name, base, custom, payload)
+      return base.emit('signal', i)
+    })
+    await Promise.all(inFlight)
+    // 旧的模块级计数会在第 6 个在飞时误报「递归过深」
+    expect(error).not.toHaveBeenCalled()
+    expect(calls).toEqual([0, 1, 2, 3, 4, 5, 6, 7])
   })
 
   it('同时配 fn 与 hook、引用不存在的公共事件各警告一次（不随触发重复）', async () => {

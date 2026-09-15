@@ -1,11 +1,10 @@
 import type { DragEndEvent } from '@dnd-kit/react'
-import type { HookRef } from '../events/types'
 import type { FormSchema } from '../types/schema'
 import { DragDropProvider } from '@dnd-kit/react'
 import { App } from 'antd'
 import { createStyles } from 'antd-style'
 import { useEffect, useRef } from 'react'
-import { validateFnSource } from '../events/fnSource'
+import { validateEvents } from '../events/validateEvents'
 import { validateSchemaFieldNames } from '../utils/fieldName'
 import { Canvas } from './Canvas'
 import { LeftPanel } from './LeftPanel'
@@ -70,26 +69,8 @@ export function FormDesigner({ initialSchema, onSave }: FormDesignerProps) {
   // 保存前拦截字段名问题：不一致的字段名会静默产生脏数据（同名绑定到同一 store 槽位）
   function handleSave() {
     const issues = validateSchemaFieldNames(schema)
-    // 钩子只校验内联 fn：运行时 resolveFn 以「fn 优先」，带 fn 的引用不该因 hook 字段绕过校验
-    const hookIssues: string[] = []
-    for (const [scene, refs] of Object.entries(schema.events || {})) {
-      if (scene === 'custom')
-        continue
-      for (const ref of (refs as HookRef[]) || []) {
-        if (ref.fn) {
-          const issue = validateFnSource(ref.fn)
-          if (issue)
-            hookIssues.push(`${scene}：${issue}`)
-        }
-      }
-    }
-    for (const [name, def] of Object.entries(schema.events?.custom || {})) {
-      if (def?.fn) {
-        const issue = validateFnSource(def.fn)
-        if (issue)
-          hookIssues.push(`公共事件 ${name}：${issue}`)
-      }
-    }
+    // 钩子校验与 parseSchema 共用同一份口径（含正文长度上限），避免「保存放行、回读拒绝」
+    const hookIssues = validateEvents(schema.events)
     if (issues.length || hookIssues.length) {
       message.error([...issues, ...hookIssues].join('；'))
       return

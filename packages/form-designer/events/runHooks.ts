@@ -8,17 +8,47 @@ const HOOK_ERROR_KEY = 'form-designer-hook-error'
 /** emit 嵌套深度上限：钩子自 emit / 两个公共事件互 emit 会沿微任务无限递归，超过即中断该次 emit */
 const EMIT_DEPTH_LIMIT = 5
 
-/** 当前 emit 嵌套层数；模块级共享，finally 里归还，正常与异常路径都不能漏 */
-let emitDepth = 0
+/**
+ * emit 嵌套深度按 ctx 对象记账（WeakMap），不落公共类型、不参与序列化。
+ * 不能用模块级计数：同页多个表单并发 await emit 会互相抬高计数，≥5 个在飞就误报「递归过深」。
+ * 深度随调用链生成的 ctx 副本走，副本随调用链一起被 GC，无需手工归还。
+ */
+const emitDepths = new WeakMap<FormHookContext, number>()
 
 /** 已提示过的配置问题（键形如 both:名 / missing:名），只警告一次，避免逐键触发时重复刷屏 */
 const warnedConfigs = new Set<string>()
+
+/** 已打过 console 的键：toast 按稳定 key 去重，console 按场景 / 公共事件名去重 */
+const loggedErrors = new Set<string>()
 
 function warnOnce(key: string, text: string) {
   if (warnedConfigs.has(key))
     return
   warnedConfigs.add(key)
   console.warn(text)
+}
+
+function logErrorOnce(key: string, text: string, detail?: unknown) {
+  if (loggedErrors.has(key))
+    return
+  loggedErrors.add(key)
+  if (detail === undefined)
+    console.error(text)
+  else
+    console.error(text, detail)
+}
+
+/**
+ * 错误提示上报：本身不能改变控制流、更不能从 catch 里二次抛出。
+ * 宿主没挂 <App> 时 antd 的 useApp() 返回 { message: {} }，ctx.message.error 会直接 TypeError。
+ */
+function notifyError(ctx: FormHookContext, content: string, detail?: unknown) {
+  try {
+    ctx.message.error({ content, key: HOOK_ERROR_KEY })
+  }
+  catch (e) {
+    logErrorOnce('notify', '[form-designer] 钩子错误提示上报失败（宿主可能未挂载 <App>）', detail ?? e)
+  }
 }
 
 /** onFieldChange 触发前的字段过滤：未声明 watch 的引用对任意字段都触发 */
@@ -70,8 +100,8 @@ export async function runHooks(
         return false
     }
     catch (e) {
-      console.error(`[form-designer] 钩子执行失败（${scene}）`, e)
-      ctx.message.error({ content: `表单钩子执行失败：${scene}`, key: HOOK_ERROR_KEY })
+      logErrorOnce(`hook:${scene}`, `[form-designer] 钩子执行失败（${scene}）`, e)
+      notifyError(ctx, `表单钩子执行失败：${scene}`)
       if (critical)
         return false
     }
@@ -91,22 +121,23 @@ export async function emitHook(
     warnOnce(`missing:${name}`, `[form-designer] 公共事件不存在：${name}`)
     return
   }
-  if (emitDepth >= EMIT_DEPTH_LIMIT) {
-    console.error(`[form-designer] 公共事件 emit 递归过深（${name}），已中断`)
-    ctx.message.error({ content: `表单钩子 emit 递归过深：${name}`, key: HOOK_ERROR_KEY })
+  const depth = emitDepths.get(ctx) ?? 0
+  if (depth >= EMIT_DEPTH_LIMIT) {
+    logErrorOnce(`depth:${name}`, `[form-designer] 公共事件 emit 递归过深（${name}），已中断`)
+    notifyError(ctx, `表单钩子 emit 递归过深：${name}`)
     return
   }
-  emitDepth++
+  // 新建 ctx 投递 payload：不污染调用方的值快照，也不与真实字段名撞名。
+  // emit 重新绑定到这份新 ctx 上：深度随调用链走，钩子里的 ctx.emit 才会继续往深处记账
+  // （ctx.emit 是闭包在 ctx 自身上的，直接复制会把深度又读回上一层）。
+  const inner: FormHookContext = { ...ctx, payload }
+  inner.emit = (nextName, nextPayload) => emitHook(nextName, inner, custom, nextPayload)
+  emitDepths.set(inner, depth + 1)
   try {
-    // 新建 ctx 投递 payload：不污染调用方的值快照，也不与真实字段名撞名
-    await compileFn(def.fn)({ ...ctx, payload })
+    await compileFn(def.fn)(inner)
   }
   catch (e) {
-    console.error(`[form-designer] 公共事件执行失败（${name}）`, e)
-    ctx.message.error({ content: `公共事件执行失败：${name}`, key: HOOK_ERROR_KEY })
-  }
-  finally {
-    // 钩子体内 await 时其它 emit 也在计数，这里必须成对归还
-    emitDepth--
+    logErrorOnce(`emit:${name}`, `[form-designer] 公共事件执行失败（${name}）`, e)
+    notifyError(inner, `公共事件执行失败：${name}`)
   }
 }

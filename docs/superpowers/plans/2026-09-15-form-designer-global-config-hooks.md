@@ -941,6 +941,14 @@ git commit -m "feat(form-designer): 钩子场景、上下文与执行器"
 
 **背景：** 场景触发点收敛在 `FormRenderer`。**画布（设计态）不执行钩子**；预览弹窗与业务渲染页执行 —— 预览是显式动作，也是联调钩子的唯一手段。
 
+> **本节为初稿，以实际实现为准。** 代码块与最终实现有三处分叉：
+>
+> 1. **提交失败不 rethrow**：`catch` 里跑完 `onSubmitError` 就返回。rc-field-form 忽略 `onFinish` 的返回值（内部 `onFinish(values)` 没有链到返回的 promise），往外抛只会变成没有消费者的 unhandled rejection；业务页的失败提示由 http 拦截器统一负责。
+> 2. **依赖收窄**：`buildCtx` 只依赖 `[form, message]`，事件表与 children 都经 `schemaRef` 读取（`eventsRef` 已删除）。否则业务页内联传 `schema` 时，父组件每次渲染都会重跑一遍 `onFormUnmount → onFormCreated → onFormMounted`。
+> 3. **提交值以改后状态为准**：`beforeSubmit` 通过后用 `form.getFieldsValue(true)` 重新取值再交给 `onSubmit`（antd 传进来的 `values` 只是校验时的快照）。
+>
+> 另外两处口径记录（任务 7 写文档时会用到）：`onReset` 只覆盖渲染器自带的「重置」按钮（业务页自己调 `form.resetFields()` 不会触发），`onValidateFail` 只覆盖提交校验失败这条路径（`validateFields()` 手动调用不算）；`emit` 同步死循环（`await` 前无限自调用，不经过微任务）没有超时护栏，属模型 A 已接受范围。
+
 - [x] **步骤 1：编写失败的测试**
 
 ```tsx
@@ -1171,7 +1179,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     }
   }, [buildCtx])
 
-  /** 提交链路：beforeSubmit 可改值/可 return false 中断 → onSubmit → afterSubmit / onSubmitError */
+  /** 提交链路：beforeSubmit（可 return false 中断；改的值经重新取值进入 onSubmit）→ afterSubmit / onSubmitError */
   const handleFinish = async (values: Record<string, any>) => {
     const custom = eventsRef.current?.custom
     if (!await runHooks('beforeSubmit', eventsRef.current?.beforeSubmit, buildCtx({ values }), custom))
@@ -1342,10 +1350,13 @@ export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v
 - 「全局事件」段：按场景清单（场景名 + 中文说明 + 入参提示）逐场景渲染；每场景一个「添加钩子」按钮与已添加列表（`HookEditor` + 引用公共事件的下拉 + 上移 / 删除）
 - 「公共事件」段：命名表，每项 `label` + `HookEditor` + 删除；「新增公共事件」按钮生成 `event_${n}` 键名
 
-> 「全局事件」段两条必须守住的规则：
+> 「全局事件」段三条必须守住的规则：
 >
 > 1. **内联正文与按名引用互斥**：`resolveFn` 以 `fn` 优先，只写 `hook` 而不清 `fn` 会继续执行旧的内联正文（空正文时公共事件一次都不跑）。选公共事件时写 `{ hook: v, fn: undefined }`；在 `HookEditor` 里输入时写 `{ fn: src, hook: undefined }`。
 > 2. `onFieldChange` 的场景说明里要写明**嵌套字段只上报顶层段名**（子表单内 `contact.name` 变化 → `ctx.changed.field === 'contact'`，`watch: ['contact.name']` 不命中），见任务 5 的同名限制说明。
+> 3. **`patchRef` 必须归一化**：`Select` 带 `allowClear`，点 × 时回传 `undefined`，只写 `hook` 会留下既无 `fn` 也无 `hook` 的引用；`store.mutate` 的 JSON 深拷贝会把它落成 `{}`，保存侧放行、重新进设计页时 `parseSchema` 抛错（页面以空 schema 打开，再保存就清空表单）。patch 后若两者皆无，回落成 `{ fn: makeFnSource(HOOK_ARGS, '') }`。
+
+> 仅记录（不修）：`event_${n}` 的 n 取的是「当前最小可用序号」，删掉 `event_1` 后再新增会复用同名键，指向旧名的引用会静默绑定到新事件上。要根治得引入不可复用的 ids，收益不抵改动。
 
 `RightPanel.tsx` 的「表单」页签改为渲染 `FormEventsPanel`（两个页签结构不变）。
 

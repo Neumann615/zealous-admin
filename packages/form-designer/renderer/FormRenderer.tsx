@@ -1,7 +1,7 @@
 import type { FormInstance } from 'antd'
 import type { FormHookContext } from '../events/types'
 import type { FieldSchema, FormSchema } from '../types/schema'
-import { App, Button, Form, Space } from 'antd'
+import { App, Button, Form, Space, message as staticMessage } from 'antd'
 import { Fragment, useCallback, useEffect, useRef } from 'react'
 import { emitHook, filterRefsForField, runHooks } from '../events/runHooks'
 import { findNodeByField } from '../utils/schemaTree'
@@ -19,7 +19,10 @@ export interface FormRendererProps {
 }
 
 export function FormRenderer({ schema, initialValues, onSubmit, showActions = true, form: externalForm }: FormRendererProps) {
-  const { message } = App.useApp()
+  const app = App.useApp()
+  // 缺 <App> 祖先时 antd 只返回 { message: {} }（无降级、无告警），钩子里 ctx.message.xxx 会
+  // 直接 TypeError 并从 runHooks 的 catch 里逃逸。降级到静态 message。
+  const message = typeof app.message?.error === 'function' ? app.message : staticMessage
   const [innerForm] = Form.useForm()
   const form = externalForm ?? innerForm
   const { submitBtn, resetBtn } = schema.form
@@ -32,16 +35,13 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     ? { style: { marginLeft: `${labelWidth}px` } }
     : (isHorizontalLayout(schema.form) ? { offset: 4 } : undefined)
 
-  // 钩子配置经 ref 读取，避免 schema 引用变化时闭包拿到旧事件表
-  const eventsRef = useRef(schema.events)
-  eventsRef.current = schema.events
-  // 同理，getField 也经 ref 读 schema：否则 buildCtx 依赖 schema.children，
-  // 业务页内联传 schema 时父组件每次渲染都会让挂载 effect 重跑一遍
+  // 事件表与 children 都经 ref 读取：schema 引用变化时既不重建 buildCtx（否则业务页内联传
+  // schema 时父组件每次渲染都会让挂载 effect 重跑），也不会拿到旧配置
   const schemaRef = useRef(schema)
   schemaRef.current = schema
 
   const buildCtx = useCallback((over?: Partial<FormHookContext>): FormHookContext => {
-    const current = eventsRef.current
+    const current = schemaRef.current.events
     const ctx: FormHookContext = {
       form,
       values: form.getFieldsValue(true),
@@ -65,38 +65,49 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 
   /** onFieldChange：只触发 watch 命中（或未声明 watch）的引用 */
   const runFieldChange = useCallback((field: string, value: any) => {
-    const refs = filterRefsForField(eventsRef.current?.onFieldChange, field)
+    const events = schemaRef.current.events
+    const refs = filterRefsForField(events?.onFieldChange, field)
     if (refs.length)
-      void runHooks('onFieldChange', refs, buildCtx({ changed: { field, value } }), eventsRef.current?.custom)
+      void runHooks('onFieldChange', refs, buildCtx({ changed: { field, value } }), events?.custom)
   }, [buildCtx])
 
   useEffect(() => {
-    void runHooks('onFormCreated', eventsRef.current?.onFormCreated, buildCtx(), eventsRef.current?.custom)
-      .then(() => runHooks('onFormMounted', eventsRef.current?.onFormMounted, buildCtx(), eventsRef.current?.custom))
+    const events = schemaRef.current.events
+    void runHooks('onFormCreated', events?.onFormCreated, buildCtx(), events?.custom)
+      .then(() => runHooks('onFormMounted', schemaRef.current.events?.onFormMounted, buildCtx(), schemaRef.current.events?.custom))
     return () => {
-      void runHooks('onFormUnmount', eventsRef.current?.onFormUnmount, buildCtx(), eventsRef.current?.custom)
+      const leaving = schemaRef.current.events
+      void runHooks('onFormUnmount', leaving?.onFormUnmount, buildCtx(), leaving?.custom)
     }
   }, [buildCtx])
 
-  /** 提交链路：beforeSubmit 可改值/可 return false 中断 → onSubmit → afterSubmit / onSubmitError */
+  /**
+   * 提交链路：beforeSubmit（可改值、可 return false 中断）→ 以改后的表单状态提交 →
+   * afterSubmit / onSubmitError
+   */
   const handleFinish = async (values: Record<string, any>) => {
-    const custom = eventsRef.current?.custom
-    if (!await runHooks('beforeSubmit', eventsRef.current?.beforeSubmit, buildCtx({ values }), custom))
+    const events = schemaRef.current.events
+    const custom = events?.custom
+    if (!await runHooks('beforeSubmit', events?.beforeSubmit, buildCtx({ values }), custom))
       return
+    // beforeSubmit 里可能用 ctx.setValue / ctx.setValues 改过值：antd 传进来的 values 只是校验时的
+    // 快照，这里重新取一次，钩子的改值才真的进 onSubmit
+    const submitted = form.getFieldsValue(true)
     try {
-      await onSubmit?.(values)
-      await runHooks('afterSubmit', eventsRef.current?.afterSubmit, buildCtx({ values }), custom)
+      await onSubmit?.(submitted)
+      await runHooks('afterSubmit', schemaRef.current.events?.afterSubmit, buildCtx({ values: submitted }), custom)
     }
     catch {
       // 不往外抛：rc-field-form 忽略 onFinish 的返回值，抛出去只会变成没有消费者的 unhandled
       // rejection（控制台报错 / 测试运行器失败）；业务页的失败提示由 http 拦截器统一负责
-      await runHooks('onSubmitError', eventsRef.current?.onSubmitError, buildCtx({ values }), custom)
+      await runHooks('onSubmitError', schemaRef.current.events?.onSubmitError, buildCtx({ values: submitted }), custom)
     }
   }
 
   const handleReset = () => {
     form.resetFields()
-    void runHooks('onReset', eventsRef.current?.onReset, buildCtx(), eventsRef.current?.custom)
+    const events = schemaRef.current.events
+    void runHooks('onReset', events?.onReset, buildCtx(), events?.custom)
   }
 
   const renderChild = (child: FieldSchema, parentType?: string): React.ReactNode => (
@@ -109,7 +120,8 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
       initialValues={initialValues}
       onFinish={handleFinish}
       onFinishFailed={() => {
-        void runHooks('onValidateFail', eventsRef.current?.onValidateFail, buildCtx(), eventsRef.current?.custom)
+        const events = schemaRef.current.events
+        void runHooks('onValidateFail', events?.onValidateFail, buildCtx(), events?.custom)
       }}
       onValuesChange={changed => Object.entries(changed).forEach(([field, value]) => runFieldChange(field, value))}
       {...buildFormProps(schema.form)}

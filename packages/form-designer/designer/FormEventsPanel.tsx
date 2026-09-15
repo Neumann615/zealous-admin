@@ -119,7 +119,14 @@ export function FormEventsPanel() {
   }
 
   const patchRef = (scene: HookScene, index: number, patch: Partial<HookRef>) => {
-    setRefs(scene, (events[scene] || []).map((ref, i) => (i === index ? { ...ref, ...patch } : ref)))
+    setRefs(scene, (events[scene] || []).map((ref, i) => {
+      if (i !== index)
+        return ref
+      const next = { ...ref, ...patch }
+      // 归一化：清空引用（Select 的 allowClear 回传 undefined）后既无 fn 也无 hook 的引用会被
+      // 序列化成 {}，保存侧放行、回读时整张表单解析失败。空正文是合法的「什么都不做」。
+      return next.fn || next.hook ? next : { fn: makeFnSource(HOOK_ARGS, '') }
+    }))
   }
 
   const moveUp = (scene: HookScene, index: number) => {

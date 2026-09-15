@@ -1,6 +1,7 @@
 import type { FnSource } from '../events/fnSource'
 import { Input } from 'antd'
-import { makeFnSource, validateFnSource } from '../events/fnSource'
+import { makeFnSource } from '../events/fnSource'
+import { validateHookFn } from '../events/validateEvents'
 
 /**
  * 钩子可用形参：模型 A 下由配置声明，运行时按声明顺序注入。
@@ -19,7 +20,8 @@ export const HOOK_ARGS = ['ctx']
  * 正文不做 trim：否则从空正文起手打不进前导空格/换行。
  */
 export function HookEditor({ value, onChange }: { value?: FnSource, onChange: (v: FnSource) => void }) {
-  const error = value ? validateFnSource(value) : null
+  // 与保存/解析同一套口径（形参名 + 语法 + 正文长度），红字能提示的保存一定也能拦
+  const error = value ? validateHookFn(value) : null
   return (
     <div>
       <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>

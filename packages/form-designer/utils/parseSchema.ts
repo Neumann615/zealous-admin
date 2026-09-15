@@ -1,6 +1,6 @@
-import type { FnSource } from '../events/fnSource'
+import type { FormEventConfig } from '../events/types'
 import type { FormSchema } from '../types/schema'
-import { isFnSource } from '../events/fnSource'
+import { validateEvents } from '../events/validateEvents'
 import { createEmptySchema, SCHEMA_VERSION } from '../types/schema'
 
 /**
@@ -13,49 +13,6 @@ function migrateV1toV2(raw: Record<string, any>): Record<string, any> {
 
 const MIGRATIONS: Record<number, (raw: Record<string, any>) => Record<string, any>> = {
   1: migrateV1toV2,
-}
-
-/** 钩子正文长度上限：正文是用户代码，这里只挡住明显异常的体量（防止解析/编译当机） */
-const HOOK_BODY_LIMIT = 20000
-
-/** 单个引用的形状：fn 只要出现就必须合法（否则运行时与保存校验都会踩空），hook 必须是字符串 */
-function assertHookRef(ref: unknown, where: string): void {
-  const candidate = ref as { fn?: unknown, hook?: unknown } | null | undefined
-  if (candidate?.fn !== undefined && !isFnSource(candidate.fn))
-    throw new Error(`表单结构解析失败：事件钩子格式不正确（${where}）`)
-  if (!isFnSource(candidate?.fn) && typeof candidate?.hook !== 'string')
-    throw new Error(`表单结构解析失败：事件钩子格式不正确（${where}）`)
-  if (isFnSource(candidate?.fn) && candidate.fn.body.length > HOOK_BODY_LIMIT)
-    throw new Error(`表单结构解析失败：钩子正文过长（${where}），最多 ${HOOK_BODY_LIMIT} 字符`)
-}
-
-/** events 段形状校验：场景值为数组、每个引用有合法 fn 或字符串 hook、custom 每项 fn 合法 */
-function assertEvents(events: unknown): void {
-  if (events === undefined)
-    return
-  if (!events || typeof events !== 'object' || Array.isArray(events))
-    throw new Error('表单结构解析失败：events 应为对象')
-  const table = events as Record<string, unknown>
-  for (const [scene, refs] of Object.entries(table)) {
-    if (scene === 'custom')
-      continue
-    if (!Array.isArray(refs))
-      throw new Error(`表单结构解析失败：事件钩子格式不正确（${scene}）`)
-    for (const ref of refs)
-      assertHookRef(ref, scene)
-  }
-  const custom = table.custom
-  if (custom === undefined)
-    return
-  if (!custom || typeof custom !== 'object' || Array.isArray(custom))
-    throw new Error('表单结构解析失败：events.custom 应为对象')
-  for (const [name, def] of Object.entries(custom as Record<string, unknown>)) {
-    const fn = (def as { fn?: FnSource } | null | undefined)?.fn
-    if (!isFnSource(fn))
-      throw new Error(`表单结构解析失败：事件钩子格式不正确（公共事件 ${name}）`)
-    if (fn.body.length > HOOK_BODY_LIMIT)
-      throw new Error(`表单结构解析失败：钩子正文过长（公共事件 ${name}），最多 ${HOOK_BODY_LIMIT} 字符`)
-  }
 }
 
 /**
@@ -94,7 +51,10 @@ export function parseSchema(input: string | unknown): FormSchema {
     throw new Error('表单结构解析失败：children 应为数组')
   if (raw.form !== undefined && (typeof raw.form !== 'object' || raw.form === null))
     throw new Error('表单结构解析失败：form 应为对象')
-  assertEvents(raw.events)
+  // 与设计器保存拦截共用同一份校验（events/validateEvents），避免两边规则分叉
+  const eventIssues = validateEvents(raw.events as FormEventConfig | undefined)
+  if (eventIssues.length)
+    throw new Error(`表单结构解析失败：${eventIssues[0]}`)
 
   const empty = createEmptySchema()
   return {

@@ -3,7 +3,7 @@
 import '../test/setupDom'
 import type { FormEventConfig } from '../events/types'
 import type { FormSchema } from '../types/schema'
-import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { App } from 'antd'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -28,6 +28,18 @@ function schemaWith(events: FormEventConfig, children: FormSchema['children'] = 
 
 function submitButton(container: HTMLElement) {
   return container.querySelector('button[type="submit"]')!
+}
+
+/** 带必填字段的 schema：用于校验失败场景 */
+function requiredSchema(events: FormEventConfig): FormSchema {
+  return {
+    version: 2,
+    form: { layout: 'vertical' },
+    events,
+    children: [
+      { id: 'a', type: 'input', field: 'name', label: '姓名', props: {}, formItem: { rules: [{ type: 'required' }] } },
+    ],
+  }
 }
 
 describe('渲染器钩子接入（FormRenderer）', () => {
@@ -91,6 +103,36 @@ describe('渲染器钩子接入（FormRenderer）', () => {
     await waitFor(() => expect(calls).toEqual(['name']))
   })
 
+  it('卸载时触发 onFormUnmount', async () => {
+    const calls = trace()
+    const { unmount } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({ onFormUnmount: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("unmount")') }] })}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+    unmount()
+    await waitFor(() => expect(calls).toEqual(['unmount']))
+  })
+
+  it('校验未通过时触发 onValidateFail，且不调用 onSubmit', async () => {
+    const calls = trace()
+    const onSubmit = vi.fn()
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={requiredSchema({ onValidateFail: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("validateFail")') }] })}
+          onSubmit={onSubmit}
+        />
+      </App>,
+    )
+    fireEvent.click(submitButton(container))
+    await waitFor(() => expect(calls).toEqual(['validateFail']))
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
   it('watch 未命中的字段变化不触发钩子，命中后触发', async () => {
     const calls = trace()
     const { container } = render(
@@ -127,6 +169,36 @@ describe('渲染器钩子接入（FormRenderer）', () => {
     )
     fireEvent.click(submitButton(container))
     await waitFor(() => expect(onSubmit).not.toHaveBeenCalled())
+  })
+
+  it('beforeSubmit 不返回 false 时正常提交', async () => {
+    const calls = trace()
+    const onSubmit = vi.fn()
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({ beforeSubmit: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("before")') }] })}
+          onSubmit={onSubmit}
+        />
+      </App>,
+    )
+    fireEvent.click(submitButton(container))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(calls).toEqual(['before'])
+  })
+
+  it('beforeSubmit 里改的值会进入 onSubmit', async () => {
+    const onSubmit = vi.fn()
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={schemaWith({ beforeSubmit: [{ fn: makeFnSource(['ctx'], 'ctx.setValue("name", "李四")') }] })}
+          onSubmit={onSubmit}
+        />
+      </App>,
+    )
+    fireEvent.click(submitButton(container))
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ name: '李四' }))
   })
 
   it('onSubmit 解析后触发 afterSubmit', async () => {
@@ -228,5 +300,22 @@ describe('渲染器钩子接入（FormRenderer）', () => {
       </App>,
     )
     await waitFor(() => expect(calls).toEqual(['onFormMounted']))
+  })
+
+  it('缺 <App> 祖先时错误提示降级为静态 message，不产生 unhandled rejection', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      render(
+        <FormRenderer
+          schema={schemaWith({ onFormMounted: [{ fn: makeFnSource(['ctx'], 'throw new Error("boom")') }] })}
+          onSubmit={vi.fn()}
+        />,
+      )
+      // 静态 message 会真的把提示渲染出来；若 message 仍是 {} 则会在 catch 里二次抛出
+      expect(await screen.findByText('表单钩子执行失败：onFormMounted')).toBeTruthy()
+    }
+    finally {
+      consoleError.mockRestore()
+    }
   })
 })

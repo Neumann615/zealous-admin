@@ -211,6 +211,9 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
       mutate((draft) => {
         draft.form = parsed.form
         draft.children = children
+        // events / dataSources 也必须回填：否则「导出 → 导入」会静默丢掉全部钩子与数据源
+        draft.events = parsed.events
+        draft.dataSources = parsed.dataSources
       })
       set({ selectedId: null })
       return { ok: true }
