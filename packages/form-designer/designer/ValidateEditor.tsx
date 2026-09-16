@@ -34,6 +34,19 @@ const TRIGGER_LABELS: Record<ValidateTrigger, string> = {
 
 const TRIGGER_OPTIONS = VALIDATE_TRIGGERS.map(t => ({ label: TRIGGER_LABELS[t], value: t }))
 
+/**
+ * 阈值规则分两组语境，钉死 antd 的 type 后配错组件会恒不通过：
+ * 长度组走 type: 'string'，数值组走 type: 'number'。这里就地提示，避免「配了就永远校验失败」。
+ */
+const LENGTH_HINT = '按字符长度校验，仅对文本类组件生效；数值范围请改用最小值 / 最大值'
+const NUMBER_HINT = '按数值大小校验，仅对数值组件（如数字输入框）生效；文本长度请改用最小长度 / 最大长度'
+
+function thresholdHint(type: ValidateRuleType): string | null {
+  if (type === 'min' || type === 'max')
+    return NUMBER_HINT
+  return THRESHOLD_RULE_TYPES.includes(type) ? LENGTH_HINT : null
+}
+
 interface ValidateEditorProps {
   value?: ValidateRule[]
   onChange?: (value: ValidateRule[]) => void
@@ -70,13 +83,16 @@ export function ValidateEditor({ value = [], onChange, custom }: ValidateEditorP
             <Input size="small" placeholder="正则表达式，如 ^1\d{10}$" value={rule.pattern ?? ''} onChange={e => update(i, { pattern: e.target.value })} />
           )}
           {THRESHOLD_RULE_TYPES.includes(rule.type) && (
-            <InputNumber
-              size="small"
-              style={{ width: '100%' }}
-              placeholder="阈值（长度 / 数值）"
-              value={rule.value ?? null}
-              onChange={v => update(i, { value: typeof v === 'number' ? v : undefined })}
-            />
+            <>
+              <InputNumber
+                size="small"
+                style={{ width: '100%' }}
+                placeholder="阈值（长度 / 数值）"
+                value={rule.value ?? null}
+                onChange={v => update(i, { value: typeof v === 'number' ? v : undefined })}
+              />
+              <div style={{ fontSize: 12, color: '#999' }}>{thresholdHint(rule.type)}</div>
+            </>
           )}
           {rule.type === 'validator' && (
             <>

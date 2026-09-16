@@ -26,6 +26,12 @@ function validateOneRule(rule: unknown, where: string): string[] {
   const r = rule as ValidateRule
   if (!VALIDATE_RULE_TYPES.includes(r.type))
     return [issue]
+  // pattern / trigger 适用于所有类型，检查放在 validator 分支之前：
+  // 该分支内有多个提前 return，放后面会被整段跳过（`{ type: 'validator', trigger: 'onBlur' }` 就是漏网的那个）
+  if (r.pattern !== undefined && typeof r.pattern !== 'string')
+    return [issue]
+  if (r.trigger !== undefined && !VALIDATE_TRIGGERS.includes(r.trigger))
+    return [issue]
   // 自定义校验的执行结果由钩子运行时决定，因此「有没有可执行来源」必须在这里拦下
   if (r.type === 'validator') {
     if (r.fn !== undefined && !isFnSource(r.fn))
@@ -41,10 +47,6 @@ function validateOneRule(rule: unknown, where: string): string[] {
   // 阈值类规则没有 value 就没有可校验的边界，运行时只能跳过 —— 这里直接拦下，避免「存得进、回读不知所谓」
   if (THRESHOLD_RULE_TYPES.includes(r.type) && !(typeof r.value === 'number' && Number.isFinite(r.value)))
     return [`${issue}：${r.type} 需要数字阈值 value`]
-  if (r.pattern !== undefined && typeof r.pattern !== 'string')
-    return [issue]
-  if (r.trigger !== undefined && !VALIDATE_TRIGGERS.includes(r.trigger))
-    return [issue]
   return []
 }
 

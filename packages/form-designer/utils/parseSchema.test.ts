@@ -229,4 +229,14 @@ describe('parseSchema 校验规则形状', () => {
     expect(() => parseSchema(withRules([{ type: 'validator', fn: { $type: 'fn', args: ['ctx'], body: 'return (' } }])))
       .toThrow('校验规则格式不正确（邮箱）：语法错误')
   })
+
+  it('validator 规则同样受 pattern / trigger 的形状检查约束', () => {
+    // trigger 只允许 blur / change / submit（写成 antd 事件名会让运行时不再按配置时机过滤）
+    expect(() => parseSchema(withRules([{ type: 'validator', hook: 'checkNick', trigger: 'onBlur' }])))
+      .toThrow('校验规则格式不正确（邮箱）')
+    expect(() => parseSchema(withRules([{ type: 'validator', hook: 'checkNick', pattern: 1 }])))
+      .toThrow('校验规则格式不正确（邮箱）')
+    // 合法 trigger 照常通过
+    expect(() => parseSchema(withRules([{ type: 'validator', hook: 'checkNick', trigger: 'submit' }]))).not.toThrow()
+  })
 })

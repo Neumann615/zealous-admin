@@ -44,6 +44,21 @@ describe('校验规则编辑器（ValidateEditor）', () => {
     expect(screen.queryByPlaceholderText('阈值（长度 / 数值）')).toBeNull()
   })
 
+  it('数值组阈值提示只对数值组件生效', () => {
+    render(<ValidateEditor value={[{ type: 'min', value: 18 }]} onChange={vi.fn()} />)
+    expect(screen.getByText(/仅对数值组件/)).toBeTruthy()
+  })
+
+  it('长度组阈值提示只对文本类组件生效', () => {
+    render(<ValidateEditor value={[{ type: 'minLen', value: 2 }]} onChange={vi.fn()} />)
+    expect(screen.getByText(/仅对文本类组件/)).toBeTruthy()
+  })
+
+  it('非阈值类型不给语境提示', () => {
+    render(<ValidateEditor value={[{ type: 'required' }]} onChange={vi.fn()} />)
+    expect(screen.queryByText(/仅对数值组件|仅对文本类组件/)).toBeNull()
+  })
+
   it('触发时机下拉写回 trigger（默认项为不写该字段）', async () => {
     const onChange = vi.fn()
     render(<ValidateEditor value={[{ type: 'required' }]} onChange={onChange} />)

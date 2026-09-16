@@ -205,7 +205,7 @@ export function renderField(schema, renderChild, parentType?) {
 
 **文件：** 修改 `types/schema.ts`、`renderer/toAntdRules.ts`（+测试）、`designer/ValidateEditor.tsx`、`utils/parseSchema.ts`（形状校验）。
 
-**设计：** 类型扩到 12 种（`len` / `maxLen` / `minLen` / `min` / `max` / `phone` / `ip` / `integer` / `uppercase` / `lowercase` 新增），每条规则支持 `trigger: 'blur' | 'change' | 'submit'`（默认 `blur`）。**不加** `validator` 内联函数（自定义校验放任务 3，复用公共事件表）。
+**设计：** 类型扩到 15 种（`len` / `maxLen` / `minLen` / `min` / `max` / `phone` / `ip` / `integer` / `uppercase` / `lowercase` 新增），每条规则支持 `trigger: 'blur' | 'change' | 'submit'`（**不写则沿用 antd 默认时机：值变化即校验**）。**不加** `validator` 内联函数（自定义校验放任务 3，复用公共事件表）。
 
 ```ts
 export type ValidateRuleType
@@ -220,20 +220,20 @@ export interface ValidateRule {
   pattern?: string
   /** len / maxLen / minLen / min / max 的阈值 */
   value?: number
-  /** 触发时机，默认 blur */
+  /** 触发时机；不写则沿用 antd 默认（值变化即校验） */
   trigger?: 'blur' | 'change' | 'submit'
 }
 ```
 
 要点：
-1. `toAntdRules` 里 `number` 是 antd 的 `type: 'number'`（要求值为 number），而 `min` / `max` / `len` 等是**独立规则**（`{ min }` / `{ max }` / `{ len }` / `{ min: n, type: 'string' }` 语义差异）——实现时以 antd `Rule` 类型为准，逐个写清并各配一条测试（**不要照抄参照实现的实现**）。
+1. `toAntdRules` 里 `number` 是 antd 的 `type: 'number'`（要求值为 number），而 `min` / `max` / `len` 等是**独立规则**（`{ min }` / `{ max }` / `{ len }` / `{ min: n, type: 'string' }` 语义差异）——实现时以 antd `Rule` 类型为准，逐个写清并各配一条测试（**不要照抄参照实现的实现**）。实现落地：`len` / `minLen` / `maxLen` 钉 `type: 'string'` 走字符串长度语义，`min` / `max` 钉 `type: 'number'` 走数值语义（理由与组件语境提示见 `renderer/toAntdRules.ts` 注释与 `designer/ValidateEditor.tsx`）。
 2. `phone` / `ip` 用内置 pattern 常量（`/^1[3-9]\d{9}$/`、IPv4 正则），`integer` 用 `/^-?\d+$/`，`uppercase` / `lowercase` 用 `/^[A-Z]+$/`、`/^[a-z]+$/` —— 常量集中在 `toAntdRules.ts` 顶部并注释。
-3. `trigger` 透传到 antd rule 的 `validateTrigger`；提交时 antd 仍会全量校验（`trigger: 'submit'` 的规则只在提交时校验）。
+3. `trigger` 透传到 antd rule 的 `validateTrigger`（实现里映射为 antd 的字段事件名 `onBlur` / `onChange` / `onSubmit`）；规则级 `validateTrigger` 是字段级时机的子集，声明了 `blur` 的字段会把 `onBlur` 并入 `Form.Item.validateTrigger`，未配 `trigger` 时不写该字段。提交时 antd 仍会全量校验（`trigger: 'submit'` 的规则只在提交时校验）。
 4. `parseSchema` 的 events 校验旁，新增**校验规则形状**校验：类型在枚举内、`value` 为数字（用到阈值的类型必填）、`pattern` 为字符串、`trigger` 在枚举内。复用「面向用户」的错误消息风格。
 
 测试：每种新类型至少一条正反例（`toAntdRules` 纯函数级）；`trigger` 透传；`parseSchema` 拒绝非法类型 / 缺 `value` / 非法 `trigger`。
 
-提交：`feat(form-designer): 校验规则扩展与 trigger`
+- [x] **提交**：`feat(form-designer): 校验规则扩展与 trigger`
 
 ## 任务 3：自定义校验（复用公共事件表）+ 面板
 
@@ -255,7 +255,7 @@ export interface ValidateRule {
 
 测试：validator 返回 `true` / 字符串 / `false` / 抛错四条；非法引用（名字不存在）不抛错且视为通过（并 warn）；`parseSchema` 校验 `validator` 规则形状。
 
-提交：`feat(form-designer): 自定义校验引用公共事件`
+- [x] **提交**：`feat(form-designer): 自定义校验引用公共事件`
 
 > **检查点：** 批次 3A 到此可独立验收（栅格 + 校验，无网络依赖）。建议先跑全量测试与 `pnpm docs:build` 再进 3B。
 

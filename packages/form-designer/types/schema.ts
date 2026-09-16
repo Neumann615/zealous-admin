@@ -65,9 +65,12 @@ export interface ValidateRule {
   value?: number
   /** 触发时机；不写则跟随字段级时机 */
   trigger?: ValidateTrigger
-  /** 仅 type 为 validator 时使用：引用 events.custom 的公共事件名（与 fn 二选一，fn 优先） */
+  /**
+   * 仅 type 为 validator 时使用：引用 events.custom 的公共事件名（与 fn 二选一，fn 优先）。
+   * 其它类型即使带上 hook 也会被忽略（类型与 parseSchema 都不拦，属已知宽松点）。
+   */
   hook?: string
-  /** 仅 type 为 validator 时使用：内联函数体（与 HookRef 同规则，与 hook 同时存在时 fn 优先） */
+  /** 仅 type 为 validator 时使用：内联函数体（与 HookRef 同规则，与 hook 同时存在时 fn 优先）；其它类型忽略 */
   fn?: FnSource
 }
 
