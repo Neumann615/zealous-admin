@@ -51,6 +51,8 @@ export function collectValidateTriggers(rules: ValidateRule[] | undefined): stri
  * - 返回 `false` 或其他值 → 用 `${label}校验未通过`
  * - 抛错 → 视为不通过（默认文案），并走与钩子同一条 notifyError 上报路径
  * - 面板配置了 message 时以面板文案为准（antd 用 rule.message 覆盖校验器给出的文案）
+ * - ctx 由渲染器注入（FieldItem 恒在 FormHooksProvider 之下）；缺 ctx 时该规则被跳过并提示一次，
+ *   不伪造 ctx 静默降级 —— 否则「漏挂 Provider」这类真 bug 会伪装成一条无害的 console 提示
  */
 export function toAntdRules(
   schema: FieldSchema,
@@ -205,11 +207,14 @@ function mapValidatorRule(
   const run = resolveValidatorFn(r, custom)
   if (!run)
     return null
+  if (!buildCtx) {
+    warnOnce('validator:no-ctx', '[form-designer] 自定义校验缺少表单上下文（FormRenderer 未下发 buildCtx），已跳过该规则')
+    return null
+  }
 
   return {
     validator: async (_rule: unknown, value: unknown) => {
-      // 渲染器注入了 ctx 工厂时用完整 ctx（含 form / setValue / message），纯函数级调用退化为最小实现
-      const ctx: FormHookContext = buildCtx ? buildCtx() : minimalValidatorCtx()
+      const ctx: FormHookContext = buildCtx()
       ctx.payload = { value, formValue: ctx.values }
       let result: unknown
       try {
@@ -225,26 +230,5 @@ function mapValidatorRule(
     },
     ...(r.message ? { message: r.message } : {}),
     ...trigger,
-  }
-}
-
-/** 兜底 message：纯函数级调用没有宿主 <App>，只写日志（真实渲染路径始终由 FormRenderer 注入 ctx） */
-function fallbackMessage(text: string | { content: string }) {
-  console.warn(`[form-designer] ${typeof text === 'string' ? text : text.content}`)
-}
-
-/** 没有渲染器 ctx 时的最小实现：只有 payload 与兜底 message，字段/表单能力缺失 */
-function minimalValidatorCtx(): FormHookContext {
-  const noop = () => {}
-  return {
-    form: {} as FormHookContext['form'],
-    values: {},
-    getValues: () => ({}),
-    setValue: noop,
-    setValues: noop,
-    getField: () => undefined,
-    emit: async () => {},
-    reload: async () => {},
-    message: { success: fallbackMessage, error: fallbackMessage, warning: fallbackMessage, info: fallbackMessage },
   }
 }

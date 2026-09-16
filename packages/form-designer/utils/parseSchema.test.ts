@@ -240,3 +240,55 @@ describe('parseSchema 校验规则形状', () => {
     expect(() => parseSchema(withRules([{ type: 'validator', hook: 'checkNick', trigger: 'submit' }]))).not.toThrow()
   })
 })
+
+describe('parseSchema 字段级栅格形状', () => {
+  function withCol(col: unknown, label = '邮箱'): string {
+    return JSON.stringify({
+      version: 2,
+      form: {},
+      children: [{ id: 'a', type: 'input', label, props: {}, col }],
+    })
+  }
+
+  it('合法栅格穿过解析（span 与断点、span: 0、只有断点）', () => {
+    expect(parseSchema(withCol({ span: 12 })).children[0].col).toEqual({ span: 12 })
+    expect(parseSchema(withCol({ span: 12, xs: 24, md: 8 })).children[0].col).toEqual({ span: 12, xs: 24, md: 8 })
+    expect(() => parseSchema(withCol({ span: 0 }))).not.toThrow()
+    expect(() => parseSchema(withCol({ xs: 24 }))).not.toThrow()
+    // 未配置 col 当然也合法
+    expect(() => parseSchema(JSON.stringify({
+      version: 2,
+      form: {},
+      children: [{ id: 'a', type: 'input', props: {} }],
+    }))).not.toThrow()
+  })
+
+  it('超出 0-24 / 非整数 / 非数字被拒', () => {
+    expect(() => parseSchema(withCol({ span: 99 })))
+      .toThrow('表单结构解析失败：字段栅格格式不正确（邮箱）：span 必须是 0-24 的整数')
+    expect(() => parseSchema(withCol({ span: '12' }))).toThrow('字段栅格格式不正确（邮箱）')
+    expect(() => parseSchema(withCol({ span: -5 }))).toThrow('字段栅格格式不正确（邮箱）')
+    expect(() => parseSchema(withCol({ xs: 12.5 }))).toThrow('字段栅格格式不正确（邮箱）')
+    expect(() => parseSchema(withCol({ lg: 25 }))).toThrow('字段栅格格式不正确（邮箱）')
+  })
+
+  it('col 不是对象、或出现未知键时被拒', () => {
+    expect(() => parseSchema(withCol('span:12'))).toThrow('字段栅格格式不正确（邮箱）')
+    expect(() => parseSchema(withCol([]))).toThrow('字段栅格格式不正确（邮箱）')
+    expect(() => parseSchema(withCol({ span: 12, offset: 2 })))
+      .toThrow('字段栅格格式不正确（邮箱）：未知键 offset')
+  })
+
+  it('嵌套子表单里的栅格同样校验（无 label 时用组件 type 定位）', () => {
+    expect(() => parseSchema(JSON.stringify({
+      version: 2,
+      form: {},
+      children: [{
+        id: 'c',
+        type: 'card',
+        props: {},
+        children: [{ id: 'b', type: 'input', props: {}, col: { span: 30 } }],
+      }],
+    }))).toThrow('字段栅格格式不正确（input）')
+  })
+})

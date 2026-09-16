@@ -2,10 +2,9 @@ import type { CustomHookDef } from '../events/types'
 import type { ValidateRule, ValidateRuleType, ValidateTrigger } from '../types/schema'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Input, InputNumber, Select } from 'antd'
-import { makeFnSource } from '../events/fnSource'
 import { THRESHOLD_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
-import { HOOK_ARGS, HookEditor } from './HookEditor'
-import { withRuleType } from './ruleType'
+import { HookEditor } from './HookEditor'
+import { emptyInlineFn, withRuleType } from './ruleType'
 
 const RULE_TYPES: { label: string, value: ValidateRuleType }[] = [
   { label: '必填', value: 'required' },
@@ -38,8 +37,11 @@ const TRIGGER_OPTIONS = VALIDATE_TRIGGERS.map(t => ({ label: TRIGGER_LABELS[t], 
  * 阈值规则分两组语境，钉死 antd 的 type 后配错组件会恒不通过：
  * 长度组走 type: 'string'，数值组走 type: 'number'。这里就地提示，避免「配了就永远校验失败」。
  */
-const LENGTH_HINT = '按字符长度校验，仅对文本类组件生效；数值范围请改用最小值 / 最大值'
-const NUMBER_HINT = '按数值大小校验，仅对数值组件（如数字输入框）生效；文本长度请改用最小长度 / 最大长度'
+const LENGTH_HINT = '按字符长度校验，仅对文本类组件生效；数值范围请改用最小值 / 最大值。字段留空时不校验，需要必填请再加一条必填规则'
+const NUMBER_HINT = '按数值大小校验，仅对数值组件（如数字输入框）生效；文本长度请改用最小长度 / 最大长度。字段留空时不校验，需要必填请再加一条必填规则'
+
+/** 空 pattern 的 regexp 规则会被 toAntdRules 静默跳过（既有行为，不改成拒绝以免废掉存量 schema），面板就地提示 */
+const EMPTY_PATTERN_HINT = '正则表达式为空，该规则不会生效'
 
 function thresholdHint(type: ValidateRuleType): string | null {
   if (type === 'min' || type === 'max')
@@ -80,7 +82,10 @@ export function ValidateEditor({ value = [], onChange, custom }: ValidateEditorP
             <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => onChange?.(value.filter((_, j) => j !== i))} />
           </div>
           {rule.type === 'regexp' && (
-            <Input size="small" placeholder="正则表达式，如 ^1\d{10}$" value={rule.pattern ?? ''} onChange={e => update(i, { pattern: e.target.value })} />
+            <>
+              <Input size="small" placeholder="正则表达式，如 ^1\d{10}$" value={rule.pattern ?? ''} onChange={e => update(i, { pattern: e.target.value })} />
+              {!rule.pattern && <div style={{ fontSize: 12, color: '#ff4d4f' }}>{EMPTY_PATTERN_HINT}</div>}
+            </>
           )}
           {THRESHOLD_RULE_TYPES.includes(rule.type) && (
             <>
@@ -103,7 +108,7 @@ export function ValidateEditor({ value = [], onChange, custom }: ValidateEditorP
                 value={rule.hook}
                 options={customNames.map(name => ({ label: custom?.[name]?.label || name, value: name }))}
                 // 内联正文与按名引用互斥：运行时 fn 优先，留着旧正文会让公共事件永远不执行
-                onChange={v => update(i, v ? { hook: v, fn: undefined } : { hook: undefined, fn: makeFnSource(HOOK_ARGS, '') })}
+                onChange={v => update(i, v ? { hook: v, fn: undefined } : { hook: undefined, fn: emptyInlineFn() })}
               />
               <HookEditor value={rule.fn} onChange={fn => update(i, { fn, hook: undefined })} />
             </>

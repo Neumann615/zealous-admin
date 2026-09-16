@@ -1,5 +1,6 @@
 import type { FieldCol } from '../types/schema'
 import { Button, InputNumber } from 'antd'
+import { BREAKPOINTS } from '../renderer/colProps'
 
 /** span 预设：对齐 antd 24 栅格的常用分数（1/4=6、1/3=8、1/2=12、2/3=16、3/4=18、整行=24） */
 const SPAN_PRESETS = [
@@ -10,8 +11,6 @@ const SPAN_PRESETS = [
   { label: '3/4', span: 18 },
   { label: '整行', span: 24 },
 ]
-
-const BREAKPOINTS = ['xs', 'sm', 'md', 'lg', 'xl'] as const
 
 interface ColEditorProps {
   value?: FieldCol
@@ -61,6 +60,9 @@ export function ColEditor({ value, onChange }: ColEditorProps) {
             onChange={v => patch({ [bp]: typeof v === 'number' ? v : undefined })}
           />
         ))}
+      </div>
+      <div style={{ fontSize: 12, color: '#999' }}>
+        断点按屏幕宽度生效，画布只镜像 span；效果请在预览里看
       </div>
     </div>
   )

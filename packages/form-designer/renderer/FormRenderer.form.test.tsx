@@ -242,6 +242,21 @@ describe('渲染器校验规则触发时机（FormRenderer）', () => {
     fireEvent.blur(input)
     await waitFor(() => expect(errorText(container)).toContain('昵称长度不能少于 3'))
   })
+
+  it('trigger: submit 的规则值变化时不校验，提交时才校验', async () => {
+    const schema = schemaWithRules([{ type: 'minLen', value: 3, trigger: 'submit' }])
+    const { container } = render(<FormRenderer schema={schema} onSubmit={vi.fn()} />)
+
+    fill(container, 'ab')
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20))
+    })
+    expect(errorText(container)).toBeUndefined()
+
+    // 提交走全量校验（不按 trigger 过滤），只声明 submit 的规则此时才生效
+    submit(container)
+    await waitFor(() => expect(errorText(container)).toContain('昵称长度不能少于 3'))
+  })
 })
 
 describe('渲染器自定义校验（FormRenderer）', () => {

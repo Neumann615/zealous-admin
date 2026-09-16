@@ -277,8 +277,10 @@ describe('字段级栅格（col）', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '1/2' }))
     expect(useDesignerStore.getState().schema.children[0].col).toEqual({ span: 12 })
-    expect(shellOf(container).style.flex).toBe('0 0 50%')
+    // 轴向无关的写法：width + maxWidth（不用 flex 简写，简写的 basis 会落到父容器主轴上）
+    expect(shellOf(container).style.width).toBe('50%')
     expect(shellOf(container).style.maxWidth).toBe('50%')
+    expect(shellOf(container).style.flex).toBe('')
   })
 
   it('再次点击同一预设置空 col，导出不含空 col 键', () => {
@@ -292,8 +294,8 @@ describe('字段级栅格（col）', () => {
     fireEvent.click(preset)
     expect(useDesignerStore.getState().schema.children[0].col).toBeUndefined()
     expect(useDesignerStore.getState().exportSchema()).not.toContain('"col"')
-    // 未配置时外壳不再写 flex 尺寸，回到默认的整行流
-    expect(shellOf(container).style.flex).toBe('')
+    // 未配置时外壳不再写宽度，回到默认的整行流
+    expect(shellOf(container).style.width).toBe('')
   })
 
   it('响应式断点写入 col', () => {
@@ -304,11 +306,45 @@ describe('字段级栅格（col）', () => {
     expect(useDesignerStore.getState().schema.children[0].col).toEqual({ md: 8 })
   })
 
+  it('断点连续输入合并成一条历史（撤销一次即回到未配置）', () => {
+    renderDesigner(schemaOf(['input']))
+    selectFirst('input')
+
+    fireEvent.change(screen.getByPlaceholderText('md'), { target: { value: '8' } })
+    const afterFirst = useDesignerStore.getState().past.length
+    expect(afterFirst).toBeGreaterThan(0)
+
+    fireEvent.change(screen.getByPlaceholderText('md'), { target: { value: '12' } })
+    expect(useDesignerStore.getState().schema.children[0].col).toEqual({ md: 12 })
+    expect(useDesignerStore.getState().past.length).toBe(afterFirst)
+  })
+
+  it('断点行提示画布只镜像 span（断点看预览）', () => {
+    renderDesigner(schemaOf(['input']))
+    selectFirst('input')
+
+    expect(screen.getByText(/画布只镜像 span/)).toBeTruthy()
+  })
+
   it('辅助组件（无 Form.Item）不提供布局分组', () => {
     renderDesigner(schemaOf(['divider']))
     selectFirst('divider')
 
     expect(screen.queryByText('响应式断点（1-24，留空表示不设）')).toBeNull()
+  })
+
+  it('导出面板列出当前 schema 的问题（不阻断导出）', async () => {
+    renderDesigner(schemaOf(['input']))
+    const node = selectFirst('input')
+    act(() => {
+      useDesignerStore.getState().updateField(node.id, 'formItem.rules', [{ type: 'len' }], true)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /导\s*出/ }))
+    await waitFor(() => expect(screen.getByText(/当前 schema 有问题/)).toBeTruthy())
+    // 导出内容照常给出，只是明确告知这份 JSON 回读会被拒
+    const textarea = document.querySelector('.ant-modal textarea') as HTMLTextAreaElement
+    expect(textarea.value).toContain('"type": "len"')
   })
 })
 

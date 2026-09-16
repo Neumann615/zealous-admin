@@ -67,4 +67,21 @@ describe('渲染器冒烟（FormRenderer）', () => {
     expect(dividerCol?.querySelector('.ant-divider')).not.toBeNull()
     unmount()
   })
+
+  it('栅格边界：span 0 与「只有断点」都按 antd Col 渲染', () => {
+    const zeroSpan = pick('input').defaultSchema()
+    zeroSpan.col = { span: 0 }
+    const xsOnly = pick('divider').defaultSchema()
+    xsOnly.col = { xs: 24 }
+
+    const { container, unmount } = render(
+      <FormRenderer
+        showActions={false}
+        schema={{ version: 2, form: {}, children: [zeroSpan, xsOnly] }}
+      />,
+    )
+    expect(container.querySelector('.ant-col-0')).not.toBeNull()
+    expect(container.querySelector('.ant-col-xs-24')).not.toBeNull()
+    unmount()
+  })
 })

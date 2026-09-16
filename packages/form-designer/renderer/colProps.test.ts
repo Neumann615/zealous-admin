@@ -20,11 +20,11 @@ describe('fieldColProps', () => {
 })
 
 describe('shellStyleFromCol', () => {
-  it('span 换算成外壳的 flex 尺寸', () => {
-    expect(shellStyleFromCol({ span: 6 })).toEqual({ flex: '0 0 25%', maxWidth: '25%' })
+  it('span 换算成与轴向无关的宽度（不用 flex 简写）', () => {
+    expect(shellStyleFromCol({ span: 6 })).toEqual({ width: '25%', maxWidth: '25%', flexShrink: 0 })
   })
 
   it('未配置时占满一行', () => {
-    expect(shellStyleFromCol(undefined)).toEqual({ flex: '0 0 100%', maxWidth: '100%' })
+    expect(shellStyleFromCol(undefined)).toEqual({ width: '100%', maxWidth: '100%', flexShrink: 0 })
   })
 })

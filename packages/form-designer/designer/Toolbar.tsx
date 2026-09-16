@@ -9,7 +9,9 @@ import {
 } from '@ant-design/icons'
 import { App, Button, Divider, Input, Modal, Space, theme } from 'antd'
 import { useState } from 'react'
+import { validateEvents } from '../events/validateEvents'
 import { FormRenderer } from '../renderer/FormRenderer'
+import { validateFieldRules } from '../utils/parseSchema'
 import { useDesignerStore } from './store'
 
 interface ToolbarProps {
@@ -27,6 +29,9 @@ export function Toolbar({ onSave }: ToolbarProps) {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [submitted, setSubmitted] = useState<string | null>(null)
+  // 导出面板不经过保存拦截（编辑器可以停在「选了阈值类型还没填数值」的中间态），
+  // 这里把同一份口径的问题显式摆出来：导出不阻断，但要让用户知道这份 JSON 回读会被拒
+  const exportIssues = exportOpen ? [...validateFieldRules(schema.children), ...validateEvents(schema.events)] : []
 
   const handleImport = () => {
     const result = importSchema(importText)
@@ -79,6 +84,11 @@ export function Toolbar({ onSave }: ToolbarProps) {
       </Modal>
 
       <Modal title="导出 Schema" open={exportOpen} footer={null} onCancel={() => setExportOpen(false)}>
+        {exportIssues.length > 0 && (
+          <div style={{ marginBottom: 8, color: token.colorError }}>
+            {`当前 schema 有问题，导入时会被拒绝：${exportIssues.join('；')}`}
+          </div>
+        )}
         <Input.TextArea rows={14} readOnly value={exportSchema()} onFocus={e => e.target.select()} />
       </Modal>
 

@@ -169,9 +169,14 @@ describe('toAntdRules 自定义校验（validator）', () => {
     }
   }
 
+  /** FieldItem 的调用形态：恒带 custom 与 FormRenderer 下发的 ctx 工厂 */
+  function rulesFor(rule: ValidateRule, custom: any = CUSTOM, buildCtx: any = () => stubCtx()) {
+    return toAntdRules(field({ rules: [rule] }), custom, buildCtx)
+  }
+
   /** 取规则里的校验器：签名与 antd 调用方式一致（忽略 callback，用 promise 表达结果） */
   function validatorOf(rule: ValidateRule, custom?: any, buildCtx?: any) {
-    const rules = toAntdRules(field({ rules: [rule] }), custom, buildCtx)
+    const rules = rulesFor(rule, custom, buildCtx)
     return (rules[0] as any)?.validator as ((r: unknown, v: unknown) => Promise<void>) | undefined
   }
 
@@ -227,10 +232,10 @@ describe('toAntdRules 自定义校验（validator）', () => {
 
   it('引用不存在的公共事件：该规则被忽略（不抛错、视为通过），按名只提示一次', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    expect(toAntdRules(field({ rules: [{ type: 'validator', hook: 'nope' }] }), CUSTOM)).toEqual([])
+    expect(rulesFor({ type: 'validator', hook: 'nope' })).toEqual([])
     expect(warn).toHaveBeenCalled()
     const afterFirst = warn.mock.calls.length
-    expect(toAntdRules(field({ rules: [{ type: 'validator', hook: 'nope' }] }), CUSTOM)).toEqual([])
+    expect(rulesFor({ type: 'validator', hook: 'nope' })).toEqual([])
     expect(warn.mock.calls.length).toBe(afterFirst)
     warn.mockRestore()
   })
@@ -248,23 +253,30 @@ describe('toAntdRules 自定义校验（validator）', () => {
   it('函数体编译失败时跳过该规则而不抛错（渲染期不能白屏）', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const badRule: ValidateRule = { type: 'validator', fn: makeFnSource(['ctx'], 'return (') }
-    expect(() => toAntdRules(field({ rules: [badRule] }), CUSTOM)).not.toThrow()
-    expect(toAntdRules(field({ rules: [badRule] }), CUSTOM)).toEqual([])
+    expect(() => rulesFor(badRule)).not.toThrow()
+    expect(rulesFor(badRule)).toEqual([])
+    warn.mockRestore()
+  })
+
+  it('缺渲染器下发的 ctx 时跳过该规则并提示一次（不伪造 ctx 静默降级）', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(() => toAntdRules(field({ rules: [{ type: 'validator', hook: 'checkNick' }] }), CUSTOM)).not.toThrow()
+    expect(toAntdRules(field({ rules: [{ type: 'validator', hook: 'checkNick' }] }), CUSTOM)).toEqual([])
+    expect(warn).toHaveBeenCalled()
+    const afterFirst = warn.mock.calls.length
+    expect(toAntdRules(field({ rules: [{ type: 'validator', hook: 'checkNick' }] }), CUSTOM)).toEqual([])
+    expect(warn.mock.calls.length).toBe(afterFirst)
     warn.mockRestore()
   })
 
   it('面板配置的 message 透传到 rule（antd 会用它覆盖校验器给出的文案）', () => {
-    const rules = toAntdRules(
-      field({ rules: [{ type: 'validator', hook: 'checkNick', message: '昵称不合法' }] }),
-      CUSTOM,
-    )
-    expect((rules[0] as any).message).toBe('昵称不合法')
+    expect((rulesFor({ type: 'validator', hook: 'checkNick', message: '昵称不合法' })[0] as any).message)
+      .toBe('昵称不合法')
   })
 
   it('trigger 同样透传到校验器规则', () => {
     const check = validatorOf({ type: 'validator', hook: 'checkNick', trigger: 'submit' }, CUSTOM)
     expect(check).toBeTypeOf('function')
-    expect((toAntdRules(field({ rules: [{ type: 'validator', hook: 'checkNick', trigger: 'submit' }] }), CUSTOM)[0] as any).validateTrigger)
-      .toBe('onSubmit')
+    expect((rulesFor({ type: 'validator', hook: 'checkNick', trigger: 'submit' })[0] as any).validateTrigger).toBe('onSubmit')
   })
 })

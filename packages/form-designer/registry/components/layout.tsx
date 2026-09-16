@@ -39,7 +39,7 @@ registerComponent({
   defaultSchema: () => bareSchema('col', { span: 12 }, []),
   render: (schema, children) => <Col {...schema.props}>{children}</Col>,
   // 画布中 Col 被 CanvasItem 外壳（.item）包裹，外壳才是 Row 的 flex item：
-  // span 换算成外壳的 flex 尺寸（与字段级 col 共用同一份换算），Col 自身在画布内恒为 span:24 占满外壳
+  // span 换算成外壳宽度（与字段级 col 共用同一份换算，轴向无关），Col 自身在画布内恒为 span:24 占满外壳
   canvasShellStyle: schema => shellStyleFromCol({ span: schema.props.span ?? 24 }),
   canvasRender: (schema, children) => {
     const { span, ...rest } = schema.props

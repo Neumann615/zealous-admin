@@ -54,7 +54,7 @@ function FieldConfig() {
           <Divider titlePlacement="start" plain style={{ margin: '16px 0 12px' }}>布局</Divider>
           <ColEditor
             value={node.col}
-            onChange={col => updateField(node.id, 'col', col)}
+            onChange={col => updateField(node.id, 'col', col, true)}
           />
         </>
       )}

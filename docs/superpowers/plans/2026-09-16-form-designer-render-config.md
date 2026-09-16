@@ -70,7 +70,13 @@
 
 **文件：** 创建 `renderer/colProps.ts` + `renderer/colProps.test.ts`；修改 `types/schema.ts`、`renderer/renderField.tsx`、`registry/components/layout.tsx`、`designer/ColEditor.tsx`（创建）、`designer/RightPanel.tsx`。
 
-**设计：** `col` 是**字段自带**的栅格配置，渲染时把该字段包进 `<Col>`；画布用同一份换算作为外壳样式，保证设计态与运行态一致（与批次 1 的 `buildFormProps` 同理，**只留一个换算点**）。
+**设计：** `col` 是**字段自带**的栅格配置，渲染时把该字段包进 `<Col>`；画布用同一份换算作为外壳样式（与批次 1 的 `buildFormProps` 同理，**只留一个换算点**）。
+
+收尾轮修正（实现以此为准）：
+
+- 外壳样式改成**轴向无关**的 `{ width: pct, maxWidth: pct, flexShrink: 0 }`，不用 `flex: 0 0 X%` 简写 —— `flex-basis` 落在父容器的**主轴**上，而画布根是纵向 flex（`Canvas.tsx`）、`Row` 是横向 flex，同一份简写在两种父容器下含义不同（顶层字段会变成「限高」而不是「限宽」）。
+- **画布只镜像 `span`**，不镜像断点：`xs` / `sm` / `md` / `lg` / `xl` 是媒体查询驱动、依赖真实视口宽度，画布没有可依据的宽度，断点效果只能在预览/业务页里看。面板断点行对此有提示。
+- **已知限制**：`Col` 只在 flex 行父容器（`Row`）里才能真正并排；顶层字段设 `span` 只表现为「限宽 + 换行」。
 
 - [x] **步骤 1：编写失败的测试**
 
@@ -98,12 +104,12 @@ describe('fieldColProps', () => {
 })
 
 describe('shellStyleFromCol', () => {
-  it('span 换算成外壳的 flex 尺寸（与 col 容器一致）', () => {
-    expect(shellStyleFromCol({ span: 6 })).toEqual({ flex: '0 0 25%', maxWidth: '25%' })
+  it('span 换算成与轴向无关的宽度（不用 flex 简写）', () => {
+    expect(shellStyleFromCol({ span: 6 })).toEqual({ width: '25%', maxWidth: '25%', flexShrink: 0 })
   })
 
   it('未配置时占满一行', () => {
-    expect(shellStyleFromCol(undefined)).toEqual({ flex: '0 0 100%', maxWidth: '100%' })
+    expect(shellStyleFromCol(undefined)).toEqual({ width: '100%', maxWidth: '100%', flexShrink: 0 })
   })
 })
 ```
@@ -134,11 +140,16 @@ export function fieldColProps(col: FieldCol | undefined): Record<string, any> | 
   return Object.keys(props).length ? props : null
 }
 
-/** 画布外壳样式：把 span 换算成 flex 尺寸（与 layout.tsx 的 col 容器同一算法） */
+/**
+ * 画布外壳样式：span → 外壳宽度（与 layout.tsx 的 col 容器同一算法）。
+ * 用 width + maxWidth + flexShrink 而不是 `flex: 0 0 X%`：flex-basis 落在父容器主轴上，
+ * 画布根是纵向 flex、Row 是横向 flex，简写在两种父容器下含义不同；width 则始终是横向尺寸。
+ * 断点不镜像（媒体查询依赖真实视口宽度），只镜像 span，断点效果请在预览里看。
+ */
 export function shellStyleFromCol(col: FieldCol | undefined) {
   const span = col?.span ?? 24
   const pct = `${(span / 24) * 100}%`
-  return { flex: `0 0 ${pct}`, maxWidth: pct }
+  return { width: pct, maxWidth: pct, flexShrink: 0 }
 }
 ```
 
@@ -258,6 +269,14 @@ export interface ValidateRule {
 - [x] **提交**：`feat(form-designer): 自定义校验引用公共事件`
 
 > **检查点：** 批次 3A 到此可独立验收（栅格 + 校验，无网络依赖）。建议先跑全量测试与 `pnpm docs:build` 再进 3B。
+
+### 3A 收尾轮遗留（留给 3B，届时一并处理）
+
+- `toAntdRules.ts` 拆成 `ruleShape` / `ruleTrigger` / `validatorRule` 三块 —— 3B 本来就要动这个文件。
+- `ValidateRule` 改成判别联合（`ValidateRule | ValidatorRule`），把「`hook` / `fn` 仅 `validator` 生效」落到类型上；现在只靠注释与 `parseSchema` 的宽松检查（非 `validator` 类型带上 `hook` 会被运行时忽略，已知不拦）。
+- 「长度组 / 数值组」的元数据表：面板提示与 antd 映射共用一份，避免两处枚举分叉。
+- `validator` 引用的公共事件被删除后，面板提示「已不存在」；现在只在运行时 `warnOnce` 并视为通过。
+- **已知限制**：`Col` 只在 flex 行父容器（`Row`）里才能真正并排，顶层字段设 `span` 只表现为「限宽 + 换行」；画布外壳也只镜像 `span`，断点效果要到预览 / 业务页才看得到。
 
 ---
 

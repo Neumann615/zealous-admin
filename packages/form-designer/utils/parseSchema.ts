@@ -19,6 +19,36 @@ const MIGRATIONS: Record<number, (raw: Record<string, any>) => Record<string, an
 /** 规则形状问题的统一文案：where 用字段 label，缺省退回组件 type */
 const ruleIssue = (where: string) => `校验规则格式不正确（${where}）`
 
+/** 字段栅格允许的键：与 FieldCol 一一对应（antd Col 的 offset / push / pull / order 暂不支持） */
+const COL_KEYS = ['span', 'xs', 'sm', 'md', 'lg', 'xl'] as const
+
+/**
+ * 字段级栅格形状校验：col 必须是非数组对象，白名单键的值必须是 0-24 的整数（0 也合法，antd 允许 span: 0）。
+ * 未知键直接报错而不忽略：面板写不出别的键，出现未知键基本都是手写 / 外部 JSON 的笔误（如 spam: 12），
+ * 忽略的表现是「配了却完全没生效」，比报错难查得多。
+ * 值为 undefined 的键视为未配置（JSON 序列化本来就会丢键，不能因此拒绝一份能存能读的 schema）。
+ */
+function validateCol(node: FieldSchema, where: string): string[] {
+  const col = (node as { col?: unknown }).col
+  if (col === undefined)
+    return []
+  const issue = `字段栅格格式不正确（${where}）`
+  if (!col || typeof col !== 'object' || Array.isArray(col))
+    return [issue]
+  const issues: string[] = []
+  for (const [key, value] of Object.entries(col as Record<string, unknown>)) {
+    if (value === undefined)
+      continue
+    if (!(COL_KEYS as readonly string[]).includes(key)) {
+      issues.push(`${issue}：未知键 ${key}`)
+      continue
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 24)
+      issues.push(`${issue}：${key} 必须是 0-24 的整数`)
+  }
+  return issues
+}
+
 function validateOneRule(rule: unknown, where: string): string[] {
   const issue = ruleIssue(where)
   if (!rule || typeof rule !== 'object' || Array.isArray(rule))
@@ -51,7 +81,7 @@ function validateOneRule(rule: unknown, where: string): string[] {
 }
 
 /**
- * children 树上所有字段的校验规则形状校验（含 formItem.rules 与嵌套子表单）。
+ * children 树上所有字段的形状校验：校验规则（formItem.rules）与字段级栅格（col），含嵌套子表单。
  * 与 events 校验并列：保存拦截与解析侧共用同一份口径，避免「保存放行、回读拒绝」。
  * 返回面向用户的问题列表，调用方决定是抛错还是弹提示。
  */
@@ -64,6 +94,7 @@ export function validateFieldRules(children: unknown): string[] {
       if (!node || typeof node !== 'object')
         continue
       const where = node.label || node.type || '未命名字段'
+      issues.push(...validateCol(node, where))
       const rules = (node.formItem as { rules?: unknown } | undefined)?.rules
       if (rules !== undefined) {
         if (!Array.isArray(rules))
