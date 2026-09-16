@@ -344,6 +344,59 @@ describe('校验规则形状与保存拦截', () => {
     clickSave()
     expect(onSave).toHaveBeenCalledTimes(1)
   })
+
+  it('没有可执行来源的自定义校验规则被保存拦截', async () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+    const node = selectFirst('input')
+    act(() => {
+      useDesignerStore.getState().updateField(node.id, 'formItem.rules', [{ type: 'validator' }], true)
+    })
+
+    clickSave()
+    expect(onSave).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByText(/校验规则格式不正确/)).toBeTruthy())
+  })
+
+  it('引用不存在的公共事件仍可保存（运行时按「不校验」处理并提示一次）', () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+    const node = selectFirst('input')
+    act(() => {
+      useDesignerStore.getState().updateField(node.id, 'formItem.rules', [{ type: 'validator', hook: 'ghost' }], true)
+    })
+
+    clickSave()
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('自定义校验面板（复用公共事件表）', () => {
+  it('引用下拉列出公共事件名，编辑正文写回 fn 并清掉 hook', () => {
+    renderDesigner(schemaOf(['input']))
+    const node = selectFirst('input')
+    act(() => {
+      useDesignerStore.getState().updateCustomHooks({
+        checkNick: { label: '昵称校验', fn: { $type: 'fn', args: ['ctx'], body: '' } },
+      })
+    })
+    act(() => {
+      useDesignerStore.getState().updateField(node.id, 'formItem.rules', [{ type: 'validator', hook: 'checkNick' }], true)
+    })
+
+    // 下拉的既有值以公共事件的 label 展示，说明面板拿到了 events.custom
+    expect(screen.getByText('昵称校验')).toBeTruthy()
+
+    const body = document.querySelector('textarea') as HTMLTextAreaElement
+    expect(body, '内联正文编辑器应复用 HookEditor').toBeTruthy()
+    fireEvent.change(body, { target: { value: 'return ctx.payload.value === "ok"' } })
+
+    expect(useDesignerStore.getState().schema.children[0].formItem?.rules?.[0]).toEqual({
+      type: 'validator',
+      hook: undefined,
+      fn: { $type: 'fn', args: ['ctx'], body: 'return ctx.payload.value === "ok"' },
+    })
+  })
 })
 
 describe('设计器全局事件与公共事件', () => {

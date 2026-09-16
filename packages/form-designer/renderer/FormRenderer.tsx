@@ -2,10 +2,11 @@ import type { FormInstance } from 'antd'
 import type { FormHookContext } from '../events/types'
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { App, Button, Form, Space, message as staticMessage } from 'antd'
-import { Fragment, useCallback, useEffect, useRef } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef } from 'react'
 import { emitHook, filterRefsForField, runHooks } from '../events/runHooks'
 import { findNodeByField } from '../utils/schemaTree'
 import { buildFormProps, isHorizontalLayout, resolveLabelWidth } from './formProps'
+import { FormHooksProvider } from './hooksContext'
 import { renderField } from './renderField'
 
 export interface FormRendererProps {
@@ -116,6 +117,10 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     <Fragment key={child.id}>{renderField(child, renderChild, parentType)}</Fragment>
   )
 
+  // 字段级自定义校验要读公共事件表与完整 ctx（ctx.payload = { value, formValue }）；
+  // 逐层透传会污染 renderField 的签名，这里用 context 下发
+  const hooksRuntime = useMemo(() => ({ custom: schema.events?.custom, buildCtx }), [schema.events?.custom, buildCtx])
+
   return (
     <Form
       form={form}
@@ -128,15 +133,17 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
       onValuesChange={changed => Object.entries(changed).forEach(([field, value]) => runFieldChange(field, value))}
       {...buildFormProps(schema.form)}
     >
-      {schema.children.map(c => renderChild(c))}
-      {(showSubmit || showReset) && (
-        <Form.Item wrapperCol={actionWrapperCol}>
-          <Space>
-            {showSubmit && <Button type="primary" htmlType="submit">提交</Button>}
-            {showReset && <Button onClick={handleReset}>重置</Button>}
-          </Space>
-        </Form.Item>
-      )}
+      <FormHooksProvider value={hooksRuntime}>
+        {schema.children.map(c => renderChild(c))}
+        {(showSubmit || showReset) && (
+          <Form.Item wrapperCol={actionWrapperCol}>
+            <Space>
+              {showSubmit && <Button type="primary" htmlType="submit">提交</Button>}
+              {showReset && <Button onClick={handleReset}>重置</Button>}
+            </Space>
+          </Form.Item>
+        )}
+      </FormHooksProvider>
     </Form>
   )
 }

@@ -2,6 +2,7 @@ import type { ComponentDef } from '../registry/registry'
 import type { FieldSchema } from '../types/schema'
 import { Form } from 'antd'
 import { FieldControl } from './FieldControl'
+import { useFormHooksRuntime } from './hooksContext'
 import { joinName, useNamePrefix } from './namePrefix'
 import { collectValidateTriggers, toAntdRules } from './toAntdRules'
 
@@ -15,6 +16,8 @@ export function FieldItem({ def, schema, parentType }: {
   parentType?: string
 }) {
   const prefix = useNamePrefix()
+  // 自定义校验的公共事件表与 ctx 工厂由 FormRenderer 经 context 下发
+  const hooks = useFormHooksRuntime()
   // 规则级 validateTrigger 是字段级时机的子集：声明了 blur 的规则要把 onBlur 并进 Form.Item
   const validateTrigger = collectValidateTriggers(schema.formItem?.rules)
 
@@ -22,7 +25,7 @@ export function FieldItem({ def, schema, parentType }: {
     <Form.Item
       name={joinName(prefix, schema.field)}
       label={parentType && LABEL_HANDLED_BY_PARENT.includes(parentType) ? undefined : schema.label}
-      rules={toAntdRules(schema)}
+      rules={toAntdRules(schema, hooks?.custom, hooks?.buildCtx)}
       validateTrigger={validateTrigger}
       tooltip={schema.formItem?.tooltip}
       extra={schema.formItem?.extra}

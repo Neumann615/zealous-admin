@@ -1,6 +1,7 @@
 import type { FormEventConfig } from '../events/types'
 import type { FieldSchema, FormSchema, ValidateRule } from '../types/schema'
-import { validateEvents } from '../events/validateEvents'
+import { isFnSource } from '../events/fnSource'
+import { validateEvents, validateHookFn } from '../events/validateEvents'
 import { createEmptySchema, SCHEMA_VERSION, THRESHOLD_RULE_TYPES, VALIDATE_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
 
 /**
@@ -25,6 +26,18 @@ function validateOneRule(rule: unknown, where: string): string[] {
   const r = rule as ValidateRule
   if (!VALIDATE_RULE_TYPES.includes(r.type))
     return [issue]
+  // 自定义校验的执行结果由钩子运行时决定，因此「有没有可执行来源」必须在这里拦下
+  if (r.type === 'validator') {
+    if (r.fn !== undefined && !isFnSource(r.fn))
+      return [issue]
+    if (isFnSource(r.fn)) {
+      const fnIssue = validateHookFn(r.fn)
+      return fnIssue ? [`${issue}：${fnIssue}`] : []
+    }
+    if (typeof r.hook !== 'string' || !r.hook)
+      return [issue]
+    return []
+  }
   // 阈值类规则没有 value 就没有可校验的边界，运行时只能跳过 —— 这里直接拦下，避免「存得进、回读不知所谓」
   if (THRESHOLD_RULE_TYPES.includes(r.type) && !(typeof r.value === 'number' && Number.isFinite(r.value)))
     return [`${issue}：${r.type} 需要数字阈值 value`]

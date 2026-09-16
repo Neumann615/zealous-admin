@@ -1,3 +1,4 @@
+import type { FnSource } from '../events/fnSource'
 import type { FormEventConfig } from '../events/types'
 
 /** 可透传给 antd Form 的属性（白名单，须与 pickAntdFormProps 保持一致） */
@@ -41,6 +42,7 @@ export const VALIDATE_RULE_TYPES = [
   'integer',
   'uppercase',
   'lowercase',
+  'validator',
 ] as const
 
 export type ValidateRuleType = (typeof VALIDATE_RULE_TYPES)[number]
@@ -63,6 +65,10 @@ export interface ValidateRule {
   value?: number
   /** 触发时机；不写则跟随字段级时机 */
   trigger?: ValidateTrigger
+  /** 仅 type 为 validator 时使用：引用 events.custom 的公共事件名（与 fn 二选一，fn 优先） */
+  hook?: string
+  /** 仅 type 为 validator 时使用：内联函数体（与 HookRef 同规则，与 hook 同时存在时 fn 优先） */
+  fn?: FnSource
 }
 
 /** 字段级栅格（渲染时自动包裹 Col，字段自带，不必再拖 row + col 容器） */

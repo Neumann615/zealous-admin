@@ -1,7 +1,11 @@
+import type { CustomHookDef } from '../events/types'
 import type { ValidateRule, ValidateRuleType, ValidateTrigger } from '../types/schema'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Input, InputNumber, Select } from 'antd'
+import { makeFnSource } from '../events/fnSource'
 import { THRESHOLD_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
+import { HOOK_ARGS, HookEditor } from './HookEditor'
+import { withRuleType } from './ruleType'
 
 const RULE_TYPES: { label: string, value: ValidateRuleType }[] = [
   { label: '必填', value: 'required' },
@@ -19,6 +23,7 @@ const RULE_TYPES: { label: string, value: ValidateRuleType }[] = [
   { label: '整数', value: 'integer' },
   { label: '大写字母', value: 'uppercase' },
   { label: '小写字母', value: 'lowercase' },
+  { label: '自定义校验', value: 'validator' },
 ]
 
 const TRIGGER_LABELS: Record<ValidateTrigger, string> = {
@@ -29,36 +34,23 @@ const TRIGGER_LABELS: Record<ValidateTrigger, string> = {
 
 const TRIGGER_OPTIONS = VALIDATE_TRIGGERS.map(t => ({ label: TRIGGER_LABELS[t], value: t }))
 
-/**
- * 切换类型时重建规则：丢弃新类型用不到的字段（如正则的 pattern、阈值的 value），
- * 保留 message / trigger 这类所有类型共用的项。
- */
-function withType(rule: ValidateRule, type: ValidateRuleType): ValidateRule {
-  const next: ValidateRule = {
-    type,
-    ...(rule.message ? { message: rule.message } : {}),
-    ...(rule.trigger ? { trigger: rule.trigger } : {}),
-  }
-  if (type === 'regexp' && rule.pattern)
-    next.pattern = rule.pattern
-  if (THRESHOLD_RULE_TYPES.includes(type) && typeof rule.value === 'number')
-    next.value = rule.value
-  return next
-}
-
 interface ValidateEditorProps {
   value?: ValidateRule[]
   onChange?: (value: ValidateRule[]) => void
+  /** 公共事件表（events.custom）：自定义校验的引用来源 */
+  custom?: Record<string, CustomHookDef>
 }
 
-export function ValidateEditor({ value = [], onChange }: ValidateEditorProps) {
+export function ValidateEditor({ value = [], onChange, custom }: ValidateEditorProps) {
   const update = (index: number, patch: Partial<ValidateRule>) => {
     onChange?.(value.map((r, i) => (i === index ? { ...r, ...patch } : r)))
   }
 
   const changeType = (index: number, type: ValidateRuleType) => {
-    onChange?.(value.map((r, i) => (i === index ? withType(r, type) : r)))
+    onChange?.(value.map((r, i) => (i === index ? withRuleType(r, type) : r)))
   }
+
+  const customNames = Object.keys(custom || {})
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -85,6 +77,20 @@ export function ValidateEditor({ value = [], onChange }: ValidateEditorProps) {
               value={rule.value ?? null}
               onChange={v => update(i, { value: typeof v === 'number' ? v : undefined })}
             />
+          )}
+          {rule.type === 'validator' && (
+            <>
+              <Select
+                size="small"
+                allowClear
+                placeholder="引用公共事件"
+                value={rule.hook}
+                options={customNames.map(name => ({ label: custom?.[name]?.label || name, value: name }))}
+                // 内联正文与按名引用互斥：运行时 fn 优先，留着旧正文会让公共事件永远不执行
+                onChange={v => update(i, v ? { hook: v, fn: undefined } : { hook: undefined, fn: makeFnSource(HOOK_ARGS, '') })}
+              />
+              <HookEditor value={rule.fn} onChange={fn => update(i, { fn, hook: undefined })} />
+            </>
           )}
           <Input size="small" placeholder="校验失败提示语（可选）" value={rule.message ?? ''} onChange={e => update(i, { message: e.target.value })} />
           <Select

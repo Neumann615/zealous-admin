@@ -42,8 +42,9 @@ function logErrorOnce(key: string, text: string, detail?: unknown) {
 /**
  * 错误提示上报：本身不能改变控制流、更不能从 catch 里二次抛出。
  * 宿主没挂 <App> 时 antd 的 useApp() 返回 { message: {} }，ctx.message.error 会直接 TypeError。
+ * 只用到 ctx.message，故这里放宽入参类型：字段级校验（toAntdRules）也复用它上报。
  */
-function notifyError(ctx: FormHookContext, content: string, detail?: unknown) {
+export function notifyError(ctx: { message: FormHookContext['message'] }, content: string, detail?: unknown) {
   try {
     ctx.message.error({ content, key: HOOK_ERROR_KEY })
   }

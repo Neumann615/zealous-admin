@@ -64,6 +64,7 @@ function FieldConfig() {
           <ValidateEditor
             value={node.formItem?.rules}
             onChange={rules => updateField(node.id, 'formItem.rules', rules, true)}
+            custom={schema.events?.custom}
           />
         </>
       )}

@@ -1,5 +1,7 @@
+import type { FormHookContext } from '../events/types'
 import type { FieldSchema, ValidateRule } from '../types/schema'
 import { describe, expect, it, vi } from 'vitest'
+import { makeFnSource } from '../events/fnSource'
 import { collectValidateTriggers, toAntdRules } from './toAntdRules'
 
 function field(formItem: FieldSchema['formItem']): FieldSchema {
@@ -144,5 +146,125 @@ describe('toAntdRules trigger', () => {
     expect(collectValidateTriggers([{ type: 'required', trigger: 'submit' }])).toBeUndefined()
     // 显式设置字段级时机不能挤掉 antd 默认的 onChange 校验
     expect(collectValidateTriggers([{ type: 'required', trigger: 'blur' }])).toEqual(['onChange', 'onBlur'])
+  })
+})
+
+describe('toAntdRules 自定义校验（validator）', () => {
+  const CUSTOM = {
+    checkNick: { label: '昵称校验', fn: makeFnSource(['ctx'], 'return ctx.payload.value === "ok"') },
+  }
+
+  function stubCtx(over?: Partial<FormHookContext>): FormHookContext {
+    return {
+      form: {} as FormHookContext['form'],
+      values: {},
+      getValues: () => ({}),
+      setValue: vi.fn(),
+      setValues: vi.fn(),
+      getField: () => undefined,
+      emit: vi.fn(),
+      reload: async () => {},
+      message: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+      ...over,
+    }
+  }
+
+  /** 取规则里的校验器：签名与 antd 调用方式一致（忽略 callback，用 promise 表达结果） */
+  function validatorOf(rule: ValidateRule, custom?: any, buildCtx?: any) {
+    const rules = toAntdRules(field({ rules: [rule] }), custom, buildCtx)
+    return (rules[0] as any)?.validator as ((r: unknown, v: unknown) => Promise<void>) | undefined
+  }
+
+  it('返回 true / undefined / 空串视为通过', async () => {
+    await expect(validatorOf({ type: 'validator', fn: makeFnSource(['ctx'], 'return true') })!({}, 'ok')).resolves.toBeUndefined()
+    await expect(validatorOf({ type: 'validator', fn: makeFnSource(['ctx'], '') })!({}, 'ok')).resolves.toBeUndefined()
+    await expect(validatorOf({ type: 'validator', fn: makeFnSource(['ctx'], 'return ""') })!({}, 'ok')).resolves.toBeUndefined()
+  })
+
+  it('返回字符串时作为错误消息', async () => {
+    const check = validatorOf({ type: 'validator', fn: makeFnSource(['ctx'], 'return "昵称已经被占用"') })!
+    await expect(check({}, 'ok')).rejects.toThrow('昵称已经被占用')
+  })
+
+  it('返回 false 时用「字段校验未通过」', async () => {
+    const check = validatorOf({ type: 'validator', fn: makeFnSource(['ctx'], 'return false') })!
+    await expect(check({}, 'ok')).rejects.toThrow('邮箱校验未通过')
+  })
+
+  it('抛错视为不通过，并走 notifyError 上报（ctx 由渲染器注入）', async () => {
+    const messageError = vi.fn()
+    const buildCtx = () => stubCtx({ message: { ...stubCtx().message, error: messageError } })
+    const check = validatorOf(
+      { type: 'validator', fn: makeFnSource(['ctx'], 'throw new Error("炸了")') },
+      CUSTOM,
+      buildCtx,
+    )!
+    await expect(check({}, 'ok')).rejects.toThrow('邮箱校验未通过')
+    expect(messageError).toHaveBeenCalledTimes(1)
+  })
+
+  it('钩子拿到 ctx.payload = { value, formValue }', async () => {
+    const seen: any[] = []
+    ;(globalThis as any).__payload = (p: any) => seen.push(p)
+    const buildCtx = () => stubCtx({ values: { name: '张三' } })
+    const check = validatorOf(
+      { type: 'validator', fn: makeFnSource(['ctx'], 'globalThis.__payload(ctx.payload); return true') },
+      CUSTOM,
+      buildCtx,
+    )!
+
+    await check({}, 42)
+    expect(seen).toEqual([{ value: 42, formValue: { name: '张三' } }])
+  })
+
+  it('fn 优先于 hook（与 HookRef 同规则）', async () => {
+    const check = validatorOf(
+      { type: 'validator', hook: 'checkNick', fn: makeFnSource(['ctx'], 'return "内联生效"') },
+      CUSTOM,
+    )!
+    await expect(check({}, 'ok')).rejects.toThrow('内联生效')
+  })
+
+  it('引用不存在的公共事件：该规则被忽略（不抛错、视为通过），按名只提示一次', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(toAntdRules(field({ rules: [{ type: 'validator', hook: 'nope' }] }), CUSTOM)).toEqual([])
+    expect(warn).toHaveBeenCalled()
+    const afterFirst = warn.mock.calls.length
+    expect(toAntdRules(field({ rules: [{ type: 'validator', hook: 'nope' }] }), CUSTOM)).toEqual([])
+    expect(warn.mock.calls.length).toBe(afterFirst)
+    warn.mockRestore()
+  })
+
+  it('未传 custom 表时忽略 validator 规则（按名去重，不逐次刷屏）', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(toAntdRules(field({ rules: [{ type: 'validator', hook: 'checkNick' }] }))).toEqual([])
+    const afterFirst = warn.mock.calls.length
+    expect(afterFirst).toBeGreaterThan(0)
+    expect(toAntdRules(field({ rules: [{ type: 'validator', hook: 'checkNick' }] }))).toEqual([])
+    expect(warn.mock.calls.length).toBe(afterFirst)
+    warn.mockRestore()
+  })
+
+  it('函数体编译失败时跳过该规则而不抛错（渲染期不能白屏）', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const badRule: ValidateRule = { type: 'validator', fn: makeFnSource(['ctx'], 'return (') }
+    expect(() => toAntdRules(field({ rules: [badRule] }), CUSTOM)).not.toThrow()
+    expect(toAntdRules(field({ rules: [badRule] }), CUSTOM)).toEqual([])
+    warn.mockRestore()
+  })
+
+  it('面板配置的 message 透传到 rule（antd 会用它覆盖校验器给出的文案）', () => {
+    const rules = toAntdRules(
+      field({ rules: [{ type: 'validator', hook: 'checkNick', message: '昵称不合法' }] }),
+      CUSTOM,
+    )
+    expect((rules[0] as any).message).toBe('昵称不合法')
+  })
+
+  it('trigger 同样透传到校验器规则', () => {
+    const check = validatorOf({ type: 'validator', hook: 'checkNick', trigger: 'submit' }, CUSTOM)
+    expect(check).toBeTypeOf('function')
+    expect((toAntdRules(field({ rules: [{ type: 'validator', hook: 'checkNick', trigger: 'submit' }] }), CUSTOM)[0] as any).validateTrigger)
+      .toBe('onSubmit')
   })
 })

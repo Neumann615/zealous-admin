@@ -205,4 +205,28 @@ describe('parseSchema 校验规则形状', () => {
       }],
     }))).toThrow('校验规则格式不正确（年龄）：min 需要数字阈值 value')
   })
+
+  it('validator 规则：hook 字符串或合法 fn，至少有一个', () => {
+    // 只引用公共事件：合法
+    expect(() => parseSchema(withRules([{ type: 'validator', hook: 'checkNick' }]))).not.toThrow()
+    // 只给内联函数体：合法
+    const withInlineFn = withRules([{ type: 'validator', fn: { $type: 'fn', args: ['ctx'], body: 'return true' } }])
+    expect(() => parseSchema(withInlineFn)).not.toThrow()
+    // 两个都没有 → 会被序列化成读不回来的空壳
+    expect(() => parseSchema(withRules([{ type: 'validator' }])))
+      .toThrow('表单结构解析失败：校验规则格式不正确（邮箱）')
+    // hook 不是字符串
+    expect(() => parseSchema(withRules([{ type: 'validator', hook: 1 }])))
+      .toThrow('校验规则格式不正确（邮箱）')
+  })
+
+  it('validator 的 fn 一旦出现必须合法（形状 + 语法，与钩子同一份校验）', () => {
+    expect(() => parseSchema(withRules([{ type: 'validator', fn: { $type: 'fn', args: ['ctx'] } }])))
+      .toThrow('校验规则格式不正确（邮箱）')
+    expect(() => parseSchema(withRules([{ type: 'validator', fn: 'oops' }])))
+      .toThrow('校验规则格式不正确（邮箱）')
+    // 语法错误用钩子同一份诊断文案
+    expect(() => parseSchema(withRules([{ type: 'validator', fn: { $type: 'fn', args: ['ctx'], body: 'return (' } }])))
+      .toThrow('校验规则格式不正确（邮箱）：语法错误')
+  })
 })

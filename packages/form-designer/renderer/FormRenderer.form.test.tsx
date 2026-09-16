@@ -243,3 +243,53 @@ describe('渲染器校验规则触发时机（FormRenderer）', () => {
     await waitFor(() => expect(errorText(container)).toContain('昵称长度不能少于 3'))
   })
 })
+
+describe('渲染器自定义校验（FormRenderer）', () => {
+  const errorText = (container: HTMLElement) =>
+    container.querySelector('.ant-form-item-explain-error')?.textContent
+
+  it('公共事件能读到 ctx.payload（value + 表单快照），失败文案来自钩子返回值', async () => {
+    ;(globalThis as any).__payload = undefined
+    const node = pick('input').defaultSchema()
+    node.label = '昵称'
+    const name = node.field as string
+    node.formItem = { rules: [{ type: 'validator', hook: 'checkNick' }] }
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical' },
+      events: {
+        custom: {
+          checkNick: {
+            label: '昵称校验',
+            fn: {
+              $type: 'fn',
+              args: ['ctx'],
+              body: 'globalThis.__payload = ctx.payload; return ctx.payload.value === "ok" ? true : "昵称必须是 ok"',
+            },
+          },
+        },
+      },
+      children: [node],
+    }
+
+    const { container } = render(<FormRenderer showActions={false} schema={schema} />)
+    fill(container, 'bad')
+    await waitFor(() => expect(errorText(container)).toContain('昵称必须是 ok'))
+
+    const payload = (globalThis as any).__payload
+    expect(payload.value).toBe('bad')
+    // formValue 是表单当前值快照（名路径 → 值），不是 antd 传进来的单字段快照
+    expect(payload.formValue).toEqual(expect.objectContaining({ [name]: 'bad' }))
+  })
+
+  it('钩子抛错时按「校验未通过」处理，不白屏', async () => {
+    const node = pick('input').defaultSchema()
+    node.label = '昵称'
+    node.formItem = { rules: [{ type: 'validator', fn: { $type: 'fn', args: ['ctx'], body: 'throw new Error("炸了")' } }] }
+    const schema: FormSchema = { version: 2, form: { layout: 'vertical' }, children: [node] }
+
+    const { container } = render(<FormRenderer showActions={false} schema={schema} />)
+    fill(container, 'x')
+    await waitFor(() => expect(errorText(container)).toContain('昵称校验未通过'))
+  })
+})

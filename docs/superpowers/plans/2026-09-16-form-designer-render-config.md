@@ -72,7 +72,7 @@
 
 **设计：** `col` 是**字段自带**的栅格配置，渲染时把该字段包进 `<Col>`；画布用同一份换算作为外壳样式，保证设计态与运行态一致（与批次 1 的 `buildFormProps` 同理，**只留一个换算点**）。
 
-- [ ] **步骤 1：编写失败的测试**
+- [x] **步骤 1：编写失败的测试**
 
 ```ts
 // packages/form-designer/renderer/colProps.test.ts
@@ -108,12 +108,12 @@ describe('shellStyleFromCol', () => {
 })
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：`cmd /c "node_modules\.bin\vitest.CMD run packages/form-designer/renderer/colProps.test.ts"`
 预期：FAIL，`Cannot find module './colProps'`
 
-- [ ] **步骤 3：实现 `colProps.ts`**
+- [x] **步骤 3：实现 `colProps.ts`**
 
 ```ts
 import type { FieldCol } from '../types/schema'
@@ -142,9 +142,9 @@ export function shellStyleFromCol(col: FieldCol | undefined) {
 }
 ```
 
-- [ ] **步骤 4：运行测试验证通过**（预期 6 条）
+- [x] **步骤 4：运行测试验证通过**（预期 6 条）
 
-- [ ] **步骤 5：`types/schema.ts` 加类型**
+- [x] **步骤 5：`types/schema.ts` 加类型**
 
 ```ts
 /** 字段级栅格（渲染时自动包裹 Col；不配则与其他字段同处一行流） */
@@ -162,7 +162,7 @@ export interface FieldCol {
   col?: FieldCol
 ```
 
-- [ ] **步骤 6：`renderField.tsx` 包裹 Col**（有 `col` 时；注意 `nestList` / 容器分支同样适用，包在外层）
+- [x] **步骤 6：`renderField.tsx` 包裹 Col**（有 `col` 时；注意 `nestList` / 容器分支同样适用，包在外层）
 
 ```tsx
 import { Col } from 'antd'
@@ -186,9 +186,9 @@ export function renderField(schema, renderChild, parentType?) {
 }
 ```
 
-- [ ] **步骤 7：`layout.tsx` 的 col 容器复用换算**：把 `canvasShellStyle` 改为 `schema => shellStyleFromCol({ span: schema.props.span ?? 24 })`，删掉本地重复的百分比算法。
+- [x] **步骤 7：`layout.tsx` 的 col 容器复用换算**：把 `canvasShellStyle` 改为 `schema => shellStyleFromCol({ span: schema.props.span ?? 24 })`，删掉本地重复的百分比算法。
 
-- [ ] **步骤 8：`ColEditor.tsx` + 属性面板接入**
+- [x] **步骤 8：`ColEditor.tsx` + 属性面板接入**
 
 ```tsx
 // designer/ColEditor.tsx：span 预设按钮（1/4=6、1/3=8、1/2=12、2/3=16、3/4=18、整行=24，再点同值置空）
@@ -197,9 +197,9 @@ export function renderField(schema, renderChild, parentType?) {
 
 `RightPanel` 的 `FieldConfig` 在「基础」与「校验规则」之间插入「布局」分组（`ColEditor`），只在**能进入栅格**的节点上渲染（非 `noFormItem`）。
 
-- [ ] **步骤 9：补交互测试**（`FormDesigner.interaction.test.tsx`）：设置 span=12 后 `useDesignerStore.getState().schema.children[0].col.span === 12`；画布外壳带上对应 flex 样式。
+- [x] **步骤 9：补交互测试**（`FormDesigner.interaction.test.tsx`）：设置 span=12 后 `useDesignerStore.getState().schema.children[0].col.span === 12`；画布外壳带上对应 flex 样式。
 
-- [ ] **步骤 10：提交**（`feat(form-designer): 字段级栅格配置`）
+- [x] **步骤 10：提交**（`feat(form-designer): 字段级栅格配置`）
 
 ## 任务 2：校验规则扩展与 `trigger`
 
