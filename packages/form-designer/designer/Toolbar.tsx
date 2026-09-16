@@ -31,7 +31,9 @@ export function Toolbar({ onSave }: ToolbarProps) {
   const [submitted, setSubmitted] = useState<string | null>(null)
   // 导出面板不经过保存拦截（编辑器可以停在「选了阈值类型还没填数值」的中间态），
   // 这里把同一份口径的问题显式摆出来：导出不阻断，但要让用户知道这份 JSON 回读会被拒
-  const exportIssues = exportOpen ? [...validateFieldRules(schema.children), ...validateEvents(schema.events)] : []
+  const exportIssues = exportOpen
+    ? [...validateFieldRules(schema.children, schema.dataSources), ...validateEvents(schema.events)]
+    : []
 
   const handleImport = () => {
     const result = importSchema(importText)

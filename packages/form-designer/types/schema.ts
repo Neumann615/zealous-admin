@@ -84,6 +84,40 @@ export interface FieldCol {
   xl?: number
 }
 
+/** 选项（下拉 / 单选 / 多选等组件的 props.options 项） */
+export interface FieldOption {
+  label: string
+  value: string | number
+  disabled?: boolean
+}
+
+/** 数据来源类型全集：面板下拉与形状校验共用这一份，避免两处枚举分叉 */
+export const DATA_SOURCE_TYPES = ['static', 'dict', 'api'] as const
+
+export type DataSourceType = (typeof DATA_SOURCE_TYPES)[number]
+
+/**
+ * 声明式数据来源定义。三种类型都由渲染器取数后写进 `props.options`：
+ * - `static`：schema 里直接写死的选项
+ * - `dict`：走宿主注册名 `'dict'`，参数 `{ dictType }`，按字段映射成 label / value
+ * - `api`：走宿主注册名 `def.api`（**只接受注册名，不填裸 URL**），`params` 经 `{{}}` 插值后传入
+ */
+export type DataSourceDef
+  = | { type: 'static', options: FieldOption[] }
+    | { type: 'dict', dictType: string, labelField?: string, valueField?: string }
+    | { type: 'api', api: string, params?: Record<string, string>, parse?: string }
+
+/** 字段的数据来源：`def` 优先于 `ref`（与 HookRef 的「内联优先」同规则） */
+export interface FieldDataSource {
+  /** 引用 schema.dataSources 命名表；与 def 二选一，def 优先 */
+  ref?: string
+  def?: DataSourceDef
+  /** 依赖字段（名路径，支持 contact.name）：这些字段变化时重新取数 */
+  watch?: string[]
+  /** 防抖 ms，默认 300 */
+  debounce?: number
+}
+
 export interface FieldSchema {
   /** 唯一 id，拖拽/选中主键 */
   id: string
@@ -96,6 +130,8 @@ export interface FieldSchema {
   props: Record<string, any>
   /** 字段级栅格；设置后渲染器会为该字段包一层 Col */
   col?: FieldCol
+  /** 声明式选项来源：加载结果写入 props.options */
+  dataSource?: FieldDataSource
   /** Form.Item 层面配置 */
   formItem?: {
     rules?: ValidateRule[]
@@ -118,8 +154,8 @@ export interface FormSchema {
   form: FormGlobalConfig
   /** 表单级场景钩子与命名公共事件 */
   events?: FormEventConfig
-  /** 命名全局数据源（批次 3 落地，本任务只占位类型） */
-  dataSources?: Record<string, unknown>
+  /** 命名全局数据源：字段用 `dataSource.ref` 按名引用 */
+  dataSources?: Record<string, DataSourceDef>
   children: FieldSchema[]
 }
 

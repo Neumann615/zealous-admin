@@ -44,9 +44,14 @@ function logErrorOnce(key: string, text: string, detail?: unknown) {
  * 宿主没挂 <App> 时 antd 的 useApp() 返回 { message: {} }，ctx.message.error 会直接 TypeError。
  * 只用到 ctx.message，故这里放宽入参类型：字段级校验（toAntdRules）也复用它上报。
  */
-export function notifyError(ctx: { message: FormHookContext['message'] }, content: string, detail?: unknown) {
+export function notifyError(
+  ctx: { message: FormHookContext['message'] },
+  content: string,
+  detail?: unknown,
+  key: string = HOOK_ERROR_KEY,
+) {
   try {
-    ctx.message.error({ content, key: HOOK_ERROR_KEY })
+    ctx.message.error({ content, key })
   }
   catch (e) {
     logErrorOnce('notify', '[form-designer] 钩子错误提示上报失败（宿主可能未挂载 <App>）', detail ?? e)

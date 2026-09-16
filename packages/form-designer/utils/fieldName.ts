@@ -61,6 +61,24 @@ function listBindingNodes(nodes: FieldSchema[], out: FieldSchema[] = []): FieldS
   return out
 }
 
+/**
+ * 收集整棵树的字段名路径（名路径，含嵌套作用域前缀），供属性面板的下拉 / 多选使用。
+ * 前缀规则与渲染器一致：nestObject / nestList 容器把自己的 field 作为前缀（数组行下标是运行期才有的，
+ * 因此只给到容器自身 —— watch 整个数组即「任一行变化都重取」）。
+ */
+export function collectFieldNamePaths(children: FieldSchema[], prefix: string[] = [], out: string[] = []): string[] {
+  for (const node of children) {
+    const path = node.field ? [...prefix, node.field] : prefix
+    if (node.field && nodeBindsField(node))
+      out.push(path.join('.'))
+    const def = getComponent(node.type)
+    const nested = !!(def?.nestObject || def?.nestList) && !!node.field
+    if (node.children?.length)
+      collectFieldNamePaths(node.children, nested ? path : prefix, out)
+  }
+  return out
+}
+
 /** 找出各命名作用域内重名的字段（跨作用域同名合法） */
 export function findDuplicateFieldNames(children: FieldSchema[], out: DuplicateFieldName[] = []): DuplicateFieldName[] {
   const scope: FieldSchema[] = []

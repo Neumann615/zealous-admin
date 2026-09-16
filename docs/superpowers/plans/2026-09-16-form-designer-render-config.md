@@ -318,7 +318,7 @@ export interface FieldDataSource {
   dataSources?: Record<string, DataSourceDef>
 ```
 
-- [ ] **步骤 1：宿主注册表（`dataApis.ts`）**
+- [x] **步骤 1：宿主注册表（`dataApis.ts`）**
 
 ```ts
 /** 宿主注册的数据接口签名：params 已完成插值；signal 用于取消（可选实现） */
@@ -339,7 +339,7 @@ export function getFormDataApi(name: string): FormDataApi | undefined {
 
 `index.ts` 导出 `registerFormDataApis`（宿主唯一入口）。测试：注册后可取、未注册返回 `undefined`、同名覆盖。
 
-- [ ] **步骤 2：插值（`interpolate.ts`，纯函数）**
+- [x] **步骤 2：插值（`interpolate.ts`，纯函数）**
 
 ```ts
 /** 把 "{{a.b}}/固定值" 中的 {{名路径}} 替换成当前值；缺失替换为空串 */
@@ -350,7 +350,7 @@ export function interpolateDeep<T>(input: T, values: Record<string, any>): T
 
 测试：顶层、嵌套（`contact.name`）、缺失、混合固定文本、非字符串原样返回。
 
-- [ ] **步骤 3：取数钩子（`useFieldDataSource.ts`）**
+- [x] **步骤 3：取数钩子（`useFieldDataSource.ts`）**
 
 核心行为（完整实现写入文件，测试覆盖每条）：
 
@@ -363,7 +363,7 @@ export function interpolateDeep<T>(input: T, values: Record<string, any>): T
 
 返回值：`{ options, loading }`；无来源时 `options` 为 `undefined`（调用方保持 `schema.props.options` 原样）。
 
-- [ ] **步骤 4：接进渲染（`FieldControl.tsx`）**
+- [x] **步骤 4：接进渲染（`FieldControl.tsx`）**
 
 ```tsx
 export function FieldControl({ def, schema, ...injected }) {
@@ -375,19 +375,23 @@ export function FieldControl({ def, schema, ...injected }) {
 
 （`injected` 是 `Form.Item` 注入的受控 props，仍最后合并，保持既有优先级。）
 
-- [ ] **步骤 5：渲染器接线 `ctx.reload` 与三个场景**
+- [x] **步骤 5：渲染器接线 `ctx.reload` 与三个场景**
 
 `FormRenderer` 内新增一个「重载信号」state（`Map<fieldId, number>` 或单一版本号 + 可选字段名）：`ctx.reload(field?)` 递增版本号 → 命中的 `useFieldDataSource` 重新取数；取值 `onReload` 场景在**手动 reload** 时触发（区别于字段变化触发的自动重载）。
 
 注意：`beforeLoadData` / `afterLoadData` 的钩子来自 `schema.events`，`useFieldDataSource` 需要拿到它们与 `buildCtx` —— 通过一个轻量 context（`FormHooksContext`）从 `FormRenderer` 下发，避免逐层传参。
 
-- [ ] **步骤 6：面板（`DataSourceEditor.tsx`）**
+- [x] **步骤 6：面板（`DataSourceEditor.tsx`）**
 
 三段：来源类型（静态 / 字典 / 接口 / 引用命名数据源）、对应参数（静态用 `OptionsEditor`；字典填 `dictType` + 可选字段映射；接口选注册名 + `params` 键值对 + 可选 `parse`）、依赖与防抖（`watch` 多选当前 schema 的所有字段名 + `debounce` 数字）。
 
 「接口」下拉的来源：包不知道宿主注册了哪些名字 → 由宿主注入可选清单 `registerFormDataApis` 的第二个参数或独立 `setFormDataApiCatalog(names)`；未注入时退化为自由文本输入并提示。
 
 测试：解析优先级（def 优先于 ref）、插值、竞态后写胜、`beforeLoadData` 返回 false 中断、失败保留旧 options、`ctx.reload()` 触发重载、面板写入 store 的形状。
+
+- [x] **步骤 7：形状校验（`parseSchema`）**
+
+`validateFieldRules(children, dataSources?)` 单一 walk 内校验 `dataSource`（`type` 在枚举内、`api` / `dictType` / `ref` 非空、`static.options` 是每项带 `label` / `value` 的数组、`def` 与 `ref` 至少一个、`watch` 字符串数组、`debounce` 非负数）与 `schema.dataSources` 命名表；设计器保存 / 导出拦截与解析侧共用同一份口径。
 
 提交：`feat(form-designer): 声明式数据来源与依赖重载`
 

@@ -1,13 +1,21 @@
 import type { FormInstance } from 'antd'
 import type { FormHookContext } from '../events/types'
 import type { FieldSchema, FormSchema } from '../types/schema'
+import type { DataSourceReloadHandle } from './hooksContext'
 import { App, Button, Form, Space, message as staticMessage } from 'antd'
-import { Fragment, useCallback, useEffect, useMemo, useRef } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { emitHook, filterRefsForField, runHooks } from '../events/runHooks'
 import { findNodeByField } from '../utils/schemaTree'
 import { buildFormProps, isHorizontalLayout, resolveLabelWidth } from './formProps'
 import { FormHooksProvider } from './hooksContext'
 import { renderField } from './renderField'
+
+/** 是否声明了数据源的依赖重跑（决定值变化时要不要重算 / 重渲染） */
+function hasDataWatch(children: FieldSchema[]): boolean {
+  return children.some(node =>
+    !!node.dataSource?.watch?.length || hasDataWatch(node.children ?? []),
+  )
+}
 
 export interface FormRendererProps {
   schema: FormSchema
@@ -26,6 +34,21 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   const message = typeof app.message?.error === 'function' ? app.message : staticMessage
   const [innerForm] = Form.useForm()
   const form = externalForm ?? innerForm
+  // 表单值版本号：数据源的 watch 重跑以它为信号（只有真的声明了 watch 才自增，
+  // 其余表单保持原有的「值变化不重渲染」行为）
+  const [valuesVersion, setValuesVersion] = useState(0)
+  const watchesValues = useMemo(() => hasDataWatch(schema.children), [schema.children])
+  /** 数据源重取句柄：ctx.reload 的目标集合（Form.List 行内字段会登记多个实例） */
+  const reloadHandlesRef = useRef(new Map<number, DataSourceReloadHandle>())
+  const reloadSeqRef = useRef(0)
+  const registerDataSource = useCallback((handle: DataSourceReloadHandle) => {
+    const id = ++reloadSeqRef.current
+    reloadHandlesRef.current.set(id, handle)
+    return () => {
+      reloadHandlesRef.current.delete(id)
+    }
+  }, [])
+
   const { submitBtn, resetBtn } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
   const showReset = showActions && (resetBtn ?? true)
@@ -50,8 +73,17 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
       setValue: (field, value) => form.setFieldsValue({ [field]: value }),
       setValues: patch => form.setFieldsValue(patch),
       getField: field => findNodeByField(schemaRef.current.children, field) ?? undefined,
-      // 数据源在批次 3 接入；此处保留空实现，钩子里调用不会抛错
-      reload: async () => {},
+      /**
+       * 重跑数据源：无参 → 所有挂了 dataSource 的字段；带参 → 命中该字段（名路径或字段名）的实例。
+       * 返回的 Promise 在取数（以及随后的 onReload）结束后 resolve；手动重取才触发 onReload，
+       * watch 引起的自动重取不触发（区别见 docs/form-designer/events.md）。
+       */
+      reload: async (field?: string) => {
+        const targets = [...reloadHandlesRef.current.values()]
+          .filter(handle => !field || handle.key === field || handle.field === field)
+        await Promise.all(targets.map(handle => handle.reload()))
+        await runHooks('onReload', schemaRef.current.events?.onReload, buildCtx({ payload: { field } }), current?.custom)
+      },
       message,
       // emit 必须转发 ctx 自身，先占位、构造完成后立刻绑定（见下）
       emit: async () => {},
@@ -109,8 +141,16 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 
   const handleReset = () => {
     form.resetFields()
+    if (watchesValues)
+      setValuesVersion(v => v + 1)
     const events = schemaRef.current.events
     void runHooks('onReset', events?.onReset, buildCtx(), events?.custom)
+  }
+
+  const handleValuesChange = (changed: Record<string, any>) => {
+    Object.entries(changed).forEach(([field, value]) => runFieldChange(field, value))
+    if (watchesValues)
+      setValuesVersion(v => v + 1)
   }
 
   const renderChild = (child: FieldSchema, parentType?: string): React.ReactNode => (
@@ -119,7 +159,14 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 
   // 字段级自定义校验要读公共事件表与完整 ctx（ctx.payload = { value, formValue }）；
   // 逐层透传会污染 renderField 的签名，这里用 context 下发
-  const hooksRuntime = useMemo(() => ({ custom: schema.events?.custom, buildCtx }), [schema.events?.custom, buildCtx])
+  const hooksRuntime = useMemo(() => ({
+    custom: schema.events?.custom,
+    events: schema.events,
+    dataSources: schema.dataSources,
+    valuesVersion,
+    registerDataSource,
+    buildCtx,
+  }), [schema.events, schema.dataSources, valuesVersion, registerDataSource, buildCtx])
 
   return (
     <Form
@@ -130,7 +177,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
         const events = schemaRef.current.events
         void runHooks('onValidateFail', events?.onValidateFail, buildCtx(), events?.custom)
       }}
-      onValuesChange={changed => Object.entries(changed).forEach(([field, value]) => runFieldChange(field, value))}
+      onValuesChange={handleValuesChange}
       {...buildFormProps(schema.form)}
     >
       <FormHooksProvider value={hooksRuntime}>

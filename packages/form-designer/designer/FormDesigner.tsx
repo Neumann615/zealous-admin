@@ -73,7 +73,7 @@ export function FormDesigner({ initialSchema, onSave }: FormDesignerProps) {
     // 钩子校验与 parseSchema 共用同一份口径（含正文长度上限），避免「保存放行、回读拒绝」
     const hookIssues = validateEvents(schema.events)
     // 校验规则形状同理：面板可以停在「选了阈值类型但还没填数值」的中间态，保存这一步要拦住
-    const ruleIssues = validateFieldRules(schema.children)
+    const ruleIssues = validateFieldRules(schema.children, schema.dataSources)
     if (issues.length || hookIssues.length || ruleIssues.length) {
       message.error([...issues, ...hookIssues, ...ruleIssues].join('；'))
       return

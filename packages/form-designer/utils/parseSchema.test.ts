@@ -59,11 +59,11 @@ describe('parseSchema', () => {
       form: {},
       children: [],
       events: { onFormCreated: [{ fn: { $type: 'fn', args: ['ctx'], body: '' } }] },
-      dataSources: { orgTree: { type: 'static' } },
+      dataSources: { orgTree: { type: 'static', options: [{ label: '研发', value: 'rd' }] } },
     })
     const schema = parseSchema(raw)
     expect(schema.events?.onFormCreated).toHaveLength(1)
-    expect(schema.dataSources?.orgTree).toEqual({ type: 'static' })
+    expect(schema.dataSources?.orgTree).toEqual({ type: 'static', options: [{ label: '研发', value: 'rd' }] })
   })
 
   it('合法 events（内联 fn + 按名引用 + custom）通过', () => {
@@ -290,5 +290,100 @@ describe('parseSchema 字段级栅格形状', () => {
         children: [{ id: 'b', type: 'input', props: {}, col: { span: 30 } }],
       }],
     }))).toThrow('字段栅格格式不正确（input）')
+  })
+})
+
+describe('parseSchema 数据来源形状', () => {
+  function withDataSource(dataSource: unknown, extra: Record<string, unknown> = {}): string {
+    return JSON.stringify({
+      version: 2,
+      form: {},
+      ...extra,
+      children: [{ id: 'a', type: 'select', label: '部门', field: 'dept', props: {}, dataSource }],
+    })
+  }
+
+  it('三种合法定义穿过解析', () => {
+    expect(() => parseSchema(withDataSource({ def: { type: 'static', options: [{ label: 'A', value: 'a' }] } }))).not.toThrow()
+    expect(() => parseSchema(withDataSource({ def: { type: 'dict', dictType: 'sys_sex', labelField: 'name' } }))).not.toThrow()
+    expect(() => parseSchema(withDataSource({
+      def: { type: 'api', api: 'orgTree', params: { id: '{{dept}}' }, parse: 'data.list' },
+      watch: ['city', 'contact.name'],
+      debounce: 0,
+    }))).not.toThrow()
+    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'dict', dictType: 'sex' } } }))).not.toThrow()
+    // 未配置 dataSource 当然也合法
+    expect(() => parseSchema(JSON.stringify({
+      version: 2,
+      form: {},
+      children: [{ id: 'a', type: 'input', props: {} }],
+    }))).not.toThrow()
+  })
+
+  it('def / ref 都没有、或 ref 为空时被拒', () => {
+    expect(() => parseSchema(withDataSource({ watch: ['a'] })))
+      .toThrow('数据来源格式不正确（部门）：def 与 ref 至少要有一个')
+    expect(() => parseSchema(withDataSource({ ref: '' })))
+      .toThrow('数据来源格式不正确（部门）：ref 需要非空字符串')
+  })
+
+  it('类型不在枚举内、或不是对象时被拒', () => {
+    expect(() => parseSchema(withDataSource({ def: { type: 'graphql' } }))).toThrow('数据来源格式不正确（部门）')
+    expect(() => parseSchema(withDataSource({ def: [] }))).toThrow('数据来源格式不正确（部门）')
+    expect(() => parseSchema(withDataSource('dict'))).toThrow('数据来源格式不正确（部门）')
+  })
+
+  it('static 的 options 必须是数组，每项要有 label 与 value', () => {
+    expect(() => parseSchema(withDataSource({ def: { type: 'static' } })))
+      .toThrow('数据来源格式不正确（部门）：static 需要 options 数组')
+    expect(() => parseSchema(withDataSource({ def: { type: 'static', options: [{ label: 'A' }] } })))
+      .toThrow('数据来源格式不正确（部门）：第 1 个选项需要 label 与 value')
+    expect(() => parseSchema(withDataSource({ def: { type: 'static', options: [{ label: 'A', value: 'a', disabled: 'yes' }] } })))
+      .toThrow('disabled 应为布尔值')
+  })
+
+  it('dict 需要非空 dictType', () => {
+    expect(() => parseSchema(withDataSource({ def: { type: 'dict', dictType: '' } })))
+      .toThrow('数据来源格式不正确（部门）：dict 需要非空的 dictType')
+    expect(() => parseSchema(withDataSource({ def: { type: 'dict', labelField: 1 } })))
+      .toThrow('数据来源格式不正确（部门）')
+  })
+
+  it('api 需要非空注册名，params 必须是字符串值的对象', () => {
+    expect(() => parseSchema(withDataSource({ def: { type: 'api', api: '' } })))
+      .toThrow('数据来源格式不正确（部门）：api 需要非空的注册名')
+    expect(() => parseSchema(withDataSource({ def: { type: 'api', api: 'orgTree', params: { id: 1 } } })))
+      .toThrow('数据来源格式不正确（部门）：params.id 应为字符串')
+    expect(() => parseSchema(withDataSource({ def: { type: 'api', api: 'orgTree', params: [] } })))
+      .toThrow('数据来源格式不正确（部门）：api 的 params 应为对象')
+  })
+
+  it('watch 必须是字符串数组、debounce 必须是非负数', () => {
+    expect(() => parseSchema(withDataSource({ def: { type: 'static', options: [] }, watch: 'city' })))
+      .toThrow('数据来源格式不正确（部门）：watch 应为字符串数组')
+    expect(() => parseSchema(withDataSource({ def: { type: 'static', options: [] }, watch: [1] })))
+      .toThrow('数据来源格式不正确（部门）：watch 应为字符串数组')
+    expect(() => parseSchema(withDataSource({ def: { type: 'static', options: [] }, debounce: -1 })))
+      .toThrow('数据来源格式不正确（部门）：debounce 应为非负数')
+  })
+
+  it('命名数据源表逐项校验（dataSources 非对象、或某项非法）', () => {
+    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: [] })))
+      .toThrow('数据来源格式不正确（dataSources 应为对象）')
+    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'dict', dictType: '' } } })))
+      .toThrow('数据来源格式不正确（dataSources.shared）：dict 需要非空的 dictType')
+  })
+
+  it('嵌套子表单里的数据来源同样校验', () => {
+    expect(() => parseSchema(JSON.stringify({
+      version: 2,
+      form: {},
+      children: [{
+        id: 'c',
+        type: 'card',
+        props: {},
+        children: [{ id: 'b', type: 'select', field: 'dept', props: {}, dataSource: { def: { type: 'api', api: '' } } }],
+      }],
+    }))).toThrow('数据来源格式不正确（select）')
   })
 })

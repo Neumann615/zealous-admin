@@ -1,8 +1,8 @@
 import type { FormEventConfig } from '../events/types'
-import type { FieldSchema, FormSchema, ValidateRule } from '../types/schema'
+import type { DataSourceDef, FieldDataSource, FieldOption, FieldSchema, FormSchema, ValidateRule } from '../types/schema'
 import { isFnSource } from '../events/fnSource'
 import { validateEvents, validateHookFn } from '../events/validateEvents'
-import { createEmptySchema, SCHEMA_VERSION, THRESHOLD_RULE_TYPES, VALIDATE_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
+import { createEmptySchema, DATA_SOURCE_TYPES, SCHEMA_VERSION, THRESHOLD_RULE_TYPES, VALIDATE_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
 
 /**
  * v1 → v2：纯增量（新增 events / dataSources 可选段），只需抬版本号；
@@ -81,11 +81,98 @@ function validateOneRule(rule: unknown, where: string): string[] {
 }
 
 /**
+ * 数据来源定义（`dataSource.def` 与 `dataSources` 命名表共用一份）：面板写不出非法形状，
+ * 出现非法形状基本都是手写 / 外部 JSON 的笔误，忽略的表现是「配了却完全没生效」，故一律拦下。
+ */
+function validateDataSourceDef(def: unknown, where: string): string[] {
+  const issue = `数据来源格式不正确（${where}）`
+  if (!def || typeof def !== 'object' || Array.isArray(def))
+    return [issue]
+  const source = def as DataSourceDef
+  if (!DATA_SOURCE_TYPES.includes(source.type))
+    return [issue]
+
+  if (source.type === 'static') {
+    if (!Array.isArray(source.options))
+      return [`${issue}：static 需要 options 数组`]
+    return source.options.flatMap((option, index) => {
+      if (!option || typeof option !== 'object' || Array.isArray(option))
+        return [`${issue}：第 ${index + 1} 个选项应为对象`]
+      const item = option as FieldOption
+      if (typeof item.label !== 'string' || !(typeof item.value === 'string' || typeof item.value === 'number'))
+        return [`${issue}：第 ${index + 1} 个选项需要 label 与 value`]
+      if (item.disabled !== undefined && typeof item.disabled !== 'boolean')
+        return [`${issue}：第 ${index + 1} 个选项的 disabled 应为布尔值`]
+      return []
+    })
+  }
+
+  if (source.type === 'dict') {
+    if (typeof source.dictType !== 'string' || !source.dictType)
+      return [`${issue}：dict 需要非空的 dictType`]
+    if (source.labelField !== undefined && typeof source.labelField !== 'string')
+      return [issue]
+    if (source.valueField !== undefined && typeof source.valueField !== 'string')
+      return [issue]
+    return []
+  }
+
+  // api：只接受宿主注册名（不填裸 URL），形状上确保是个非空字符串
+  if (typeof source.api !== 'string' || !source.api)
+    return [`${issue}：api 需要非空的注册名`]
+  if (source.parse !== undefined && typeof source.parse !== 'string')
+    return [issue]
+  if (source.params !== undefined) {
+    if (!source.params || typeof source.params !== 'object' || Array.isArray(source.params))
+      return [`${issue}：api 的 params 应为对象`]
+    for (const [key, value] of Object.entries(source.params)) {
+      if (typeof value !== 'string')
+        return [`${issue}：params.${key} 应为字符串`]
+    }
+  }
+  return []
+}
+
+/** 字段的 dataSource 段：ref / def 至少一个，def 优先（与 HookRef 同规则） */
+function validateFieldDataSource(node: FieldSchema, where: string): string[] {
+  const raw = (node as { dataSource?: unknown }).dataSource
+  if (raw === undefined)
+    return []
+  const issue = `数据来源格式不正确（${where}）`
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+    return [issue]
+  const dataSource = raw as FieldDataSource
+  const issues: string[] = []
+  if (dataSource.def !== undefined)
+    issues.push(...validateDataSourceDef(dataSource.def, where))
+  if (dataSource.ref !== undefined && (typeof dataSource.ref !== 'string' || !dataSource.ref))
+    issues.push(`${issue}：ref 需要非空字符串`)
+  if (dataSource.def === undefined && dataSource.ref === undefined)
+    issues.push(`${issue}：def 与 ref 至少要有一个`)
+  if (dataSource.watch !== undefined && (!Array.isArray(dataSource.watch) || dataSource.watch.some(w => typeof w !== 'string')))
+    issues.push(`${issue}：watch 应为字符串数组`)
+  if (dataSource.debounce !== undefined
+    && (typeof dataSource.debounce !== 'number' || !Number.isFinite(dataSource.debounce) || dataSource.debounce < 0)) {
+    issues.push(`${issue}：debounce 应为非负数`)
+  }
+  return issues
+}
+
+/** 命名数据源表（schema.dataSources）：每项都是合法的 DataSourceDef */
+function validateDataSources(dataSources: unknown): string[] {
+  if (dataSources === undefined)
+    return []
+  if (!dataSources || typeof dataSources !== 'object' || Array.isArray(dataSources))
+    return ['数据来源格式不正确（dataSources 应为对象）']
+  return Object.entries(dataSources).flatMap(([name, def]) => validateDataSourceDef(def, `dataSources.${name}`))
+}
+
+/**
  * children 树上所有字段的形状校验：校验规则（formItem.rules）与字段级栅格（col），含嵌套子表单。
  * 与 events 校验并列：保存拦截与解析侧共用同一份口径，避免「保存放行、回读拒绝」。
  * 返回面向用户的问题列表，调用方决定是抛错还是弹提示。
  */
-export function validateFieldRules(children: unknown): string[] {
+export function validateFieldRules(children: unknown, dataSources?: unknown): string[] {
   const issues: string[] = []
   const walk = (nodes: unknown) => {
     if (!Array.isArray(nodes))
@@ -95,6 +182,7 @@ export function validateFieldRules(children: unknown): string[] {
         continue
       const where = node.label || node.type || '未命名字段'
       issues.push(...validateCol(node, where))
+      issues.push(...validateFieldDataSource(node, where))
       const rules = (node.formItem as { rules?: unknown } | undefined)?.rules
       if (rules !== undefined) {
         if (!Array.isArray(rules))
@@ -106,6 +194,7 @@ export function validateFieldRules(children: unknown): string[] {
     }
   }
   walk(children)
+  issues.push(...validateDataSources(dataSources))
   return issues
 }
 
@@ -149,7 +238,7 @@ export function parseSchema(input: string | unknown): FormSchema {
   const eventIssues = validateEvents(raw.events as FormEventConfig | undefined)
   if (eventIssues.length)
     throw new Error(`表单结构解析失败：${eventIssues[0]}`)
-  const ruleIssues = validateFieldRules(raw.children)
+  const ruleIssues = validateFieldRules(raw.children, raw.dataSources)
   if (ruleIssues.length)
     throw new Error(`表单结构解析失败：${ruleIssues[0]}`)
 

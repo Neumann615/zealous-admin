@@ -671,7 +671,7 @@ describe('设计器全局事件与公共事件', () => {
         custom: { event_1: { label: '探针', fn: { $type: 'fn', args: ['ctx'], body: 'return 1' } } },
         onFormCreated: [{ hook: 'event_1' }],
       },
-      dataSources: { orgTree: { type: 'static' } },
+      dataSources: { orgTree: { type: 'static', options: [{ label: '研发', value: 'rd' }] } },
     }
     const dumped = JSON.stringify(source)
 
@@ -687,7 +687,7 @@ describe('设计器全局事件与公共事件', () => {
     const after = useDesignerStore.getState().schema
     expect(after.events?.custom?.event_1?.label).toBe('探针')
     expect(after.events?.onFormCreated).toEqual([{ hook: 'event_1' }])
-    expect(after.dataSources).toEqual({ orgTree: { type: 'static' } })
+    expect(after.dataSources).toEqual({ orgTree: { type: 'static', options: [{ label: '研发', value: 'rd' }] } })
     expect(after.children).toHaveLength(1)
   })
 })
