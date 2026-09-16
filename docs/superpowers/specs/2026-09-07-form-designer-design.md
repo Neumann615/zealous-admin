@@ -334,3 +334,31 @@ P1–P4 构成完整可用闭环；P5 逐组件增量添加，互不影响。
 **验证**：Vitest 18 文件 / 243 用例全绿；`eslint packages/form-designer src/pages/index/form` 0 error（两条既有 `react/no-array-index-key` warning 除外）；`tsc --noEmit` 本批次文件 0 条新增（既有报错集中在 `packages/layout` 等无关文件）；`pnpm docs:build` 通过。
 
 **遗留**：数据源三场景（`beforeLoadData` / `afterLoadData` / `onReload`）与 `ctx.reload()` 待批次 3 落地（当前不触发、空实现）；字段级钩子（`field.hooks`）与字段级按名引用未接入；`HookEditor` 计划升级 CodeMirror 6（语法高亮 + `ctx` 补全 + lint）；其余已知限制（嵌套字段 `onFieldChange` 只上报顶层段名导致 `watch` 不命中、`onReset` / `onValidateFail` 只覆盖渲染器自身路径、删除公共事件后 `event_${n}` 键名复用会让旧引用静默改绑）见 `docs/form-designer/events.md`。
+
+### 12.10 字段级渲染项配置（2026-09-16 新增）
+
+§3 / §4 只定义了「字段 = 类型 + 字段名 + props + 简单校验」，没有栅格、没有数据来源、没有联动。本批次补齐四项**字段级**配置，全部是 `FieldSchema` 的增量字段，运行时行为集中在渲染器：`col`（渲染时包一层 `Col`）、`formItem.rules` 扩展（16 种类型 + `trigger` + 自定义校验）、`dataSource`（声明式取数后写进 `props.options`）、`control`（按值控制隐藏 / 禁用 / 必填）。实现计划见 `docs/superpowers/plans/2026-09-16-form-designer-render-config.md`（批次 3A / 3B），使用文档见 `docs/form-designer/render-config.md`。
+
+**与参照实现（form-create Pro）的偏差**（只对齐能力与数据模型，不复制实现代码；参照软件为商业授权版）：
+
+| 参照实现 | 本项目 | 原因 |
+|---|---|---|
+| `rule.effect.fetch` 直接写 `action`（URL）/ `method` / `query` / `data` / `parse` / `to` | 声明式 `dataSource`：`static` / `dict` / `api` 三型，其中接口**只接受宿主注册名**（不填裸 URL） | 鉴权、错误提示、loading 全部走宿主统一的 `http` 实例；表单定义是可导入 / 导出 / 跨环境复制的**数据**，不应携带请求实现，包也不依赖 `@zealous-admin/layout` 与 `src/apis`。字典约定注册名 `'dict'`（参数 `{ dictType }`），接口名清单由 `setFormDataApiCatalog` 可选下发，未下发时面板退化为自由文本输入 |
+| 裸 XHR：无取消、无竞态防护 | 自增请求序号**后写胜** + `AbortController` 取消上一请求（宿主函数可接收 `signal`，忽略也不影响正确性） | 依赖字段连续变化时旧响应可能晚于新响应到达，不收敛就会用过期选项覆盖新选项 |
+| `{{字段}}` 插值 + `watchData` 深度 watch 全量模板串 + 600ms 防抖 | `{{名路径}}` 插值（`params` 用）+ **显式 `watch`**（名路径数组）+ 默认 300ms 防抖 | 显式声明比隐式扫描模板串更可预测，也与批次 2 `HookRef.watch` 的语义一致；300ms 与表单交互的常规手感匹配 |
+| `rule.control = [{ value, condition, rule, method }]`，条件组合表达力更强 | `control: [{ field, operator, value, effects }]`，效果取「或」 | 收敛到「一个依赖字段 + 一个比较 + 一组效果」，面板可直接渲染；条件必填由 `effects: ['required']` 表达，与字段自身 `formItem.required` 取或 |
+| 有 `computed`（字段间公式） | **不引入** | 公式求值会牵出依赖图、循环检测与「谁覆盖谁」的语义，收益与风险不成比例；需要派生值时用钩子（`beforeSubmit` / `onFieldChange` + `ctx.setValue`）解决 |
+
+**渲染器契约**（面板与业务页都按这一份口径）：
+
+- `col`：`fieldColProps` 把字段配置转成 antd `Col` 属性并包在字段**最外层**（容器 / 数组容器 / 辅助组件同样适用）；画布外壳经 `shellStyleFromCol` 复用同一份换算，但**只镜像 `span`**（断点由媒体查询驱动，画布没有可依据的视口宽度）。已知限制：`Col` 只在 `Row` 这类 flex 行父容器里才真正并排，顶层字段设 `span` 只表现为「限宽 + 换行」。
+- 校验规则：`VALIDATE_RULE_TYPES` 从 5 种扩到 16 种（长度组走 `type: 'string'`、数值组走 `type: 'number'`，避免配错组件恒不通过）；规则级 `trigger` 是字段级时机的**收窄**（`blur` 需要把 `onBlur` 并进 `Form.Item` 的 `validateTrigger`，否则该规则永不执行；`submit` 无字段事件，天然只在提交时生效）；自定义校验**复用批次 2 的公共事件表**（`events.custom`），返回 `true` / `undefined` 通过、字符串作错误消息、`false` 用默认文案、抛错视为不通过并走既有 `notifyError`。
+- 数据来源：`useFieldDataSource` 解析 `def`（优先）或 `ref`（查 `schema.dataSources`）→ 取数 → 写 `props.options`；`beforeLoadData`（关键场景，`return false` 中断本次）/ `afterLoadData` 接线；失败 `console.error` + 稳定 key 提示并**保留上一次的选项**（已选值的标签不会消失），`AbortError` 静默；缺注册接口提示「未注册的数据接口：xxx」。
+- 联动：`evalControl` 纯函数按当前值求 `{ hidden, disabled, required }`，`FormRenderer` 在首次渲染与值变化时算出**每个字段的有效态**，经既有 `FormHooksProvider`（新增 `controls`，键为节点 id）下发，不新开 provider；`FieldItem` 消费 `hidden` / `required`（`required` 与 `formItem.required` 取或），`FieldControl` 消费 `disabled`（只置真、不回退，面板里显式的 `disabled` 开关仍然有效）；容器的 `disabled` 用同一份 Provider 覆盖 `parentDisabled` 下发给子字段。
+- `ctx.reload`：批次 2 的空实现落地为**重取句柄登记表**——`useFieldDataSource` 挂载时登记 `{ key(名路径), field, reload }`，`ctx.reload()` 重取全部、`ctx.reload(field)` 只重取命中该名路径或字段名的实例，Promise 在取数与随后的 `onReload` 都结束后 resolve；**手动重取才触发 `onReload`**，`watch` 引起的自动重取不触发。
+
+**已知限制（写入使用文档）**：画布不执行钩子 / 联动 / 取数（要看效果得开预览）；`tableForm` 行内字段的联动判定按节点 id 只算一份，多行共享（需要按行取值请在自定义校验 / 钩子里读 `ctx.getValues()`）；数据源的 `watch` 由 `onValuesChange` 驱动，钩子里的 `ctx.setValue` 不会触发自动重取（需 `ctx.reload()`）；只要声明了 `watch` 或 `control`，值变化会重渲染整棵表单；`ctx.reload` 无递归护栏（在 `onReload` 里无条件再次 `reload` 会无限递归）。
+
+**3A 遗留处置**：`validator` 引用的公共事件被删除后，面板就地红字提示「引用的公共事件已不存在」（运行期策略不变：`console.warn` 一次并视为通过）。其余三项重构（拆 `toAntdRules`、`ValidateRule` 改判别联合、长度 / 数值组的元数据表）保持原样，仍记录在实现计划的「3A 收尾轮遗留」中。
+
+**验证**：Vitest 27 文件 / 407 用例全绿；`eslint packages/form-designer` 0 error（4 条既有 `react/no-array-index-key` warning）；`tsc --noEmit` 本批次文件 0 条新增（既有报错集中在 `packages/layout` 等无关文件）；`pnpm docs:build` 通过，且文档里的 `FormSchema` / 片段示例抠出来跑过 `parseSchema`。

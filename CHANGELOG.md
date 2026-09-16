@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-16
+
+- ✨ **字段级栅格 `col`**（`packages/form-designer/types/schema.ts`、`packages/form-designer/renderer/colProps.ts`、`packages/form-designer/renderer/renderField.tsx`、`packages/form-designer/designer/ColEditor.tsx`）：字段自带 `span` 与 `xs/sm/md/lg/xl` 断点，渲染时在最外层包一层 `Col`（容器 / 数组容器 / 辅助组件同样适用）；画布外壳经 `shellStyleFromCol` 复用同一份换算，换算成与轴向无关的 `width / maxWidth / flexShrink`（`flex` 简写在纵向画布根与横向 `Row` 下含义不同）；属性面板新增「布局」分组
+- ✨ **校验规则扩展**（`types/schema.ts`、`renderer/toAntdRules.ts`、`designer/ValidateEditor.tsx`、`designer/ruleType.ts`）：`ValidateRule` 从 5 种扩到 16 种（长度组走 `type: 'string'`、数值组走 `type: 'number'`，面板给语境提示）、新增规则级 `trigger`（`blur` 会把 `onBlur` 并进 `Form.Item` 的 `validateTrigger`，`submit` 天然只在提交时生效），并切类型时归一化丢弃无关字段
+- ✨ **自定义校验复用公共事件表**（`renderer/toAntdRules.ts`、`designer/ValidateEditor.tsx`）：`validator` 规则内联正文或按名引用 `events.custom`（`fn` 优先），约定 `true` / `undefined` 通过、字符串作消息、`false` 用默认文案、抛错视为不通过并走既有 `notifyError`；引用已删除时面板红字提示「引用的公共事件已不存在」
+- ✨ **声明式数据来源**（`renderer/dataApis.ts`、`renderer/interpolate.ts`、`renderer/useFieldDataSource.ts`、`designer/DataSourceEditor.tsx`）：字段级 `dataSource` 支持 `static` / `dict` / `api`，`api` **只接受宿主注册名**（`registerFormDataApis`，不填裸 URL，包本体不发起请求、不依赖 `layout` 与 `src/apis`），字典走约定名 `dict`；`params` 支持 `{{名路径}}` 插值，`watch` 显式声明依赖字段（名路径，含嵌套）并防抖（默认 300ms）重取，依赖值未变不重复请求；竞态收口为「请求序号后写胜 + `AbortController` 取消上一请求」，失败保留上一次选项并提示（稳定 key），`AbortError` 静默；面板新增「数据来源」分组，接口名列清单由 `setFormDataApiCatalog` 可选下发
+- 🔧 **`ctx.reload` 落地与数据源三场景接线**（`renderer/FormRenderer.tsx`、`renderer/hooksContext.ts`）：`ctx.reload(field?)` 从空实现改为重取句柄登记表（无参全部、带参按名路径或字段名命中，Promise 在取数与 `onReload` 结束后 resolve），`beforeLoadData`（关键场景，`return false` 中断本次）/ `afterLoadData` / `onReload` 三个场景接线，且**手动重取才触发 `onReload`**
+- ✨ **字段联动 `control`**（`renderer/control.ts`、`renderer/FormRenderer.tsx`、`renderer/FieldItem.tsx`、`renderer/FieldControl.tsx`、`renderer/ContainerField.tsx`、`renderer/ListField.tsx`、`designer/ControlEditor.tsx`）：`control: [{ field, operator, value, effects }]`，`eq/neq/in/empty/notEmpty` 五种比较（`empty` 覆盖 `undefined` / `null` / 空串 / 空数组，非法 operator 按 `eq`），效果取「或」、`required` 与 `formItem.required` 取「或」、`hidden` 用 antd `Form.Item hidden`（值仍在表单里）；有效态按节点 id 经既有 `FormHooksProvider` 下发（不新开 provider），容器的 `disabled` 用同一份 Provider 下发到子字段（子表单 / 表格子表单内 input 一并禁用）；面板新增「联动」分组并提示 `required` 冗余
+- 🛡️ **字段级形状校验收口**（`utils/parseSchema.ts`、`designer/FormDesigner.tsx`、`designer/Toolbar.tsx`）：`validateFieldRules(children, dataSources?)` 单一 walk 校验栅格、校验规则、`dataSource`、`schema.dataSources` 与 `control`，保存 / 导出拦截与 `parseSchema()` 解析共用同一份口径；`FormSchema.dataSources` 从占位类型收敛为 `Record<string, DataSourceDef>`
+- ✅ **验证**：Vitest 27 文件 / 407 用例全绿（新增竞态后写胜、`beforeLoadData` 中断、失败保留旧选项、`AbortError` 静默、缺注册接口提示、`ctx.reload()` / `ctx.reload('field')`、容器禁用下发、面板写回形状与形状校验各分支等用例）；`eslint packages/form-designer` 0 error；`tsc --noEmit` 本批次文件 0 条新增；`pnpm docs:build` 通过
+- 📝 **文档**：新增 `docs/form-designer/render-config.md`（栅格 / 校验 / 数据来源 / 联动与已知限制），`schema.md` 补四项类型与「形状约束」一节，`designer.md` 属性面板补三组说明，`events.md` 改成 `ctx.reload` 的真实语义，设计规格新增 §12.10
+
 ## 2026-09-15
 
 - ✨ **表单填写数据落库**（`service/src/db/index.ts`、`service/src/routes/formData.ts`、`service/src/db/schema.ts`）：新增 `za_form_data` 表，整份填写值以 JSON 存储，冗余 `form_id` / `form_version` / `submitter` / `status` 列支持查询追溯，幂等建表；新增提交 / 分页查询（按提交人、状态过滤）/ 详情 / 作废恢复 / 删除 5 个接口，`GET /form/list` 相关子查询带出 `dataCount`，删表单级联清数据

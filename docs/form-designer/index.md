@@ -12,6 +12,8 @@
 | `types/schema` | `FormSchema` / `FieldSchema` / `ValidateRule` 类型与 `createEmptySchema()` |
 | `designer/store` | Zustand 设计器状态：schema 树、选中态、历史栈（上限 50 步） |
 
+字段级配置（栅格 `col`、校验规则、数据来源 `dataSource`、联动 `control`）见[渲染项配置](/form-designer/render-config)。
+
 ## 目录结构
 
 ```
@@ -33,17 +35,25 @@ packages/form-designer
 │   ├── ConfigFormRenderer.tsx  # configForm meta → 配置控件
 │   ├── OptionsEditor.tsx       # 选项列表编辑器
 │   ├── ValidateEditor.tsx      # 校验规则编辑器
+│   ├── ColEditor.tsx           # 字段级栅格编辑器
+│   ├── DataSourceEditor.tsx    # 数据来源编辑器（静态 / 字典 / 接口 / 命名引用）
+│   ├── ControlEditor.tsx       # 联动规则编辑器
 │   ├── useRemoveField.ts       # 删除统一入口（含子字段的容器二次确认）
 │   └── store.ts                # Zustand：schema + 选中态 + 历史栈 + 连续编辑合并
 ├── renderer
 │   ├── FormRenderer.tsx        # 运行时入口
 │   ├── renderField.tsx         # 单字段渲染分发（未注册类型降级为警告块）
 │   ├── FieldItem.tsx           # Form.Item 分支（名路径 + 校验 + label 特化）
-│   ├── FieldControl.tsx        # 把 Form.Item 注入的受控 props 并入 schema.props
+│   ├── FieldControl.tsx        # 把 Form.Item 注入的受控 props、数据源选项、联动 disabled 并入 schema.props
 │   ├── ContainerField.tsx      # 容器分支（nestObject 下发名路径前缀）
 │   ├── ListField.tsx           # 数组容器分支（Form.List 驱动行增删）
 │   ├── namePrefix.ts           # 名路径 context 与 joinName
-│   └── toAntdRules.ts          # ValidateRule → antd Rule
+│   ├── toAntdRules.ts          # ValidateRule → antd Rule
+│   ├── colProps.ts             # col → antd Col 属性 / 画布外壳宽度
+│   ├── dataApis.ts             # 宿主注册的数据接口表（registerFormDataApis）
+│   ├── interpolate.ts          # {{名路径}} 插值（纯函数）
+│   ├── useFieldDataSource.ts   # 数据来源取数：竞态收口 / 依赖重跑 / 降级
+│   └── control.ts              # 联动规则求值（纯函数）
 └── utils                       # schemaTree / path / uniqueId
 ```
 
@@ -93,6 +103,9 @@ import { FormDesigner, FormRenderer } from '@zealous-admin/form-designer/index'
 // 注册表
 import { getComponent, getMenus, registerComponent } from '@zealous-admin/form-designer/index'
 
+// 数据来源：注册宿主接口（字典 / 业务查询），可选提供接口名清单
+import { registerFormDataApis, setFormDataApiCatalog } from '@zealous-admin/form-designer/index'
+
 // schema
 import { createEmptySchema, parseSchema, SCHEMA_VERSION } from '@zealous-admin/form-designer/index'
 
@@ -100,6 +113,8 @@ import { createEmptySchema, parseSchema, SCHEMA_VERSION } from '@zealous-admin/f
 import type {
   ComponentDef,
   ConfigMeta,
+  ControlRule,
+  DataSourceDef,
   FieldSchema,
   FormGlobalConfig,
   FormRendererProps,
@@ -107,6 +122,7 @@ import type {
   FormSchema,
   ListRenderCtx,
   MenuGroup,
+  FieldDataSource,
   ValidateRule,
 } from '@zealous-admin/form-designer/index'
 ```
@@ -154,6 +170,7 @@ import type {
 ## 延伸阅读
 
 - [Schema 结构与名路径](/form-designer/schema) — 数据结构、校验规则、嵌套提交结构
+- [渲染项配置](/form-designer/render-config) — 字段级栅格、校验规则、数据来源与联动
 - [组件清单与注册](/form-designer/components) — 37 个内置组件与 `registerComponent` 扩展
 - [设计器与渲染器](/form-designer/designer) — 交互、快捷键、配置面板、已知限制
 - [事件钩子](/form-designer/events) — 12 个表单级场景、命名公共事件、`ctx` API 与风险边界

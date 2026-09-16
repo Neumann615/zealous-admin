@@ -170,6 +170,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: 'Schema 结构', link: '/form-designer/schema' },
+            { text: '渲染项配置', link: '/form-designer/render-config' },
             { text: '事件钩子', link: '/form-designer/events' },
             { text: '组件清单', link: '/form-designer/components' },
             { text: '设计器与渲染器', link: '/form-designer/designer' },

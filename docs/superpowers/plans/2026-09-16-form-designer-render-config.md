@@ -456,13 +456,13 @@ export function getByPathName(values: Record<string, any>, path: string): any
 **文件：** 创建 `docs/form-designer/render-config.md`；修改 `docs/form-designer/schema.md`、`docs/form-designer/designer.md`、`docs/form-designer/index.md`、`docs/.vitepress/config.ts`、`docs/superpowers/specs/2026-09-07-form-designer-design.md`（§12.10）、`CHANGELOG.md`、`docs/CHANGELOG.md`。
 
 要点：
-- `render-config.md`：字段级栅格（span 与响应式断点、画布与运行态同源的说明）、校验规则类型表与 `trigger` 语义、自定义校验的返回约定（`true`/字符串/`false`/抛错）与「复用公共事件表」的理由、数据来源三种类型 + 宿主注册方式（`registerFormDataApis` 代码示例）+ `{{}}` 插值 + `watch`/`debounce` + 竞态与失败降级行为、联动 `control` 的 operator 表与「效果取或」语义、以及已知限制。
-- `schema.md`：补 `col` / `dataSource` / `control` / 扩后的 `ValidateRule` 与 `dataSources` 收敛后的类型，并在「形状约束」里加对应条目。
-- `designer.md`：属性面板新增三个分组（布局 / 数据来源 / 联动）的说明。
-- 两份 CHANGELOG 在既有日期节追加（若已跨日则新建 `## 2026-09-16`）。
-- 规格 §12.10：回写本批次实现偏差（尤其：数据来源只接受宿主注册名、补了竞态收口、`control` 的条件必填用 `effects` 表达、不引入参照实现的 `computed`）。
+- [x] `render-config.md`：字段级栅格（span 与响应式断点、画布与运行态同源的说明）、校验规则类型表与 `trigger` 语义、自定义校验的返回约定（`true`/字符串/`false`/抛错）与「复用公共事件表」的理由、数据来源三种类型 + 宿主注册方式（`registerFormDataApis` 代码示例）+ `{{}}` 插值 + `watch`/`debounce` + 竞态与失败降级行为、联动 `control` 的 operator 表与「效果取或」语义、以及已知限制。
+- [x] `schema.md`：补 `col` / `dataSource` / `control` / 扩后的 `ValidateRule` 与 `dataSources` 收敛后的类型，并在「形状约束」里加对应条目。
+- [x] `designer.md`：属性面板新增三个分组（布局 / 数据来源 / 联动）的说明。
+- [x] 两份 CHANGELOG 在既有日期节追加（若已跨日则新建 `## 2026-09-16`）。
+- [x] 规格 §12.10：回写本批次实现偏差（尤其：数据来源只接受宿主注册名、补了竞态收口、`control` 的条件必填用 `effects` 表达、不引入参照实现的 `computed`）。
 
-验证：`cmd /c "node_modules\.bin\vitest.CMD run"` 全绿、`cmd /c "pnpm docs:build"` 通过，并把文档里的 `FormSchema` 示例**抠出来跑一次 `parseSchema`**（沿用批次 2 的做法）。
+- [x] 验证：`cmd /c "node_modules\.bin\vitest.CMD run"` 全绿（27 文件 / 407 用例）、`cmd /c "pnpm docs:build"` 通过，并把文档里的 `FormSchema` 与数据来源片段**抠出来跑了一次 `parseSchema`**（沿用批次 2 的做法，临时校验文件已删）。
 
 提交：`docs(form-designer): 渲染项配置文档与批次 3 变更日志`
 

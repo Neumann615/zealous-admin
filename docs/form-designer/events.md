@@ -63,16 +63,16 @@ await ctx.emit('refreshOrgTree', { deptId: ctx.getValues().deptId })
 | `onFormMounted` | `onFormCreated` 之后 | 可在此拉取初始数据 |
 | `onFormUnmount` | 组件卸载的清理阶段 | 清理副作用 |
 | `onFieldChange` | 任意已注册字段的值变化 | `ctx.changed` 带 `field` / `value`；可用 `watch` 限定字段；嵌套字段只上报顶层段名，见[已知限制](#已知限制) |
-| `beforeLoadData` | 加载数据前 | **关键场景**；数据源接入后生效（批次 3） |
-| `afterLoadData` | 加载数据后 | 数据源接入后生效（批次 3） |
-| `onReload` | 重跑数据源时 | 数据源接入后生效（批次 3） |
+| `beforeLoadData` | 数据源取数前 | **关键场景**；每次请求前触发，`return false` 中断本次加载；`ctx.payload = { field, config }` |
+| `afterLoadData` | 数据源取数成功后 | `ctx.payload = { field, config, result }` |
+| `onReload` | **手动**重跑数据源后 | 只有 `ctx.reload()` 触发；`watch` 引起的自动重取不触发；`ctx.payload = { field }` |
 | `beforeSubmit` | 提交校验通过、调用 `onSubmit` 之前 | **关键场景**；可改值（只对已注册字段生效，见[改值与提交报文](#改值与提交报文)）、可 `return false` 中断 |
 | `onValidateFail` | 提交校验未通过 | 只覆盖提交这条路径，见[已知限制](#已知限制) |
 | `afterSubmit` | `onSubmit` 正常返回后 | 业务页提交失败的提示由 http 拦截器负责 |
 | `onSubmitError` | `onSubmit` 抛错时 | `onSubmit` 的 rejection 不会外抛 |
 | `onReset` | 渲染器自带「重置」按钮点击后 | 只覆盖渲染器自己的重置按钮，见[已知限制](#已知限制) |
 
-数据源相关的三个场景（`beforeLoadData` / `afterLoadData` / `onReload`）在批次 3 的声明式数据源接入前不会触发，`ctx.reload()` 也还是空实现（调用不会抛错）。
+数据源相关的三个场景只在**字段声明了 `dataSource`** 时才有触发点（见[渲染项配置 · 数据来源](/form-designer/render-config#数据来源-datasource)）：没有数据源的字段不会取数，`ctx.reload()` 也就没有目标（钩子照常执行）。
 
 ## 关键场景的中断语义
 
@@ -120,10 +120,19 @@ if (!ctx.getValues().agree) {
 | `setValues(patch)` | `(Record<string, any>) => void` | 批量改值 |
 | `getField(field)` | `(string) => FieldSchema \| undefined` | 按字段名取节点（label / props 等），容器内部的字段也能命中 |
 | `emit(name, payload?)` | `(string, any?) => Promise<void>` | 触发一个命名公共事件，**返回 Promise，可以 `await`** |
-| `reload(field?)` | `(string?) => Promise<void>` | 重跑数据源；批次 3 接入，当前为空实现 |
+| `reload(field?)` | `(string?) => Promise<void>` | 重跑数据源：无参重取所有挂了 `dataSource` 的字段，带参只重取命中该字段（名路径或字段名）的实例。返回的 Promise 在取数与随后的 `onReload` 都结束后 resolve，可以 `await` 后再读新选项 |
 | `message` | antd `message` 实例 | `success` / `error` / `warning` / `info`；宿主未挂 `<App>` 时降级为静态 message |
 
 `values` 与 `getValues()` 的差别是这套 API 里最容易踩的一处：`values` 是钩子被调用那一刻的快照，`getValues()` 每次都重新向表单取值。在一条钩子里先 `setValue` 再读，读到的还是旧快照。
+
+### `ctx.reload` 与自动重取
+
+字段的 `dataSource.watch` 命中值变化时会**自动**重取（防抖后），这条路径**不触发 `onReload`**；只有钩子里显式调用 `ctx.reload()` 才触发。因此 `onReload` 适合放「用户点了刷新之后要做的事」（例如按新选项回填、提示成功），而每次自动重取都会跑的收尾逻辑应该放进 `afterLoadData`。
+
+两个注意点：
+
+- **依赖监听只看用户输入**：值版本号由 `onValuesChange` 驱动，钩子里的 `ctx.setValue` / `setValues` 不会触发 `watch` 自动重取——需要重取就显式 `await ctx.reload()`
+- **没有递归护栏**：在 `onReload` 钩子里无条件再次 `ctx.reload()` 会沿微任务无限递归（与「同步死循环无护栏」同一类风险），要重取请加条件判断
 
 ### 改值与提交报文
 
@@ -175,7 +184,8 @@ if (!ctx.getValues().agree) {
 | `onReset` / `onValidateFail` 只覆盖渲染器自己的路径 | `showActions={false}` 时业务页自己调 `form.resetFields()` / `form.validateFields()` 不会触发这两个场景 |
 | 画布（设计态）不执行钩子 | 设计器画布只做视觉呈现；预览弹窗与业务渲染页才真正跑钩子 |
 | 公共事件键名会被复用 | 删除公共事件后，`新增公共事件` 会重新占用 `event_${n}` 这个空位，旧的 `{ hook: 'event_1' }` 会静默绑到新事件上；改名 / 删除前先查引用 |
-| 只支持表单级入口 | 字段级钩子（`field.hooks`）与字段级按名引用公共事件尚未接入 |
+| 只支持表单级入口 | 字段级钩子（`field.hooks`）与字段级按名引用公共事件尚未接入；字段级**数据来源**与**联动**不是钩子，见[渲染项配置](/form-designer/render-config) |
+| `ctx.reload` 无递归护栏 | 在 `onReload` 里无条件再次 `ctx.reload()` 会无限递归（同「同步死循环无护栏」） |
 | 正文上限 20000 字符 | 超长在保存与解析两侧都会被拒 |
 
 ## 完整示例

@@ -66,10 +66,15 @@ interface FormDesignerProps {
 | 分组 | 出现条件 | 内容 |
 |------|----------|------|
 | 基础 | 总是 | 标题、字段名（值绑定组件才有）、提示、额外说明；字段名不合法或与同级字段重名时，输入框下方红字提示 |
-| 校验规则 | 非容器且非辅助组件 | `ValidateRule` 列表编辑器 |
+| 布局 | 非辅助组件 | 字段级栅格（`col`）：span 预设 + 五个响应式断点，见[渲染项配置 · 字段级栅格](/form-designer/render-config#字段级栅格-col) |
+| 校验规则 | 非容器且非辅助组件 | `ValidateRule` 列表编辑器；阈值类型给语境提示、空正则与失效的公共事件引用给红字提示 |
+| 数据来源 | 非容器且非辅助组件 | 来源类型（静态 / 字典 / 宿主注册接口 / 引用命名数据源）+ 对应参数 + 依赖字段多选 + 防抖，见[渲染项配置 · 数据来源](/form-designer/render-config#数据来源-datasource) |
+| 联动 | 非辅助组件 | 规则列表（依赖字段 → 比较方式 → 值 → 效果），字段自身已必填时提示 `required` 冗余，见[渲染项配置 · 联动](/form-designer/render-config#联动-control) |
 | 组件属性 | `configForm` 非空 | 组件自己声明的配置项 |
 
-值绑定容器（`subForm` / `tableForm`）同样显示「字段名」——它决定提交结构的 key；但容器不挂 `Form.Item`，因此不开放校验规则。
+值绑定容器（`subForm` / `tableForm`）同样显示「字段名」——它决定提交结构的 key；容器不挂 `Form.Item`，因此不开放校验规则与数据来源，但**开放联动**：容器的 `disabled` 会下发给子字段。
+
+分组里的「数据来源」面板依赖宿主先注册接口（`registerFormDataApis`）。宿主另可用 `setFormDataApiCatalog([...])` 给接口名下拉一份清单，未提供时面板退化为自由文本输入。
 
 「表单」页签分三段（`FormEventsPanel.tsx`）：
 
@@ -89,9 +94,11 @@ interface FormDesignerProps {
 
 红字提示与保存拦截共用同一套口径（`events/validateEvents.ts` / `events/fnSource.ts`）：形参是合法标识符、正文能试编译、长度 ≤ 20000 字符。**红字能提示的，保存一定也能拦**。
 
-### 画布不执行钩子
+### 画布不执行钩子、联动与取数
 
-设计态画布只做视觉呈现（`Canvas` 用 `component={false}` 的 `Form` 承载样式，`CanvasItem` 直接调 `canvasRender ?? render`），**不跑任何钩子**。真正执行钩子的是预览弹窗与业务渲染页里的 `FormRenderer`——所以在画布上改钩子不会有运行反馈，要看效果得开预览。
+设计态画布只做视觉呈现（`Canvas` 用 `component={false}` 的 `Form` 承载样式，`CanvasItem` 直接调 `canvasRender ?? render`，不经过 `FieldItem` / `FieldControl`），因此**不跑钩子、不求联动有效态、也不触发数据来源取数**。画布上的必填星号读的是 `formItem.rules`，响应式断点也只镜像 `span`。
+
+真正执行这些行为的是预览弹窗与业务渲染页里的 `FormRenderer`——所以在画布上改钩子 / 联动 / 数据来源不会有运行反馈，要看效果得开预览。
 
 ### 工具栏
 
@@ -99,10 +106,10 @@ interface FormDesignerProps {
 |------|------|
 | 撤销 / 重做 | 按历史栈可用性自动禁用 |
 | 导入 | 粘贴 `FormSchema` JSON，格式非法或字段名不合法（重名 / 为空 / 含空格或点号）则报错并说明原因，不覆盖当前画布 |
-| 导出 | 只读展示当前 schema JSON，聚焦自动全选 |
+| 导出 | 只读展示当前 schema JSON，聚焦自动全选；打开前与保存同口径校验字段级配置（栅格 / 校验规则 / 数据来源 / 联动）与事件钩子 |
 | 清空 | 二次确认后清空全部字段（可撤销） |
 | 预览 | 弹窗内用 `FormRenderer` 真实渲染当前 schema，提交后展示 JSON |
-| 保存 | 仅在传入 `onSave` 时出现；保存前校验字段名与事件钩子（形状 + 语法 + 正文长度），任一不过即拼成一条提示并中止（不调用 `onSave`） |
+| 保存 | 仅在传入 `onSave` 时出现；保存前校验字段名、字段级配置形状与事件钩子（形状 + 语法 + 正文长度），任一不过即拼成一条提示并中止（不调用 `onSave`） |
 
 ## FormRenderer
 
@@ -141,9 +148,13 @@ interface FormRendererProps {
 | `tableForm` 细节 | 列宽 / 对齐、行内校验、数组级 min/max 规则（`Form.List` rules）未接入 |
 | 无发布版读取接口 | `GET /form/:id/schema` 暂未实现——渲染演示页需要能看草稿，待有对外填写场景再加 |
 | 历史 schema 的字段名 | 早期保存的 schema 若存在重名字段，重新打开后保存会被拦截，需要先按提示改名 |
+| 画布不镜像联动与断点 | 画布的隐藏 / 必填 / 禁用不随值变化，响应式断点也不镜像（媒体查询依赖真实视口宽度）；两者都要在预览或业务页里看 |
+| 顶层字段的 `Col` | `Col` 只在 `Row` 这类 flex 行父容器里才真正并排；顶层字段设 `span` 只表现为「限宽 + 换行」 |
+| 数据源取数的依赖监听 | `watch` 由用户输入触发；钩子里的 `ctx.setValue` 不会触发自动重取，需手动 `ctx.reload()` |
 
 ## 相关文档
 
 - [Schema 结构与名路径](/form-designer/schema)
+- [渲染项配置](/form-designer/render-config) — 字段级栅格、校验规则、数据来源、联动与已知限制
 - [事件钩子](/form-designer/events) — 场景清单、`ctx` API、公共事件复用与风险边界
 - [组件清单与注册](/form-designer/components)
