@@ -108,4 +108,38 @@ describe('联动规则编辑器（ControlEditor）', () => {
     fireEvent.click(screen.getByText('添加规则'))
     expect(onChange).toHaveBeenCalledWith([{ field: 'city', effects: [] }])
   })
+
+  it('同一字段的规则合并后同时含 hidden 与 required 时提示死局', () => {
+    render(
+      <ControlEditor
+        value={[
+          { field: 'a', operator: 'eq', value: 1, effects: ['hidden'] },
+          { field: 'b', operator: 'eq', value: 2, effects: ['required'] },
+        ]}
+        onChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('隐藏与必填同时生效会导致提交被拦住但用户看不到提示')).toBeTruthy()
+  })
+
+  it('同一条规则内同时含 hidden 与 required 也提示', () => {
+    render(
+      <ControlEditor
+        value={[{ field: 'a', operator: 'eq', value: 1, effects: ['hidden', 'required'] }]}
+        onChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('隐藏与必填同时生效会导致提交被拦住但用户看不到提示')).toBeTruthy()
+  })
+
+  it('只有 hidden 或只有 required 时不提示死局', () => {
+    const { unmount } = render(
+      <ControlEditor value={[{ field: 'a', effects: ['hidden'] }]} onChange={vi.fn()} />,
+    )
+    expect(screen.queryByText('隐藏与必填同时生效会导致提交被拦住但用户看不到提示')).toBeNull()
+    unmount()
+
+    render(<ControlEditor value={[{ field: 'a', effects: ['required'] }]} onChange={vi.fn()} />)
+    expect(screen.queryByText('隐藏与必填同时生效会导致提交被拦住但用户看不到提示')).toBeNull()
+  })
 })

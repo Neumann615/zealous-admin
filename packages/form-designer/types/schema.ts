@@ -110,7 +110,8 @@ export type ControlEffect = (typeof CONTROL_EFFECTS)[number]
  * 联动规则：条件命中时控制隐藏 / 禁用 / 必填。
  * 同一规则内的效果全生效；多条规则的效果取「或」（任一命中即生效）；
  * `required` 与字段自身 `formItem.required` 取「或」；`hidden` 用 antd `Form.Item hidden`
- * （值仍保留在表单 store 里，不进提交报文是「只提交已注册字段」的既有语义）。
+ * （只影响呈现：字段仍是已注册字段，值既留在表单 store 里、也仍会进提交报文；
+ * 与 `required` 同时命中时提交会被拦住但提示不可见，属已知限制，见 docs/form-designer/render-config.md）。
  */
 export interface ControlRule {
   /** 条件依赖的字段（名路径） */

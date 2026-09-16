@@ -120,7 +120,7 @@ if (!ctx.getValues().agree) {
 | `setValues(patch)` | `(Record<string, any>) => void` | 批量改值 |
 | `getField(field)` | `(string) => FieldSchema \| undefined` | 按字段名取节点（label / props 等），容器内部的字段也能命中 |
 | `emit(name, payload?)` | `(string, any?) => Promise<void>` | 触发一个命名公共事件，**返回 Promise，可以 `await`** |
-| `reload(field?)` | `(string?) => Promise<void>` | 重跑数据源：无参重取所有挂了 `dataSource` 的字段，带参只重取命中该字段（名路径或字段名）的实例。返回的 Promise 在取数与随后的 `onReload` 都结束后 resolve，可以 `await` 后再读新选项 |
+| `reload(field?)` | `(string?) => Promise<void>` | 重跑数据源：无参重取所有挂了 `dataSource` 的字段，带参只重取命中该字段的实例（命中口径见下）。返回的 Promise 保证**取数与写入选项、以及随后的 `onReload` 都已结束**，但视图更新发生在随后的渲染帧 —— `await` 之后立刻读 DOM 仍是旧选项需要等下；要拿新选项请在 `afterLoadData` / `onReload` 里读 `ctx.payload.result` |
 | `message` | antd `message` 实例 | `success` / `error` / `warning` / `info`；宿主未挂 `<App>` 时降级为静态 message |
 
 `values` 与 `getValues()` 的差别是这套 API 里最容易踩的一处：`values` 是钩子被调用那一刻的快照，`getValues()` 每次都重新向表单取值。在一条钩子里先 `setValue` 再读，读到的还是旧快照。
@@ -129,9 +129,10 @@ if (!ctx.getValues().agree) {
 
 字段的 `dataSource.watch` 命中值变化时会**自动**重取（防抖后），这条路径**不触发 `onReload`**；只有钩子里显式调用 `ctx.reload()` 才触发。因此 `onReload` 适合放「用户点了刷新之后要做的事」（例如按新选项回填、提示成功），而每次自动重取都会跑的收尾逻辑应该放进 `afterLoadData`。
 
-两个注意点：
+三个注意点：
 
-- **依赖监听只看用户输入**：值版本号由 `onValuesChange` 驱动，钩子里的 `ctx.setValue` / `setValues` 不会触发 `watch` 自动重取——需要重取就显式 `await ctx.reload()`
+- **`reload` 是定向口径，不是名路径**：命中规则依次是「字段的**名路径**（顶层字段即字段名，嵌套子表单为 `contact.name`）」或「**字段名**（`schema.field`）」。`tableForm` 行内字段登记的 key 是**行相对**路径（`0.title`），所以 `ctx.reload('items.0.title')` 命中不到它，请用字段名 `ctx.reload('title')`（会重取所有行的该字段实例）
+- **改值也会驱动依赖比较**：`ctx.setValue` / `ctx.setValues` 写值后会自增值版本号，`watch` 的依赖取值比较随之重跑 —— 写的是被监听的字段且值确实变了，就会走一次自动重取（写值本身是钩子主动行为，不触发 `onReload`）
 - **没有递归护栏**：在 `onReload` 钩子里无条件再次 `ctx.reload()` 会沿微任务无限递归（与「同步死循环无护栏」同一类风险），要重取请加条件判断
 
 ### 改值与提交报文

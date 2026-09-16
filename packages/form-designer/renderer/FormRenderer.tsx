@@ -78,6 +78,12 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     }
   }, [])
 
+  /** 值版本号自增：没有消费者（schema 里没声明 watch / control）时不自增，避免无谓的整树重渲染 */
+  const bumpValuesVersion = useCallback(() => {
+    if (watchesValues)
+      setValuesVersion(v => v + 1)
+  }, [watchesValues])
+
   const { submitBtn, resetBtn } = schema.form
   const showSubmit = showActions && (submitBtn ?? true)
   const showReset = showActions && (resetBtn ?? true)
@@ -114,8 +120,29 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
       form,
       values: form.getFieldsValue(true),
       getValues: () => form.getFieldsValue(true),
-      setValue: (field, value) => form.setFieldsValue({ [field]: value }),
-      setValues: patch => form.setFieldsValue(patch),
+      /**
+       * 改值后立刻自增值版本号：联动的有效态与数据源 watch 的依赖比较都以它为信号，
+       * 否则钩子（例如 onFormMounted 里）改的值要等用户下一次输入才生效。
+       *
+       * 为什么不会自增成环：值版本号只驱动两件纯计算 —— 「重算联动有效态」与「数据源依赖取值比较」，
+       * 任何钩子场景都不在它的下游（场景只在挂载、用户输入、提交链、重置与手动 ctx.reload 上触发），
+       * 因此 setValue → 自增 → 重算 不会再触发 setValue。唯一跨帧的链路是数据源 watch：它按
+       * 依赖值去重（值没变就不重新取数），只有「钩子在每次取数后又写下一个不同的依赖值」这种
+       * 自造反馈才会继续（链路是 取数 → beforeLoadData / afterLoadData → setValue → 自增），
+       * 并受防抖与请求序号限流为一次一个在飞请求。
+       *
+       * 代价（有意选择无条件自增）：写到未注册字段（只进 store 的键）也会多一次重算 + 重渲染。
+       * 换来的是不漏算 —— control 规则与 watch 都可以依赖只存在于 store 里的键（钩子算出来的标记位
+       * 就是常见用法），按「schema 里声明的字段」过滤会静默漏掉这类联动。
+       */
+      setValue: (field, value) => {
+        form.setFieldsValue({ [field]: value })
+        bumpValuesVersion()
+      },
+      setValues: (patch) => {
+        form.setFieldsValue(patch)
+        bumpValuesVersion()
+      },
       getField: field => findNodeByField(schemaRef.current.children, field) ?? undefined,
       /**
        * 重跑数据源：无参 → 所有挂了 dataSource 的字段；带参 → 命中该字段（名路径或字段名）的实例。
@@ -138,7 +165,7 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     // 的命名公共事件恰恰最需要知道自己被谁触发。
     ctx.emit = (name, payload) => emitHook(name, ctx, current?.custom, payload)
     return ctx
-  }, [form, message])
+  }, [form, message, bumpValuesVersion])
 
   /** onFieldChange：只触发 watch 命中（或未声明 watch）的引用 */
   const runFieldChange = useCallback((field: string, value: any) => {
@@ -185,16 +212,14 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
 
   const handleReset = () => {
     form.resetFields()
-    if (watchesValues)
-      setValuesVersion(v => v + 1)
+    bumpValuesVersion()
     const events = schemaRef.current.events
     void runHooks('onReset', events?.onReset, buildCtx(), events?.custom)
   }
 
   const handleValuesChange = (changed: Record<string, any>) => {
     Object.entries(changed).forEach(([field, value]) => runFieldChange(field, value))
-    if (watchesValues)
-      setValuesVersion(v => v + 1)
+    bumpValuesVersion()
   }
 
   const renderChild = (child: FieldSchema, parentType?: string): React.ReactNode => (

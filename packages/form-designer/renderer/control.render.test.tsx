@@ -3,6 +3,7 @@ import type { FormSchema } from '../types/schema'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { App } from 'antd'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { makeFnSource } from '../events/fnSource'
 import { FormRenderer } from './FormRenderer'
 import '../registry/components'
 import '../test/setupDom'
@@ -209,5 +210,56 @@ describe('联动 control 的渲染器行为', () => {
 
     fireEvent.click(container.querySelector('button#lock')!)
     await waitFor(() => expect(row()!.disabled).toBe(true))
+  })
+
+  it('钩子里 ctx.setValue 改的值立刻重算联动（不必等用户再输入）', async () => {
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={{
+            version: 2,
+            form: { layout: 'vertical' },
+            events: {
+              onFormMounted: [{ fn: makeFnSource(['ctx'], 'ctx.setValue(\'hasCompany\', true)') }],
+            },
+            children: toggleSchema([
+              { field: 'hasCompany', operator: 'eq', value: true, effects: ['hidden'] },
+            ]).children,
+          }}
+          showActions={false}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+
+    // 没有任何用户输入：onFormMounted 写入的值必须已经把公司名隐藏掉
+    await waitFor(() => expect(container.querySelector('.ant-form-item-hidden')).not.toBeNull())
+    // 值确实写进了表单（开关呈选中态），隐藏只影响呈现
+    expect(container.querySelector('button#hasCompany')!.getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('钩子里 ctx.setValues 批量改值同样立刻重算（禁用生效）', async () => {
+    const { container } = render(
+      <App>
+        <FormRenderer
+          schema={{
+            version: 2,
+            form: { layout: 'vertical' },
+            events: {
+              onFormMounted: [{ fn: makeFnSource(['ctx'], 'ctx.setValues({ hasCompany: true })') }],
+            },
+            children: toggleSchema([
+              { field: 'hasCompany', operator: 'eq', value: true, effects: ['disabled'] },
+            ]).children,
+          }}
+          showActions={false}
+          onSubmit={vi.fn()}
+        />
+      </App>,
+    )
+
+    await waitFor(() => {
+      expect((container.querySelector('input#company') as HTMLInputElement).disabled).toBe(true)
+    })
   })
 })

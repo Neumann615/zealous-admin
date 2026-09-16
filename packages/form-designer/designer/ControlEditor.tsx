@@ -40,6 +40,11 @@ export function ControlEditor({ value = [], onChange, fieldNames = [], selfRequi
     onChange?.(value.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)))
   }
 
+  // 效果取「或」：只要任一规则给了 hidden、另一条（或同一条）给了 required，就可能同时生效 ——
+  // 那时提交会被必填拦住，而错误提示渲染在 display:none 的 Form.Item 里，用户只看到「点了没反应」
+  const effects = new Set(value.flatMap(rule => rule.effects ?? []))
+  const deadlock = effects.has('hidden') && effects.has('required')
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {value.map((rule, i) => (
@@ -102,6 +107,11 @@ export function ControlEditor({ value = [], onChange, fieldNames = [], selfRequi
       >
         添加规则
       </Button>
+      {deadlock && (
+        <div style={{ fontSize: 12, color: '#ff4d4f' }}>
+          隐藏与必填同时生效会导致提交被拦住但用户看不到提示
+        </div>
+      )}
       <div style={{ fontSize: 12, color: '#999' }}>
         多条规则的效果取「或」；隐藏只影响呈现，值仍保留在表单里
       </div>

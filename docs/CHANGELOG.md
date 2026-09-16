@@ -9,7 +9,8 @@
 - 🔧 `ctx.reload` 落地：无参重取全部数据源字段、带参只重取命中字段，`beforeLoadData` / `afterLoadData` / `onReload` 三场景接线（只有手动重取触发 `onReload`）
 - ✨ 字段联动：`control` 规则按值控制隐藏 / 禁用 / 必填，五种比较方式、效果取「或」，容器 `disabled` 下发到子字段；属性面板新增「联动」分组
 - 🛡️ 形状校验收口：栅格、校验规则、数据来源、命名数据源表与联动规则统一走 `validateFieldRules`，保存 / 导出与解析同一口径
-- ✅ 验证：27 文件 407 用例全绿，lint 0 error，文档站构建通过，文档示例经 `parseSchema` 校验
+- 🐛 钩子改值重算联动：`ctx.setValue` / `setValues` 写值后立刻重算联动有效态；数据源挂载取数不再因宿主传入新的 schema 引用而重复请求；`hidden` 与 `required` 同时命中会面板红字提示；校准 `ctx.reload` / `await`、隐藏字段是否进报文、行内字段 reload 命中口径等文档措辞
+- ✅ 验证：27 文件 413 用例全绿，lint 0 error / 4 warning（2 条既有、2 条为新增规则列表编辑器同类），文档站构建通过，文档示例经 `parseSchema` 校验
 - 📝 文档：新增「渲染项配置」页，Schema / 设计器 / 事件钩子三篇同步，设计规格补 §12.10
 
 ## 2026-09-15

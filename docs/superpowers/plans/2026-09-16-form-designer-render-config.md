@@ -282,7 +282,7 @@ export interface ValidateRule {
 
 ## 任务 4：声明式数据来源
 
-**文件：** 创建 `renderer/dataApis.ts`、`renderer/interpolate.ts`、`renderer/useFieldDataSource.ts`（各配 `.test.ts`）；修改 `types/schema.ts`、`renderer/FieldControl.tsx`、`renderer/FormRenderer.tsx`、`designer/DataSourceEditor.tsx`（创建）、`designer/RightPanel.tsx`、`utils/parseSchema.ts`。
+**文件：** 创建 `renderer/dataApis.ts`、`renderer/interpolate.ts`、`renderer/useFieldDataSource.ts`（各配 `.test.ts`）、`designer/DataSourceEditor.tsx`（另拆 `designer/dataSourceType.ts` 放归一化纯函数）；修改 `types/schema.ts`、`renderer/FieldControl.tsx`、`renderer/FormRenderer.tsx`、`renderer/hooksContext.ts`、`designer/RightPanel.tsx`、`designer/FormDesigner.tsx`、`designer/Toolbar.tsx`、`utils/parseSchema.ts`、`utils/fieldName.ts`、`utils/path.ts`、`index.ts`。
 
 **设计要点（与参照实现的三处关键差异）：**
 
@@ -377,7 +377,13 @@ export function FieldControl({ def, schema, ...injected }) {
 
 - [x] **步骤 5：渲染器接线 `ctx.reload` 与三个场景**
 
-`FormRenderer` 内新增一个「重载信号」state（`Map<fieldId, number>` 或单一版本号 + 可选字段名）：`ctx.reload(field?)` 递增版本号 → 命中的 `useFieldDataSource` 重新取数；取值 `onReload` 场景在**手动 reload** 时触发（区别于字段变化触发的自动重载）。
+实现口径（上机时改为**重取句柄登记表**，不再用版本号令牌）：`useFieldDataSource` 挂载时经既有 `FormHooksProvider`（`FormRenderer` 新增 `registerDataSource`）登记 `{ key(名路径), field(schema.field), reload }`，返回注销函数；`ctx.reload(field?)` 从登记表里取目标（无参取全部；带参命中 `key === field || field === field`）后 `await Promise.all(...)`，最后触发 `onReload`（`ctx.payload = { field }`）。
+
+选择登记表的理由：`await ctx.reload()` 要在**取数真正结束**后 resolve（钩子里 `await ctx.reload()` 再读 `ctx.payload.result` 才有意义），版本号令牌只能表达「请重取」而拿不到完成信号；而且句柄直接调用取数函数，不依赖渲染帧。
+
+- 手动重取才触发 `onReload`，且是**事后通知**（取数结束之后）；`watch` 引起的自动重取不触发
+- 命中口径是「名路径或字段名」：`tableForm` 行内实例登记的是行相对路径 `0.title`，`ctx.reload('items.0.title')` 命中不到，用字段名 `ctx.reload('title')`（重取所有行实例）
+- `await` 只保证取数、写入选项与 `onReload` 结束，视图更新在随后的渲染帧（文档已写明）
 
 注意：`beforeLoadData` / `afterLoadData` 的钩子来自 `schema.events`，`useFieldDataSource` 需要拿到它们与 `buildCtx` —— 通过一个轻量 context（`FormHooksContext`）从 `FormRenderer` 下发，避免逐层传参。
 
@@ -443,6 +449,8 @@ export function getByPathName(values: Record<string, any>, path: string): any
   rules={toAntdRules(schema, { required: effective.required })}
 ```
 
+收尾轮补：重算信号（值版本号）除 `onValuesChange` 与挂载外，**钩子的 `ctx.setValue` / `setValues` 写值后也要自增**，否则「全局钩子改值 + 联动」要等用户下一次输入才生效；自增不引入循环（钩子场景不在值版本号的下游，唯一跨帧链路是数据源 `watch` 的取值比较，按值去重）。`rules` 的传递改为派生 schema（`{ ...schema, formItem: { ...schema.formItem, required: true } }`），不改 `toAntdRules` 的签名。
+
 `disabled` 需要作用到组件本身 → 由 `FieldControl` 在合并 props 时覆盖 `disabled`（与数据源 `options` 合并同一处）。**注意**：容器节点（`nestObject` / `nestList`）的 `disabled` 要下发给子字段 —— 用 context 传递「父级禁用」，`FieldItem` 里取或。
 
 - [x] **步骤 3：面板（`ControlEditor.tsx`）**：规则列表，每条选依赖字段（下拉当前 schema 字段名）、operator、value（按 operator 切控件）、effects（多选。`required` 与 `formItem.required` 都在时提示后者冗余）。
@@ -462,7 +470,7 @@ export function getByPathName(values: Record<string, any>, path: string): any
 - [x] 两份 CHANGELOG 在既有日期节追加（若已跨日则新建 `## 2026-09-16`）。
 - [x] 规格 §12.10：回写本批次实现偏差（尤其：数据来源只接受宿主注册名、补了竞态收口、`control` 的条件必填用 `effects` 表达、不引入参照实现的 `computed`）。
 
-- [x] 验证：`cmd /c "node_modules\.bin\vitest.CMD run"` 全绿（27 文件 / 407 用例）、`cmd /c "pnpm docs:build"` 通过，并把文档里的 `FormSchema` 与数据来源片段**抠出来跑了一次 `parseSchema`**（沿用批次 2 的做法，临时校验文件已删）。
+- [x] 验证：`cmd /c "node_modules\.bin\vitest.CMD run"` 全绿（27 文件 / 413 用例）、`cmd /c "pnpm docs:build"` 通过，并把文档里的 `FormSchema` 与数据来源片段**抠出来跑了一次 `parseSchema`**（沿用批次 2 的做法，临时校验文件已删）。
 
 提交：`docs(form-designer): 渲染项配置文档与批次 3 变更日志`
 

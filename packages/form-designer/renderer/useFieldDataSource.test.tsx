@@ -3,6 +3,7 @@ import type { FormEventConfig } from '../events/types'
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { App } from 'antd'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeFnSource } from '../events/fnSource'
 import { registerFormDataApis } from './dataApis'
@@ -346,5 +347,41 @@ describe('声明式数据来源（useFieldDataSource）', () => {
     expect(apiA).toHaveBeenCalledTimes(2)
     expect(apiB).toHaveBeenCalledTimes(3)
     expect(calls).toEqual(['undefined', 'b'])
+  })
+
+  it('宿主每次重渲染都传新 schema 引用时，挂载后仍只取数一次', async () => {
+    const api = vi.fn().mockResolvedValue([{ label: '研发', value: 9 }])
+    registerFormDataApis({ 'test.inline': api })
+
+    function Host() {
+      const [tick, setTick] = useState(0)
+      // 每次渲染都新建 schema 对象（与业务页内联传 schema 的写法一致）
+      return (
+        <App>
+          <FormRenderer
+            schema={{
+              version: 2,
+              form: { layout: 'vertical' },
+              children: [radio('a', 'dept', { def: { type: 'api', api: 'test.inline' } })],
+            }}
+            showActions={false}
+            onSubmit={vi.fn()}
+          />
+          <button onClick={() => setTick(tick + 1)}>rerender</button>
+          <span>{`tick:${tick}`}</span>
+        </App>
+      )
+    }
+
+    const { getByText } = render(<Host />)
+    await waitFor(() => expect(api).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(getByText('rerender'))
+    await waitFor(() => expect(getByText('tick:1')).toBeTruthy())
+    // 留出微任务窗口：schema 引用变化若被当成依赖，会在这里多发一次请求
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 30))
+    })
+    expect(api).toHaveBeenCalledTimes(1)
   })
 })

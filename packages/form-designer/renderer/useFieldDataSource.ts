@@ -156,14 +156,19 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
   const lastWatchRef = useRef<string | null>(null)
 
   const load = useCallback(async (): Promise<void> => {
-    if (!def)
-      return
+    // 取数所需的输入一律从 ref 读：这样 load 的身份是稳定的，宿主内联传 schema（每次渲染都是新对象）
+    // 也不会让「挂载即取数」变成每次重渲染都取数（依赖源变化的判断交给下面的 sourceKey）
     const runtime = latestRef.current.hooks
+    const currentSchema = latestRef.current.schema
+    const source = resolveDataSourceDef(currentSchema.dataSource, runtime?.dataSources)
+    if (!source)
+      return
+    const fieldName = currentSchema.field
     const buildCtx = runtime?.buildCtx
     const custom = runtime?.custom
     const events = runtime?.events
-    const payload = { field, config: def }
-    const label = latestRef.current.schema.label || field || '未命名字段'
+    const payload = { field: fieldName, config: source }
+    const label = currentSchema.label || fieldName || '未命名字段'
 
     // beforeLoadData 是关键场景：return false（或抛错）即中断本次加载，不取数也不算失败
     if (buildCtx && !await runHooks('beforeLoadData', events?.beforeLoadData, buildCtx({ payload }), custom))
@@ -176,7 +181,7 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
     abortRef.current = controller
     setLoading(true)
     try {
-      const result = await fetchOptions(def, latestRef.current.form, controller.signal)
+      const result = await fetchOptions(source, latestRef.current.form, controller.signal)
       // 后写胜：过期结果直接丢弃（宿主忽略 signal 时请求仍会返回）
       if (seq !== seqRef.current)
         return
@@ -197,9 +202,13 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
       if (seq === seqRef.current)
         setLoading(false)
     }
-  }, [def, field])
+  }, [])
 
-  // 挂载后取数一次；来源定义（def / watch / debounce 或所在名路径）变化时重新取数
+  /**
+   * 挂载后取数一次；来源定义变化时重新取数。
+   * 依赖用 sourceKey（内容序列化）而不是 def / load 的引用：宿主内联传 schema 时这两个引用每次都变，
+   * 用引用作依赖会让「挂载即取数」变成「每次重渲染都取数」。
+   */
   const sourceKey = def ? JSON.stringify({ def, watch, debounce, key }) : ''
   useEffect(() => {
     if (!sourceKey)
