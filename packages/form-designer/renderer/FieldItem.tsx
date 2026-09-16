@@ -3,7 +3,7 @@ import type { FieldSchema } from '../types/schema'
 import { Form } from 'antd'
 import { FieldControl } from './FieldControl'
 import { joinName, useNamePrefix } from './namePrefix'
-import { toAntdRules } from './toAntdRules'
+import { collectValidateTriggers, toAntdRules } from './toAntdRules'
 
 /** 这些父容器已自行呈现字段名（描述列表的 item label、表格子表单的列头），Form.Item 不再重复 */
 const LABEL_HANDLED_BY_PARENT = ['descriptions', 'tableForm']
@@ -15,12 +15,15 @@ export function FieldItem({ def, schema, parentType }: {
   parentType?: string
 }) {
   const prefix = useNamePrefix()
+  // 规则级 validateTrigger 是字段级时机的子集：声明了 blur 的规则要把 onBlur 并进 Form.Item
+  const validateTrigger = collectValidateTriggers(schema.formItem?.rules)
 
   return (
     <Form.Item
       name={joinName(prefix, schema.field)}
       label={parentType && LABEL_HANDLED_BY_PARENT.includes(parentType) ? undefined : schema.label}
       rules={toAntdRules(schema)}
+      validateTrigger={validateTrigger}
       tooltip={schema.formItem?.tooltip}
       extra={schema.formItem?.extra}
       hidden={schema.formItem?.hidden}

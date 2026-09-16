@@ -6,6 +6,7 @@ import { createStyles } from 'antd-style'
 import { useEffect, useRef } from 'react'
 import { validateEvents } from '../events/validateEvents'
 import { validateSchemaFieldNames } from '../utils/fieldName'
+import { validateFieldRules } from '../utils/parseSchema'
 import { Canvas } from './Canvas'
 import { LeftPanel } from './LeftPanel'
 import { RightPanel } from './RightPanel'
@@ -71,8 +72,10 @@ export function FormDesigner({ initialSchema, onSave }: FormDesignerProps) {
     const issues = validateSchemaFieldNames(schema)
     // 钩子校验与 parseSchema 共用同一份口径（含正文长度上限），避免「保存放行、回读拒绝」
     const hookIssues = validateEvents(schema.events)
-    if (issues.length || hookIssues.length) {
-      message.error([...issues, ...hookIssues].join('；'))
+    // 校验规则形状同理：面板可以停在「选了阈值类型但还没填数值」的中间态，保存这一步要拦住
+    const ruleIssues = validateFieldRules(schema.children)
+    if (issues.length || hookIssues.length || ruleIssues.length) {
+      message.error([...issues, ...hookIssues, ...ruleIssues].join('；'))
       return
     }
     onSave?.(schema)

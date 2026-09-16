@@ -1,7 +1,7 @@
 import type { FormEventConfig } from '../events/types'
-import type { FormSchema } from '../types/schema'
+import type { FieldSchema, FormSchema, ValidateRule } from '../types/schema'
 import { validateEvents } from '../events/validateEvents'
-import { createEmptySchema, SCHEMA_VERSION } from '../types/schema'
+import { createEmptySchema, SCHEMA_VERSION, THRESHOLD_RULE_TYPES, VALIDATE_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
 
 /**
  * v1 → v2：纯增量（新增 events / dataSources 可选段），只需抬版本号；
@@ -13,6 +13,54 @@ function migrateV1toV2(raw: Record<string, any>): Record<string, any> {
 
 const MIGRATIONS: Record<number, (raw: Record<string, any>) => Record<string, any>> = {
   1: migrateV1toV2,
+}
+
+/** 规则形状问题的统一文案：where 用字段 label，缺省退回组件 type */
+const ruleIssue = (where: string) => `校验规则格式不正确（${where}）`
+
+function validateOneRule(rule: unknown, where: string): string[] {
+  const issue = ruleIssue(where)
+  if (!rule || typeof rule !== 'object' || Array.isArray(rule))
+    return [issue]
+  const r = rule as ValidateRule
+  if (!VALIDATE_RULE_TYPES.includes(r.type))
+    return [issue]
+  // 阈值类规则没有 value 就没有可校验的边界，运行时只能跳过 —— 这里直接拦下，避免「存得进、回读不知所谓」
+  if (THRESHOLD_RULE_TYPES.includes(r.type) && !(typeof r.value === 'number' && Number.isFinite(r.value)))
+    return [`${issue}：${r.type} 需要数字阈值 value`]
+  if (r.pattern !== undefined && typeof r.pattern !== 'string')
+    return [issue]
+  if (r.trigger !== undefined && !VALIDATE_TRIGGERS.includes(r.trigger))
+    return [issue]
+  return []
+}
+
+/**
+ * children 树上所有字段的校验规则形状校验（含 formItem.rules 与嵌套子表单）。
+ * 与 events 校验并列：保存拦截与解析侧共用同一份口径，避免「保存放行、回读拒绝」。
+ * 返回面向用户的问题列表，调用方决定是抛错还是弹提示。
+ */
+export function validateFieldRules(children: unknown): string[] {
+  const issues: string[] = []
+  const walk = (nodes: unknown) => {
+    if (!Array.isArray(nodes))
+      return
+    for (const node of nodes as FieldSchema[]) {
+      if (!node || typeof node !== 'object')
+        continue
+      const where = node.label || node.type || '未命名字段'
+      const rules = (node.formItem as { rules?: unknown } | undefined)?.rules
+      if (rules !== undefined) {
+        if (!Array.isArray(rules))
+          issues.push(ruleIssue(where))
+        else
+          rules.forEach(rule => issues.push(...validateOneRule(rule, where)))
+      }
+      walk(node.children)
+    }
+  }
+  walk(children)
+  return issues
 }
 
 /**
@@ -55,6 +103,9 @@ export function parseSchema(input: string | unknown): FormSchema {
   const eventIssues = validateEvents(raw.events as FormEventConfig | undefined)
   if (eventIssues.length)
     throw new Error(`表单结构解析失败：${eventIssues[0]}`)
+  const ruleIssues = validateFieldRules(raw.children)
+  if (ruleIssues.length)
+    throw new Error(`表单结构解析失败：${ruleIssues[0]}`)
 
   const empty = createEmptySchema()
   return {

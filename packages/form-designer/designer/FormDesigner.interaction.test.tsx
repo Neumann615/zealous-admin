@@ -312,6 +312,40 @@ describe('字段级栅格（col）', () => {
   })
 })
 
+describe('校验规则形状与保存拦截', () => {
+  it('阈值规则未填数值（面板中间态）时保存被拦截', async () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+    const node = selectFirst('input')
+    act(() => {
+      useDesignerStore.getState().updateField(node.id, 'formItem.rules', [{ type: 'len' }], true)
+    })
+
+    clickSave()
+    expect(onSave).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByText(/校验规则格式不正确/)).toBeTruthy())
+    // 与解析侧同一口径：同一份 schema 回读也被拒
+    expect(() => parseSchema(useDesignerStore.getState().exportSchema())).toThrow('校验规则格式不正确')
+  })
+
+  it('填好阈值的规则不拦截保存', () => {
+    const onSave = vi.fn()
+    renderDesigner(schemaOf(['input']), onSave)
+    const node = selectFirst('input')
+    act(() => {
+      useDesignerStore.getState().updateField(
+        node.id,
+        'formItem.rules',
+        [{ type: 'minLen', value: 2, trigger: 'blur' }],
+        true,
+      )
+    })
+
+    clickSave()
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('设计器全局事件与公共事件', () => {
   it('全局事件里写入语法错误的钩子时保存被拦截', async () => {
     const onSave = vi.fn()

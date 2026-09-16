@@ -4,6 +4,21 @@ export { getComponent, getMenus, registerComponent } from './registry/registry'
 export type { ComponentDef, ConfigMeta, ListRenderCtx, MenuGroup } from './registry/registry'
 export { FormRenderer } from './renderer/FormRenderer'
 export type { FormRendererProps } from './renderer/FormRenderer'
-export type { FieldSchema, FormGlobalConfig, FormSchema, SchemaVersion, ValidateRule } from './types/schema'
-export { createEmptySchema, SCHEMA_VERSION } from './types/schema'
+export type {
+  FieldCol,
+  FieldSchema,
+  FormGlobalConfig,
+  FormSchema,
+  SchemaVersion,
+  ValidateRule,
+  ValidateRuleType,
+  ValidateTrigger,
+} from './types/schema'
+export {
+  createEmptySchema,
+  SCHEMA_VERSION,
+  THRESHOLD_RULE_TYPES,
+  VALIDATE_RULE_TYPES,
+  VALIDATE_TRIGGERS,
+} from './types/schema'
 export { parseSchema } from './utils/parseSchema'

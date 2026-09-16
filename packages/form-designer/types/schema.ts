@@ -21,12 +21,48 @@ export interface FormGlobalConfig extends AntdFormPassthrough {
   resetBtn?: boolean
 }
 
+/**
+ * 校验规则类型全集：面板下拉与形状校验共用这一份，避免两处枚举分叉。
+ * 各类型到 antd Rule 的映射与语义见 renderer/toAntdRules.ts。
+ */
+export const VALIDATE_RULE_TYPES = [
+  'required',
+  'email',
+  'url',
+  'number',
+  'regexp',
+  'len',
+  'maxLen',
+  'minLen',
+  'min',
+  'max',
+  'phone',
+  'ip',
+  'integer',
+  'uppercase',
+  'lowercase',
+] as const
+
+export type ValidateRuleType = (typeof VALIDATE_RULE_TYPES)[number]
+
+/** 需要数字阈值（value）的规则类型 */
+export const THRESHOLD_RULE_TYPES: readonly ValidateRuleType[] = ['len', 'maxLen', 'minLen', 'min', 'max']
+
+/** 触发时机；不写则跟随字段级时机（antd 默认 onChange） */
+export const VALIDATE_TRIGGERS = ['blur', 'change', 'submit'] as const
+
+export type ValidateTrigger = (typeof VALIDATE_TRIGGERS)[number]
+
 /** 可序列化的校验规则（渲染时转换为 antd Rule） */
 export interface ValidateRule {
-  type: 'required' | 'email' | 'url' | 'number' | 'regexp'
+  type: ValidateRuleType
   message?: string
   /** 仅 type 为 regexp 时使用 */
   pattern?: string
+  /** len / maxLen / minLen / min / max 的阈值 */
+  value?: number
+  /** 触发时机；不写则跟随字段级时机 */
+  trigger?: ValidateTrigger
 }
 
 /** 字段级栅格（渲染时自动包裹 Col，字段自带，不必再拖 row + col 容器） */

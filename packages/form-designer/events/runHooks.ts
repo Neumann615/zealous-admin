@@ -21,7 +21,8 @@ const warnedConfigs = new Set<string>()
 /** 已打过 console 的键：toast 按稳定 key 去重，console 按场景 / 公共事件名去重 */
 const loggedErrors = new Set<string>()
 
-function warnOnce(key: string, text: string) {
+/** 按 key 只警告一次（钩子与校验规则共用一份去重表，避免逐次触发的重复刷屏） */
+export function warnOnce(key: string, text: string) {
   if (warnedConfigs.has(key))
     return
   warnedConfigs.add(key)

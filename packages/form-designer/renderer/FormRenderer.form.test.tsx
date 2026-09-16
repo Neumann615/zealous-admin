@@ -207,3 +207,39 @@ describe('渲染器全局配置（FormRenderer）', () => {
     expect(control.container.querySelector('.ant-form-item-required-mark-hidden')).toBeNull()
   })
 })
+
+describe('渲染器校验规则触发时机（FormRenderer）', () => {
+  function schemaWithRules(rules: any[]): FormSchema {
+    const node = pick('input').defaultSchema()
+    node.label = '昵称'
+    node.formItem = { rules }
+    return { version: 2, form: { layout: 'vertical' }, children: [node] }
+  }
+
+  const errorText = (container: HTMLElement) =>
+    container.querySelector('.ant-form-item-explain-error')?.textContent
+
+  it('未配 trigger 的规则在值变化时即校验（antd 默认时机不变）', async () => {
+    const schema = schemaWithRules([{ type: 'minLen', value: 3 }])
+    const { container } = render(<FormRenderer showActions={false} schema={schema} />)
+    fill(container, 'ab')
+    await waitFor(() => expect(errorText(container)).toContain('昵称长度不能少于 3'))
+  })
+
+  it('trigger: blur 的规则值变化时不校验，失焦时才校验', async () => {
+    const schema = schemaWithRules([{ type: 'minLen', value: 3, trigger: 'blur' }])
+    const { container } = render(<FormRenderer showActions={false} schema={schema} />)
+    const input = container.querySelector('input') as HTMLInputElement
+
+    fill(container, 'ab')
+    // onChange 被规则级 validateTrigger 过滤：值变化后不应出现错误提示
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20))
+    })
+    expect(errorText(container)).toBeUndefined()
+
+    // 规则声明了 blur，字段级时机被并入 onBlur，失焦时才真正校验
+    fireEvent.blur(input)
+    await waitFor(() => expect(errorText(container)).toContain('昵称长度不能少于 3'))
+  })
+})
