@@ -96,6 +96,33 @@ export const DATA_SOURCE_TYPES = ['static', 'dict', 'api'] as const
 
 export type DataSourceType = (typeof DATA_SOURCE_TYPES)[number]
 
+/** 联动比较方式全集 */
+export const CONTROL_OPERATORS = ['eq', 'neq', 'in', 'empty', 'notEmpty'] as const
+
+export type ControlOperator = (typeof CONTROL_OPERATORS)[number]
+
+/** 联动效果全集：命中后施加在字段上的状态 */
+export const CONTROL_EFFECTS = ['hidden', 'disabled', 'required'] as const
+
+export type ControlEffect = (typeof CONTROL_EFFECTS)[number]
+
+/**
+ * 联动规则：条件命中时控制隐藏 / 禁用 / 必填。
+ * 同一规则内的效果全生效；多条规则的效果取「或」（任一命中即生效）；
+ * `required` 与字段自身 `formItem.required` 取「或」；`hidden` 用 antd `Form.Item hidden`
+ * （值仍保留在表单 store 里，不进提交报文是「只提交已注册字段」的既有语义）。
+ */
+export interface ControlRule {
+  /** 条件依赖的字段（名路径） */
+  field: string
+  /** 比较方式，默认 eq */
+  operator?: ControlOperator
+  /** operator 为 in 时为数组 */
+  value?: any
+  /** 条件命中时施加的效果，可多选 */
+  effects: ControlEffect[]
+}
+
 /**
  * 声明式数据来源定义。三种类型都由渲染器取数后写进 `props.options`：
  * - `static`：schema 里直接写死的选项
@@ -132,6 +159,8 @@ export interface FieldSchema {
   col?: FieldCol
   /** 声明式选项来源：加载结果写入 props.options */
   dataSource?: FieldDataSource
+  /** 联动规则：条件命中时控制隐藏 / 禁用 / 必填；多条规则的效果取「或」 */
+  control?: ControlRule[]
   /** Form.Item 层面配置 */
   formItem?: {
     rules?: ValidateRule[]

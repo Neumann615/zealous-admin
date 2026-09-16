@@ -7,6 +7,9 @@ export type { FormDataApi } from './renderer/dataApis'
 export { FormRenderer } from './renderer/FormRenderer'
 export type { FormRendererProps } from './renderer/FormRenderer'
 export type {
+  ControlEffect,
+  ControlOperator,
+  ControlRule,
   DataSourceDef,
   DataSourceType,
   FieldCol,
@@ -21,6 +24,8 @@ export type {
   ValidateTrigger,
 } from './types/schema'
 export {
+  CONTROL_EFFECTS,
+  CONTROL_OPERATORS,
   createEmptySchema,
   DATA_SOURCE_TYPES,
   SCHEMA_VERSION,

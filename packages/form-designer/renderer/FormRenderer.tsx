@@ -1,11 +1,13 @@
 import type { FormInstance } from 'antd'
 import type { FormHookContext } from '../events/types'
 import type { FieldSchema, FormSchema } from '../types/schema'
+import type { EffectiveState } from './control'
 import type { DataSourceReloadHandle } from './hooksContext'
 import { App, Button, Form, Space, message as staticMessage } from 'antd'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { emitHook, filterRefsForField, runHooks } from '../events/runHooks'
 import { findNodeByField } from '../utils/schemaTree'
+import { evalControl } from './control'
 import { buildFormProps, isHorizontalLayout, resolveLabelWidth } from './formProps'
 import { FormHooksProvider } from './hooksContext'
 import { renderField } from './renderField'
@@ -15,6 +17,32 @@ function hasDataWatch(children: FieldSchema[]): boolean {
   return children.some(node =>
     !!node.dataSource?.watch?.length || hasDataWatch(node.children ?? []),
   )
+}
+
+/** 是否有任何字段声明了联动规则 */
+function hasControlRules(children: FieldSchema[]): boolean {
+  return children.some(node => !!node.control?.length || hasControlRules(node.children ?? []))
+}
+
+/**
+ * 收集每个字段的有效态，键为节点 id（FieldItem / FieldControl / 容器分支都按 id 查表）。
+ * 嵌套字段一并收进来：容器的 disabled 由容器分支消费后向子字段下发。
+ */
+function collectControlStates(
+  children: FieldSchema[],
+  values: Record<string, any>,
+  out: Record<string, EffectiveState> = {},
+): Record<string, EffectiveState> {
+  for (const node of children) {
+    if (node.control?.length) {
+      const state = evalControl(node.control, values)
+      if (Object.keys(state).length)
+        out[node.id] = state
+    }
+    if (node.children?.length)
+      collectControlStates(node.children, values, out)
+  }
+  return out
 }
 
 export interface FormRendererProps {
@@ -37,7 +65,8 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   // 表单值版本号：数据源的 watch 重跑以它为信号（只有真的声明了 watch 才自增，
   // 其余表单保持原有的「值变化不重渲染」行为）
   const [valuesVersion, setValuesVersion] = useState(0)
-  const watchesValues = useMemo(() => hasDataWatch(schema.children), [schema.children])
+  const hasControls = useMemo(() => hasControlRules(schema.children), [schema.children])
+  const watchesValues = useMemo(() => hasDataWatch(schema.children) || hasControls, [schema.children, hasControls])
   /** 数据源重取句柄：ctx.reload 的目标集合（Form.List 行内字段会登记多个实例） */
   const reloadHandlesRef = useRef(new Map<number, DataSourceReloadHandle>())
   const reloadSeqRef = useRef(0)
@@ -63,6 +92,21 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   // schema 时父组件每次渲染都会让挂载 effect 重跑），也不会拿到旧配置
   const schemaRef = useRef(schema)
   schemaRef.current = schema
+
+  /**
+   * 联动有效态：按当前表单值求值，键为字段节点 id。
+   * 没有字段声明 control 时不下发（`undefined`），FieldItem / FieldControl 沿用原配置。
+   * 首次渲染读到的值可能还没包含 initialValues（antd 在自己的 effect 里装载初始值），
+   * 故挂载后再自增一次值版本号强制重算，否则「初始值命中规则」的隐藏 / 必填会漏掉。
+   */
+  const controls = hasControls ? collectControlStates(schema.children, form.getFieldsValue(true)) : undefined
+  useEffect(() => {
+    // 首次渲染时 initialValues 可能还没进 store（antd 在自己的 effect 里装载），
+    // 这里挂载后强制重算一次联动有效态；只在真的声明了 control 时触发这一次重渲染。
+    if (hasControls)
+      // eslint-disable-next-line react/set-state-in-effect -- 见上：刻意的挂载后重算，只在有联动规则时触发一次
+      setValuesVersion(v => v + 1)
+  }, [hasControls])
 
   const buildCtx = useCallback((over?: Partial<FormHookContext>): FormHookContext => {
     const current = schemaRef.current.events
@@ -164,9 +208,10 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
     events: schema.events,
     dataSources: schema.dataSources,
     valuesVersion,
+    controls,
     registerDataSource,
     buildCtx,
-  }), [schema.events, schema.dataSources, valuesVersion, registerDataSource, buildCtx])
+  }), [schema.events, schema.dataSources, valuesVersion, controls, registerDataSource, buildCtx])
 
   return (
     <Form

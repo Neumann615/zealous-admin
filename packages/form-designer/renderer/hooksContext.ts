@@ -1,5 +1,6 @@
 import type { CustomHookDef, FormEventConfig, FormHookContext } from '../events/types'
 import type { DataSourceDef } from '../types/schema'
+import type { EffectiveState } from './control'
 import { createContext, use } from 'react'
 
 /** 建钩子上下文：FormRenderer 的 buildCtx 原样下发，调用方可传 over 覆盖场景信息 */
@@ -31,6 +32,13 @@ export interface FormHooksRuntime {
   valuesVersion?: number
   /** 数据源重取登记：返回注销函数 */
   registerDataSource?: (handle: DataSourceReloadHandle) => () => void
+  /** 联动 control 的求值结果，键为字段节点 id（多条规则的效果在 evalControl 里取或） */
+  controls?: Record<string, EffectiveState>
+  /**
+   * 父级容器（nestObject / nestList）的禁用态：容器自身的 control 命中 disabled 时，
+   * 由容器用同一份 Provider 下发 true，子字段的「自身有效态」与它取或。
+   */
+  parentDisabled?: boolean
 }
 
 const FormHooksContext = createContext<FormHooksRuntime | undefined>(undefined)

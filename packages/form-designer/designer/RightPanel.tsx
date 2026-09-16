@@ -4,6 +4,7 @@ import { getComponent } from '../registry/registry'
 import { collectFieldNamePaths, getFieldNameIssue, nodeBindsField } from '../utils/fieldName'
 import { ColEditor } from './ColEditor'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
+import { ControlEditor } from './ControlEditor'
 import { DataSourceEditor } from './DataSourceEditor'
 import { FormEventsPanel } from './FormEventsPanel'
 import { useDesignerStore } from './store'
@@ -38,6 +39,8 @@ function FieldConfig() {
   const hasRules = !def.isContainer && !def.noFormItem
   // 数据来源作用于同一批节点：写进 props.options 的只有真正挂 Form.Item 的组件
   const hasDataSource = hasRules
+  // 联动对值绑定容器也有意义（disabled 会下发给子字段），只有辅助组件没有可作用的对象
+  const hasControl = !def.noFormItem
   // 辅助组件（文字/分隔线）在渲染器里也支持 col，但面板只对能进入栅格的节点开放该项
   const hasCol = !def.noFormItem
   const commonMetas = getCommonMetas(hasField)
@@ -81,6 +84,17 @@ function FieldConfig() {
             onChange={dataSource => updateField(node.id, 'dataSource', dataSource, true)}
             fieldNames={fieldNames}
             dataSourceNames={dataSourceNames}
+          />
+        </>
+      )}
+      {hasControl && (
+        <>
+          <Divider titlePlacement="start" plain style={{ margin: '16px 0 12px' }}>联动</Divider>
+          <ControlEditor
+            value={node.control}
+            onChange={control => updateField(node.id, 'control', control, true)}
+            fieldNames={fieldNames}
+            selfRequired={node.formItem?.required}
           />
         </>
       )}

@@ -387,3 +387,79 @@ describe('parseSchema 数据来源形状', () => {
     }))).toThrow('数据来源格式不正确（select）')
   })
 })
+
+describe('parseSchema 联动规则形状', () => {
+  function withControl(control: unknown, label = '公司名'): string {
+    return JSON.stringify({
+      version: 2,
+      form: {},
+      children: [{ id: 'a', type: 'input', label, field: 'company', props: {}, control }],
+    })
+  }
+
+  it('合法规则穿过解析（五种 operator、多效果、多规则）', () => {
+    expect(() => parseSchema(withControl([
+      { field: 'hasCompany', operator: 'eq', value: true, effects: ['hidden', 'disabled', 'required'] },
+      { field: 'kind', operator: 'neq', value: 'a', effects: ['disabled'] },
+      { field: 'kind', operator: 'in', value: ['a', 'b'], effects: ['required'] },
+      { field: 'note', operator: 'empty', effects: ['hidden'] },
+      { field: 'note', operator: 'notEmpty', effects: ['hidden'] },
+      { field: 'contact.name', effects: ['hidden'] },
+    ]))).not.toThrow()
+    // 未配置 control 当然也合法
+    expect(() => parseSchema(JSON.stringify({
+      version: 2,
+      form: {},
+      children: [{ id: 'a', type: 'input', props: {} }],
+    }))).not.toThrow()
+  })
+
+  it('control 不是数组、或规则不是对象时被拒', () => {
+    expect(() => parseSchema(withControl({ field: 'a', effects: ['hidden'] })))
+      .toThrow('联动规则格式不正确（公司名）')
+    expect(() => parseSchema(withControl(['eq'])))
+      .toThrow('联动规则格式不正确（公司名）')
+  })
+
+  it('field 必须是非空字符串', () => {
+    expect(() => parseSchema(withControl([{ field: '', effects: ['hidden'] }])))
+      .toThrow('联动规则格式不正确（公司名）：field 需要非空字符串')
+    expect(() => parseSchema(withControl([{ effects: ['hidden'] }])))
+      .toThrow('联动规则格式不正确（公司名）：field 需要非空字符串')
+  })
+
+  it('operator 必须在枚举内', () => {
+    expect(() => parseSchema(withControl([{ field: 'a', operator: 'contains', effects: ['hidden'] }])))
+      .toThrow('联动规则格式不正确（公司名）：未知的比较方式 contains')
+  })
+
+  it('effects 必须是非空数组且每项在枚举内', () => {
+    expect(() => parseSchema(withControl([{ field: 'a', effects: [] }])))
+      .toThrow('联动规则格式不正确（公司名）：effects 需要非空数组')
+    expect(() => parseSchema(withControl([{ field: 'a' }])))
+      .toThrow('联动规则格式不正确（公司名）：effects 需要非空数组')
+    expect(() => parseSchema(withControl([{ field: 'a', effects: ['readonly'] }])))
+      .toThrow('联动规则格式不正确（公司名）：effects 含未知项')
+  })
+
+  it('operator 为 in 时 value 必须是数组', () => {
+    expect(() => parseSchema(withControl([{ field: 'a', operator: 'in', value: 'x', effects: ['hidden'] }])))
+      .toThrow('联动规则格式不正确（公司名）：operator 为 in 时 value 必须是数组')
+    expect(() => parseSchema(withControl([{ field: 'a', operator: 'in', effects: ['hidden'] }])))
+      .toThrow('联动规则格式不正确（公司名）：operator 为 in 时 value 必须是数组')
+  })
+
+  it('嵌套子表单里的联动同样校验', () => {
+    expect(() => parseSchema(JSON.stringify({
+      version: 2,
+      form: {},
+      children: [{
+        id: 'c',
+        type: 'subForm',
+        field: 'contact',
+        props: {},
+        children: [{ id: 'b', type: 'input', field: 'name', props: {}, control: [{ field: '', effects: ['hidden'] }] }],
+      }],
+    }))).toThrow('联动规则格式不正确（input）：field 需要非空字符串')
+  })
+})

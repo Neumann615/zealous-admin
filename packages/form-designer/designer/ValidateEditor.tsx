@@ -43,6 +43,12 @@ const NUMBER_HINT = '按数值大小校验，仅对数值组件（如数字输�
 /** 空 pattern 的 regexp 规则会被 toAntdRules 静默跳过（既有行为，不改成拒绝以免废掉存量 schema），面板就地提示 */
 const EMPTY_PATTERN_HINT = '正则表达式为空，该规则不会生效'
 
+/**
+ * 引用的公共事件在 events.custom 里已不存在（删了公共事件、或导入的 JSON 指向别的名字）：
+ * 运行期策略不变（warn 一次 + 该规则视为通过），这里只做面板提示，避免「配了却从不执行」无从察觉。
+ */
+const MISSING_HOOK_HINT = '引用的公共事件已不存在'
+
 function thresholdHint(type: ValidateRuleType): string | null {
   if (type === 'min' || type === 'max')
     return NUMBER_HINT
@@ -110,6 +116,9 @@ export function ValidateEditor({ value = [], onChange, custom }: ValidateEditorP
                 // 内联正文与按名引用互斥：运行时 fn 优先，留着旧正文会让公共事件永远不执行
                 onChange={v => update(i, v ? { hook: v, fn: undefined } : { hook: undefined, fn: emptyInlineFn() })}
               />
+              {!!rule.hook && !custom?.[rule.hook] && (
+                <div style={{ fontSize: 12, color: '#ff4d4f' }}>{MISSING_HOOK_HINT}</div>
+              )}
               <HookEditor value={rule.fn} onChange={fn => update(i, { fn, hook: undefined })} />
             </>
           )}

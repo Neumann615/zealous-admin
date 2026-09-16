@@ -1,5 +1,6 @@
 import type { ComponentDef } from '../registry/registry'
 import type { FieldSchema } from '../types/schema'
+import { useFormHooksRuntime } from './hooksContext'
 import { useFieldDataSource } from './useFieldDataSource'
 
 /**
@@ -10,16 +11,24 @@ import { useFieldDataSource } from './useFieldDataSource'
  *
  * 声明式数据来源（schema.dataSource）加载出的选项走同一处合并：
  * 加载成功时覆盖 props.options，失败 / 无来源时保持 schema.props 原样。
+ *
+ * 联动（schema.control）的 disabled 也在这里合并：字段自身的有效态与父容器的禁用态取或，
+ * 只置真不回退 —— 关掉规则后仍能沿用面板里显式配置的 props.disabled。
  */
 export function FieldControl({ def, schema, ...injected }: {
   def: ComponentDef
   schema: FieldSchema
   [key: string]: any
 }) {
+  const hooks = useFormHooksRuntime()
   const { options } = useFieldDataSource(schema)
+  const disabled = !!(hooks?.controls?.[schema.id]?.disabled || hooks?.parentDisabled)
+
   const merged: Record<string, any> = { ...schema.props }
   if (options)
     merged.options = options
+  if (disabled)
+    merged.disabled = true
 
   return <>{def.render({ ...schema, props: { ...merged, ...injected } })}</>
 }

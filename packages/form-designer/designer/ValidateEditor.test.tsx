@@ -143,3 +143,32 @@ describe('切换规则类型时的字段归一化', () => {
     })
   })
 })
+
+describe('自定义校验的引用失配', () => {
+  it('引用的公共事件已不存在时红字提示（删了事件或导入 JSON 都会出现）', () => {
+    render(
+      <ValidateEditor
+        value={[{ type: 'validator', hook: 'gone' }]}
+        custom={{ other: { label: '别的', fn: makeFnSource(['ctx'], '') } }}
+        onChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('引用的公共事件已不存在')).toBeTruthy()
+  })
+
+  it('没有 events.custom 时同样提示（引用无处可查）', () => {
+    render(<ValidateEditor value={[{ type: 'validator', hook: 'gone' }]} onChange={vi.fn()} />)
+    expect(screen.getByText('引用的公共事件已不存在')).toBeTruthy()
+  })
+
+  it('引用还在时不提示；内联正文的规则不提示', () => {
+    const { unmount } = render(
+      <ValidateEditor value={[{ type: 'validator', hook: 'checkNick' }]} custom={CUSTOM} onChange={vi.fn()} />,
+    )
+    expect(screen.queryByText('引用的公共事件已不存在')).toBeNull()
+    unmount()
+
+    render(<ValidateEditor value={[{ type: 'validator', fn: makeFnSource(['ctx'], '') }]} onChange={vi.fn()} />)
+    expect(screen.queryByText('引用的公共事件已不存在')).toBeNull()
+  })
+})

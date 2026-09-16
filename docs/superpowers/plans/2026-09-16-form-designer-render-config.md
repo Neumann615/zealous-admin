@@ -418,7 +418,7 @@ export interface ControlRule {
   control?: ControlRule[]
 ```
 
-- [ ] **步骤 1：纯函数求值（`control.ts`）**
+- [x] **步骤 1：纯函数求值（`control.ts`）**
 
 ```ts
 export interface EffectiveState { hidden?: boolean, disabled?: boolean, required?: boolean }
@@ -434,7 +434,7 @@ export function getByPathName(values: Record<string, any>, path: string): any
 
 测试：五种 operator、嵌套名路径、多规则取或、与自身 `required` 取或、无规则返回 `{}`、非法 operator 视为 `eq`。
 
-- [ ] **步骤 2：渲染器应用**
+- [x] **步骤 2：渲染器应用**
 
 `FormRenderer` 在 `onValuesChange` 时（并首次渲染）算出每个字段的有效态，经 context 下发；`FieldItem` 读取并覆盖：
 
@@ -445,9 +445,9 @@ export function getByPathName(values: Record<string, any>, path: string): any
 
 `disabled` 需要作用到组件本身 → 由 `FieldControl` 在合并 props 时覆盖 `disabled`（与数据源 `options` 合并同一处）。**注意**：容器节点（`nestObject` / `nestList`）的 `disabled` 要下发给子字段 —— 用 context 传递「父级禁用」，`FieldItem` 里取或。
 
-- [ ] **步骤 3：面板（`ControlEditor.tsx`）**：规则列表，每条选依赖字段（下拉当前 schema 字段名）、operator、value（按 operator 切控件）、effects（多选。`required` 与 `formItem.required` 都在时提示后者冗余）。
+- [x] **步骤 3：面板（`ControlEditor.tsx`）**：规则列表，每条选依赖字段（下拉当前 schema 字段名）、operator、value（按 operator 切控件）、effects（多选。`required` 与 `formItem.required` 都在时提示后者冗余）。
 
-- [ ] **步骤 4：形状校验**：`parseSchema` 校验 `control`（`field` 非空字符串、`operator` 在枚举内、`effects` 非空且在枚举内、`in` 时 `value` 为数组）。
+- [x] **步骤 4：形状校验**：`parseSchema` 校验 `control`（`field` 非空字符串、`operator` 在枚举内、`effects` 非空且在枚举内、`in` 时 `value` 为数组）。
 
 提交：`feat(form-designer): 字段联动规则`
 

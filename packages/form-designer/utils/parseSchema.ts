@@ -1,8 +1,8 @@
 import type { FormEventConfig } from '../events/types'
-import type { DataSourceDef, FieldDataSource, FieldOption, FieldSchema, FormSchema, ValidateRule } from '../types/schema'
+import type { ControlRule, DataSourceDef, FieldDataSource, FieldOption, FieldSchema, FormSchema, ValidateRule } from '../types/schema'
 import { isFnSource } from '../events/fnSource'
 import { validateEvents, validateHookFn } from '../events/validateEvents'
-import { createEmptySchema, DATA_SOURCE_TYPES, SCHEMA_VERSION, THRESHOLD_RULE_TYPES, VALIDATE_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
+import { CONTROL_EFFECTS, CONTROL_OPERATORS, createEmptySchema, DATA_SOURCE_TYPES, SCHEMA_VERSION, THRESHOLD_RULE_TYPES, VALIDATE_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
 
 /**
  * v1 → v2：纯增量（新增 events / dataSources 可选段），只需抬版本号；
@@ -168,6 +168,35 @@ function validateDataSources(dataSources: unknown): string[] {
 }
 
 /**
+ * 联动规则形状：面板写不出非法形状，出现非法形状基本都是手写 / 外部 JSON 的笔误。
+ * 忽略的表现是「配了却完全没生效」，故一律拦下。
+ */
+function validateFieldControl(node: FieldSchema, where: string): string[] {
+  const raw = (node as { control?: unknown }).control
+  if (raw === undefined)
+    return []
+  const issue = `联动规则格式不正确（${where}）`
+  if (!Array.isArray(raw))
+    return [issue]
+  return raw.flatMap((rule) => {
+    if (!rule || typeof rule !== 'object' || Array.isArray(rule))
+      return [issue]
+    const r = rule as ControlRule
+    if (typeof r.field !== 'string' || !r.field)
+      return [`${issue}：field 需要非空字符串`]
+    if (r.operator !== undefined && !CONTROL_OPERATORS.includes(r.operator))
+      return [`${issue}：未知的比较方式 ${String(r.operator)}`]
+    if (!Array.isArray(r.effects) || !r.effects.length)
+      return [`${issue}：effects 需要非空数组`]
+    if (r.effects.some(effect => !CONTROL_EFFECTS.includes(effect)))
+      return [`${issue}：effects 含未知项`]
+    if (r.operator === 'in' && !Array.isArray(r.value))
+      return [`${issue}：operator 为 in 时 value 必须是数组`]
+    return []
+  })
+}
+
+/**
  * children 树上所有字段的形状校验：校验规则（formItem.rules）与字段级栅格（col），含嵌套子表单。
  * 与 events 校验并列：保存拦截与解析侧共用同一份口径，避免「保存放行、回读拒绝」。
  * 返回面向用户的问题列表，调用方决定是抛错还是弹提示。
@@ -183,6 +212,7 @@ export function validateFieldRules(children: unknown, dataSources?: unknown): st
       const where = node.label || node.type || '未命名字段'
       issues.push(...validateCol(node, where))
       issues.push(...validateFieldDataSource(node, where))
+      issues.push(...validateFieldControl(node, where))
       const rules = (node.formItem as { rules?: unknown } | undefined)?.rules
       if (rules !== undefined) {
         if (!Array.isArray(rules))
