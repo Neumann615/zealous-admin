@@ -1,6 +1,7 @@
 import type { ControlRule } from '../types/schema'
 import { describe, expect, it } from 'vitest'
-import { evalControl, getByPathName } from './control'
+import { getByPathName } from '../utils/path'
+import { evalControl } from './control'
 
 describe('evalControl', () => {
   it('无规则或空规则返回空对象', () => {

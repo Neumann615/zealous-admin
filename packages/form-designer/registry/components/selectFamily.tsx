@@ -17,6 +17,7 @@ registerComponent({
   title: '下拉选择',
   menu: 'main',
   icon: <DownSquareOutlined />,
+  optionProp: 'options',
   defaultSchema: () => fieldSchema('select', '下拉选择', { options: DEFAULT_OPTIONS }),
   render: schema => <Select style={{ width: '100%' }} {...schema.props} />,
   configForm: [
@@ -43,6 +44,7 @@ registerComponent({
   title: '单选框组',
   menu: 'main',
   icon: <CheckCircleOutlined />,
+  optionProp: 'options',
   defaultSchema: () => fieldSchema('radio', '单选框组', { options: DEFAULT_OPTIONS }),
   render: schema => <Radio.Group {...schema.props} />,
   configForm: [
@@ -65,6 +67,7 @@ registerComponent({
   title: '多选框组',
   menu: 'main',
   icon: <CheckSquareOutlined />,
+  optionProp: 'options',
   defaultSchema: () => fieldSchema('checkbox', '多选框组', { options: DEFAULT_OPTIONS }),
   render: schema => <Checkbox.Group {...schema.props} />,
   configForm: [

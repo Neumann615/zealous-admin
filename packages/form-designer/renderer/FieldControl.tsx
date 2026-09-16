@@ -25,7 +25,9 @@ export function FieldControl({ def, schema, ...injected }: {
   const disabled = !!(hooks?.controls?.[schema.id]?.disabled || hooks?.parentDisabled)
 
   const merged: Record<string, any> = { ...schema.props }
-  if (options)
+  // 只对声明了选项能力的组件写 options（面板也只对这些组件开放数据来源）：
+  // 导入的 JSON 若把 dataSource 配在 input / treeSelect 上，结果不会塞进原生节点
+  if (options && def.optionProp === 'options')
     merged.options = options
   if (disabled)
     merged.disabled = true

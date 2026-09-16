@@ -63,20 +63,72 @@ function listBindingNodes(nodes: FieldSchema[], out: FieldSchema[] = []): FieldS
 
 /**
  * 收集整棵树的字段名路径（名路径，含嵌套作用域前缀），供属性面板的下拉 / 多选使用。
- * 前缀规则与渲染器一致：nestObject / nestList 容器把自己的 field 作为前缀（数组行下标是运行期才有的，
- * 因此只给到容器自身 —— watch 整个数组即「任一行变化都重取」）。
+ *
+ * 只收集**能直接取值**的路径：nestObject 容器（子表单）下探并加上自己的 field 前缀；
+ * nestList 容器（表格子表单）**不下探** —— 行内字段的完整名路径要带行下标（`items.0.title`），
+ * 而下标是运行期才有的，列出来只会给出恒为 undefined 的路径（面板手输时另有校验提示）。
+ * 数组容器自身照常产出（`items`）：watch 整个数组 = 任一行变化都重取。
  */
 export function collectFieldNamePaths(children: FieldSchema[], prefix: string[] = [], out: string[] = []): string[] {
   for (const node of children) {
     const path = node.field ? [...prefix, node.field] : prefix
     if (node.field && nodeBindsField(node))
       out.push(path.join('.'))
+    if (!node.children?.length)
+      continue
+    // 作用域判定与重名校验共用 opensNameScope，避免两处口径分叉
+    if (!opensNameScope(node)) {
+      collectFieldNamePaths(node.children, prefix, out)
+      continue
+    }
     const def = getComponent(node.type)
-    const nested = !!(def?.nestObject || def?.nestList) && !!node.field
-    if (node.children?.length)
-      collectFieldNamePaths(node.children, nested ? path : prefix, out)
+    if (def?.nestList)
+      continue
+    collectFieldNamePaths(node.children, path, out)
   }
   return out
+}
+
+/**
+ * 名路径能否在 schema 树里解析：`contact.name`、`items`、`items.0.title` 都合法，
+ * `items.title`（数组容器后缺行下标）与指向非容器内部的路径不合法。
+ * 返回面向用户的问题描述，可解析返回 null —— 供面板对「手输的依赖字段 / 监听字段」就地红字提示。
+ */
+export function getFieldPathIssue(children: FieldSchema[], path: string): string | null {
+  const segments = path.split('.').filter(segment => segment.length > 0)
+  if (!segments.length)
+    return '名路径不能为空'
+
+  let nodes: FieldSchema[] = children
+  const walked: string[] = []
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i]
+    const node = nodes.find(item => item.field === segment)
+    if (!node)
+      return `未找到字段「${path}」`
+    walked.push(segment)
+    if (i === segments.length - 1)
+      return null
+
+    const def = getComponent(node.type)
+    if (def?.nestList) {
+      const index = segments[i + 1]
+      if (!/^\d+$/.test(index))
+        return `「${walked.join('.')}」是数组容器：行内字段要带行下标，如 ${[...walked, '0', ...segments.slice(i + 1)].join('.')}`
+      walked.push(index)
+      i += 1
+      nodes = node.children ?? []
+      if (i === segments.length - 1)
+        return null
+      continue
+    }
+    if (def?.nestObject && node.field) {
+      nodes = node.children ?? []
+      continue
+    }
+    return `「${walked.join('.')}」不是容器，不能继续往下取值`
+  }
+  return null
 }
 
 /** 找出各命名作用域内重名的字段（跨作用域同名合法） */

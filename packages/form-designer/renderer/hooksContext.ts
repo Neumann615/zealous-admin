@@ -28,7 +28,11 @@ export interface FormHooksRuntime {
   events?: FormEventConfig
   /** 命名数据源表（schema.dataSources）：dataSource.ref 的解析来源 */
   dataSources?: Record<string, DataSourceDef>
-  /** 表单值版本号：每次 onValuesChange 自增，作为数据源 watch 重算的信号 */
+  /**
+   * 表单值版本号：数据源 `watch` 依赖比较与联动有效态重算的信号。
+   * 自增点四处：挂载（initialValues 由 antd 在自己的 effect 里装载，挂载后补算一次）、
+   * `onValuesChange`（用户输入）、`ctx.setValue` / `setValues`（钩子改值）、渲染器自带的重置按钮。
+   */
   valuesVersion?: number
   /** 数据源重取登记：返回注销函数 */
   registerDataSource?: (handle: DataSourceReloadHandle) => () => void

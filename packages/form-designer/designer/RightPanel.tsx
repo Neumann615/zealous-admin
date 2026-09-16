@@ -1,7 +1,7 @@
 import type { ConfigMeta } from '../registry/registry'
 import { Divider, Tabs } from 'antd'
 import { getComponent } from '../registry/registry'
-import { collectFieldNamePaths, getFieldNameIssue, nodeBindsField } from '../utils/fieldName'
+import { collectFieldNamePaths, getFieldNameIssue, getFieldPathIssue, nodeBindsField } from '../utils/fieldName'
 import { ColEditor } from './ColEditor'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
 import { ControlEditor } from './ControlEditor'
@@ -37,8 +37,9 @@ function FieldConfig() {
   // 值绑定容器（嵌套对象/数组）同样需要配置字段名；校验规则仍只对挂 Form.Item 的非容器开放
   const hasField = nodeBindsField(node)
   const hasRules = !def.isContainer && !def.noFormItem
-  // 数据来源作用于同一批节点：写进 props.options 的只有真正挂 Form.Item 的组件
-  const hasDataSource = hasRules
+  // 数据来源只对声明了选项能力的组件开放（本期只实现 optionProp === 'options'）：
+  // 取数结果写的是 props.options，给 input / treeSelect / transfer 配了都不会生效
+  const hasDataSource = hasRules && def.optionProp === 'options'
   // 联动对值绑定容器也有意义（disabled 会下发给子字段），只有辅助组件没有可作用的对象
   const hasControl = !def.noFormItem
   // 辅助组件（文字/分隔线）在渲染器里也支持 col，但面板只对能进入栅格的节点开放该项
@@ -47,6 +48,7 @@ function FieldConfig() {
   const nameIssue = getFieldNameIssue(schema, node.id)
   const fieldNames = collectFieldNamePaths(schema.children)
   const dataSourceNames = Object.keys(schema.dataSources ?? {})
+  const pathIssueOf = (path: string) => getFieldPathIssue(schema.children, path)
 
   return (
     <div style={{ padding: 12 }}>
@@ -84,6 +86,8 @@ function FieldConfig() {
             onChange={dataSource => updateField(node.id, 'dataSource', dataSource, true)}
             fieldNames={fieldNames}
             dataSourceNames={dataSourceNames}
+            componentOptions={node.props.options}
+            pathIssueOf={pathIssueOf}
           />
         </>
       )}
@@ -95,6 +99,7 @@ function FieldConfig() {
             onChange={control => updateField(node.id, 'control', control, true)}
             fieldNames={fieldNames}
             selfRequired={node.formItem?.required}
+            pathIssueOf={pathIssueOf}
           />
         </>
       )}

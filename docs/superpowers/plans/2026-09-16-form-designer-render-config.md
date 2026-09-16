@@ -482,4 +482,11 @@ export function getByPathName(values: Record<string, any>, path: string): any
 - 字段级钩子（`field.hooks`）
 - 预览弹窗「执行钩子」开关
 - 钩子执行超时（同步死循环 / 永不 resolve 的 promise 目前无护栏）
+
+### 质量审查收尾轮留下的项（2026-09-16 记录，本批次不做）
+
+- `useFieldDataSource` 拆出纯逻辑模块（如 `loadFieldOptions(def, form, signal)`）：把取数 / 归一化与 React 状态（序号、abort、防抖、登记表）分离，便于单测与在别处复用
+- `FormRenderer` 抽 `useFormRuntime`：值版本号、联动有效态、重取句柄登记表、`buildCtx` 已经占了组件的大半，值得独立成 hook
+- 形状校验汇总点 `validateSchemaShape(schema)`：目前保存 / 导出 / 解析三处都手动传 `(children, dataSources)`，漏传第二参会静默丢掉命名数据源表的校验
+- 数据来源的其它选项键：`treeData`（treeSelect）、`dataSource`（transfer）与 cascader 的树形 `options` 尚未实现 —— 面板已按 `optionProp === 'options'` 收窄，导入的 JSON 里配了也不会写进组件
 - 服务端 `POST /form/update` 的 schema 校验（§12.8 遗留）

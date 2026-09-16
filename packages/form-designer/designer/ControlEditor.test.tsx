@@ -142,4 +142,34 @@ describe('联动规则编辑器（ControlEditor）', () => {
     render(<ControlEditor value={[{ field: 'a', effects: ['required'] }]} onChange={vi.fn()} />)
     expect(screen.queryByText('隐藏与必填同时生效会导致提交被拦住但用户看不到提示')).toBeNull()
   })
+
+  it('依赖字段解析不了时就地提示（含数组行内字段缺行下标）', () => {
+    render(
+      <ControlEditor
+        value={[{ field: 'items.title', operator: 'empty', effects: ['hidden'] }]}
+        pathIssueOf={path => (path === 'items.title' ? '「items」是数组容器：行内字段要带行下标，如 items.0.title' : null)}
+        onChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('「items」是数组容器：行内字段要带行下标，如 items.0.title')).toBeTruthy()
+    expect(screen.getByText(/数组行内字段的名路径要带行下标/)).toBeTruthy()
+  })
+
+  it('能解析的依赖字段不提示；未选字段时不提示', () => {
+    const { unmount } = render(
+      <ControlEditor
+        value={[{ field: 'city', effects: ['hidden'] }]}
+        pathIssueOf={() => null}
+        onChange={vi.fn()}
+      />,
+    )
+    expect(screen.queryByText(/未找到字段|行内字段要带行下标/)).toBeNull()
+    unmount()
+
+    render(
+      <ControlEditor value={[{ field: '', effects: ['hidden'] }]} pathIssueOf={path => `未找到字段「${path}」`} onChange={vi.fn()} />,
+    )
+    expect(screen.queryByText(/未找到字段/)).toBeNull()
+  })
 })

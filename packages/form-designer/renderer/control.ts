@@ -1,9 +1,6 @@
 import type { ControlRule } from '../types/schema'
 import { getByPathName } from '../utils/path'
 
-/** 名路径取值（支持 contact.name / items.0.qty）：与插值、数据源 watch 共用同一份实现 */
-export { getByPathName }
-
 /** 字段的有效态：只出现被命中的项，未命中项为 undefined（调用方按「未配置」处理） */
 export interface EffectiveState {
   hidden?: boolean

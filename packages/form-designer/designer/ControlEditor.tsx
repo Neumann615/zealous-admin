@@ -28,6 +28,8 @@ interface ControlEditorProps {
   fieldNames?: string[]
   /** 字段自身是否已必填：规则里再选 required 就是冗余，就地提示 */
   selfRequired?: boolean
+  /** 名路径校验：解析不了时返回问题描述（数组行内字段要写成 items.0.title） */
+  pathIssueOf?: (path: string) => string | null
 }
 
 /**
@@ -35,7 +37,7 @@ interface ControlEditorProps {
  * 效果取「或」（任一规则命中即生效），`required` 与字段自身 `formItem.required` 取「或」，
  * 因此字段已必填时再选 required 会就地提示冗余。
  */
-export function ControlEditor({ value = [], onChange, fieldNames = [], selfRequired }: ControlEditorProps) {
+export function ControlEditor({ value = [], onChange, fieldNames = [], selfRequired, pathIssueOf }: ControlEditorProps) {
   const update = (index: number, patch: Partial<ControlRule>) => {
     onChange?.(value.map((rule, i) => (i === index ? { ...rule, ...patch } : rule)))
   }
@@ -66,6 +68,9 @@ export function ControlEditor({ value = [], onChange, fieldNames = [], selfRequi
             options={OPERATOR_OPTIONS}
             onChange={operator => onChange?.(value.map((r, j) => (j === i ? withControlOperator(r, operator) : r)))}
           />
+          {!!rule.field && !!pathIssueOf?.(rule.field) && (
+            <div style={{ fontSize: 12, color: '#ff4d4f' }}>{pathIssueOf(rule.field)}</div>
+          )}
           {(rule.operator ?? 'eq') === 'in' && (
             <Select
               size="small"
@@ -114,6 +119,9 @@ export function ControlEditor({ value = [], onChange, fieldNames = [], selfRequi
       )}
       <div style={{ fontSize: 12, color: '#999' }}>
         多条规则的效果取「或」；隐藏只影响呈现，值仍保留在表单里
+      </div>
+      <div style={{ fontSize: 12, color: '#999' }}>
+        数组行内字段的名路径要带行下标（如 items.0.title），行下标是运行期才有的，只能手写
       </div>
     </div>
   )

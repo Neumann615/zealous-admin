@@ -691,3 +691,37 @@ describe('设计器全局事件与公共事件', () => {
     expect(after.children).toHaveLength(1)
   })
 })
+
+describe('数据来源与联动的面板开放范围', () => {
+  it('选项类组件（select）显示数据来源分组，并提示会覆盖组件属性里的选项', () => {
+    renderDesigner(schemaOf(['select']))
+    selectFirst('select')
+
+    expect(screen.getByText('数据来源')).toBeTruthy()
+    expect(screen.getByText('配置来源后，取数结果会覆盖组件属性里的选项（空列表同样覆盖）')).toBeTruthy()
+  })
+
+  it('取数不会生效的组件（input / treeSelect / transfer）不显示数据来源分组', () => {
+    renderDesigner(schemaOf(['input']))
+    selectFirst('input')
+    expect(screen.queryByText('数据来源')).toBeNull()
+    // 联动对普通字段仍然开放
+    expect(screen.getByText('联动')).toBeTruthy()
+
+    renderDesigner(schemaOf(['treeSelect']))
+    selectFirst('treeSelect')
+    expect(screen.queryByText('数据来源')).toBeNull()
+
+    renderDesigner(schemaOf(['transfer']))
+    selectFirst('transfer')
+    expect(screen.queryByText('数据来源')).toBeNull()
+  })
+
+  it('辅助组件两组都不显示', () => {
+    renderDesigner(schemaOf(['divider']))
+    selectFirst('divider')
+
+    expect(screen.queryByText('数据来源')).toBeNull()
+    expect(screen.queryByText('联动')).toBeNull()
+  })
+})

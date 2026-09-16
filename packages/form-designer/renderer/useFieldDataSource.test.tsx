@@ -384,4 +384,48 @@ describe('声明式数据来源（useFieldDataSource）', () => {
     })
     expect(api).toHaveBeenCalledTimes(1)
   })
+
+  it('static 来源不触发 beforeLoadData / afterLoadData（没有请求）', async () => {
+    const calls = trace()
+    renderForm(schemaWith(
+      [radio('a', 'dept', { def: { type: 'static', options: [{ label: 'A', value: 'a' }] } })],
+      {
+        beforeLoadData: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("before")') }],
+        afterLoadData: [{ fn: makeFnSource(['ctx'], 'globalThis.__trace("after")') }],
+      },
+    ))
+
+    await waitFor(() => expect(screen.getByText('A')).toBeTruthy())
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20))
+    })
+    expect(calls).toEqual([])
+  })
+
+  it('静态来源的空 options 同样覆盖组件属性里的选项（空数组也是 truthy）', async () => {
+    renderForm(schemaWith([
+      radio('a', 'dept', { def: { type: 'static', options: [] } }, { options: [{ label: '组件属性里的选项', value: 'x' }] }),
+    ]))
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    })
+    expect(screen.queryByText('组件属性里的选项')).toBeNull()
+  })
+
+  it('字典返回形状不符的数组时跳过无效项并告警（不产出垃圾选项）', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    registerFormDataApis({
+      // 对象项缺 dictValue → 跳过；字符串项直接当值用；布尔项无法当值 → 跳过
+      dict: vi.fn().mockResolvedValue([{ dictLabel: '缺值' }, 'b', true, { dictLabel: '正常', dictValue: '1' }]),
+    })
+
+    renderForm(schemaWith([radio('a', 'dept', { def: { type: 'dict', dictType: 'x' } })]))
+
+    await waitFor(() => expect(screen.getByText('正常')).toBeTruthy())
+    expect(screen.getByText('b')).toBeTruthy()
+    expect(screen.queryByText('缺值')).toBeNull()
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+  })
 })

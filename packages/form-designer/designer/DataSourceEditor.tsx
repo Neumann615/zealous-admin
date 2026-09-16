@@ -1,4 +1,4 @@
-import type { DataSourceDef, DataSourceType, FieldDataSource } from '../types/schema'
+import type { DataSourceDef, DataSourceType, FieldDataSource, FieldOption } from '../types/schema'
 import type { DataSourceKind } from './dataSourceType'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Input, InputNumber, Select } from 'antd'
@@ -20,6 +20,10 @@ interface DataSourceEditorProps {
   fieldNames?: string[]
   /** schema.dataSources 里的命名数据源名（引用类型下拉用） */
   dataSourceNames?: string[]
+  /** 组件属性里已配置的选项：切到「静态选项」时作为初值播种 */
+  componentOptions?: FieldOption[]
+  /** 名路径校验：解析不了时返回问题描述（数组行内字段要写成 items.0.title） */
+  pathIssueOf?: (path: string) => string | null
 }
 
 /** 参数键值对编辑器（api 的 params）：值支持 {{字段}} 插值 */
@@ -48,7 +52,8 @@ function ParamsEditor({ value = {}, onChange }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {entries.map(([key, v], index) => (
-        <div key={`${key}-${index}`} style={{ display: 'flex', gap: 6 }}>
+        // eslint-disable-next-line react/no-array-index-key -- 参数行按位置渲染：用参数名做 key 会让每次按键重挂节点、输入框丢焦点
+        <div key={index} style={{ display: 'flex', gap: 6 }}>
           <Input size="small" placeholder="参数名" value={key} onChange={e => rename(index, e.target.value)} />
           <Input size="small" placeholder="值，支持 {{字段}}" value={v} onChange={e => setValue(index, e.target.value)} />
           <Button
@@ -77,13 +82,21 @@ function ParamsEditor({ value = {}, onChange }: {
  * 接口名来自宿主注入的清单（`setFormDataApiCatalog`）：没有清单时退化为自由文本输入并提示，
  * 因为包本体并不知道宿主注册了哪些名字。
  */
-export function DataSourceEditor({ value, onChange, fieldNames = [], dataSourceNames = [] }: DataSourceEditorProps) {
+export function DataSourceEditor({
+  value,
+  onChange,
+  fieldNames = [],
+  dataSourceNames = [],
+  componentOptions,
+  pathIssueOf,
+}: DataSourceEditorProps) {
   const kind = dataSourceKind(value)
   const patch = (next: FieldDataSource) => onChange?.(next)
   const patchDef = (def: DataSourceDef) => patch({ ...(value ?? {}), def })
 
   const catalog = getFormDataApiCatalog()
   const setWatch = (watch: string[]) => patch({ ...(value ?? {}), watch: watch.length ? watch : undefined })
+  const watchIssues = (value?.watch ?? []).map(path => ({ path, issue: pathIssueOf?.(path) })).filter(item => !!item.issue)
   const setDebounce = (debounce?: number) => {
     const next = { ...(value ?? {}) }
     if (typeof debounce === 'number')
@@ -101,8 +114,11 @@ export function DataSourceEditor({ value, onChange, fieldNames = [], dataSourceN
         placeholder="不启用"
         value={kind}
         options={KIND_OPTIONS}
-        onChange={(next: DataSourceKind | undefined) => onChange?.(next ? withDataSourceKind(value, next) : undefined)}
+        onChange={(next: DataSourceKind | undefined) => onChange?.(next ? withDataSourceKind(value, next, componentOptions) : undefined)}
       />
+      <div style={{ fontSize: 12, color: '#999' }}>
+        配置来源后，取数结果会覆盖组件属性里的选项（空列表同样覆盖）
+      </div>
 
       {kind === 'static' && (
         <OptionsEditor
@@ -213,6 +229,14 @@ export function DataSourceEditor({ value, onChange, fieldNames = [], dataSourceN
             options={fieldNames.map(name => ({ label: name, value: name }))}
             onChange={setWatch}
           />
+          {watchIssues.map(item => (
+            <div key={item.path} style={{ fontSize: 12, color: '#ff4d4f' }}>
+              {`监听字段「${item.path}」：${item.issue}`}
+            </div>
+          ))}
+          <div style={{ fontSize: 12, color: '#999' }}>
+            数组行内字段的名路径要带行下标（如 items.0.title），行下标是运行期才有的，只能手写
+          </div>
           <div style={{ fontSize: 12, color: '#666' }}>防抖（ms，默认 300）</div>
           <InputNumber
             size="small"

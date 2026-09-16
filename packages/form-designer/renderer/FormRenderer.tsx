@@ -12,16 +12,14 @@ import { buildFormProps, isHorizontalLayout, resolveLabelWidth } from './formPro
 import { FormHooksProvider } from './hooksContext'
 import { renderField } from './renderField'
 
-/** 是否声明了数据源的依赖重跑（决定值变化时要不要重算 / 重渲染） */
-function hasDataWatch(children: FieldSchema[]): boolean {
+/**
+ * 是否有字段依赖表单值：数据源的 `watch`（依赖重跑）或联动 `control`（有效态重算）。
+ * 有依赖才需要值版本号 —— 其余表单保持原有的「值变化不重渲染」行为。
+ */
+function consumesValues(children: FieldSchema[]): boolean {
   return children.some(node =>
-    !!node.dataSource?.watch?.length || hasDataWatch(node.children ?? []),
+    !!node.dataSource?.watch?.length || !!node.control?.length || consumesValues(node.children ?? []),
   )
-}
-
-/** 是否有任何字段声明了联动规则 */
-function hasControlRules(children: FieldSchema[]): boolean {
-  return children.some(node => !!node.control?.length || hasControlRules(node.children ?? []))
 }
 
 /**
@@ -65,8 +63,8 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   // 表单值版本号：数据源的 watch 重跑以它为信号（只有真的声明了 watch 才自增，
   // 其余表单保持原有的「值变化不重渲染」行为）
   const [valuesVersion, setValuesVersion] = useState(0)
-  const hasControls = useMemo(() => hasControlRules(schema.children), [schema.children])
-  const watchesValues = useMemo(() => hasDataWatch(schema.children) || hasControls, [schema.children, hasControls])
+  const hasControls = useMemo(() => schema.children.some(node => !!node.control?.length), [schema.children])
+  const watchesValues = useMemo(() => consumesValues(schema.children), [schema.children])
   /** 数据源重取句柄：ctx.reload 的目标集合（Form.List 行内字段会登记多个实例） */
   const reloadHandlesRef = useRef(new Map<number, DataSourceReloadHandle>())
   const reloadSeqRef = useRef(0)

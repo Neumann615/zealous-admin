@@ -43,6 +43,13 @@ export interface ComponentDef {
   noFormItem?: boolean
   /** Form.Item 额外属性，如开关的 valuePropName: 'checked' */
   formItemProps?: Record<string, any>
+  /**
+   * 选项类能力的声明：数据来源（`field.dataSource`）取数后写进哪个 props 键。
+   * 目前只实现 `'options'`（下拉 / 单选 / 多选的选项列表），面板仅对 `optionProp === 'options'`
+   * 的组件显示「数据来源」分组；`'treeData'`（treeSelect）/ `'dataSource'`（transfer）等树形数据
+   * 尚未实现，不声明 = 组件不吃选项，面板不显示该分组。
+   */
+  optionProp?: 'options' | 'treeData' | 'dataSource'
   defaultSchema: () => FieldSchema
   /** children 为已渲染好的子节点（容器类使用） */
   render: (schema: FieldSchema, children?: ReactNode) => ReactNode

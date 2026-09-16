@@ -2,7 +2,7 @@ import type { FormInstance } from 'antd'
 import type { DataSourceDef, FieldOption, FieldSchema } from '../types/schema'
 import { Form } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { notifyError, runHooks } from '../events/runHooks'
+import { notifyError, runHooks, warnOnce } from '../events/runHooks'
 import { getByPathName } from '../utils/path'
 import { getFormDataApi } from './dataApis'
 import { useFormHooksRuntime } from './hooksContext'
@@ -25,7 +25,6 @@ const DATA_SOURCE_ERROR_KEY = 'form-designer-data-source-error'
 export interface FieldDataSourceResult {
   /** 加载出的选项；无来源（或从未加载成功）时为 undefined，调用方保持 props.options 原样 */
   options: FieldOption[] | undefined
-  loading: boolean
 }
 
 /** 取数失败中「原因可直接展示给用户」的一类；其余错误一律用通用文案 + console 详情 */
@@ -54,37 +53,46 @@ function requireArray(value: unknown, api: string): unknown[] {
 }
 
 /**
- * 接口返回的选项归一化：对象项按 `{ label, value }` 取用（`disabled` 透传），
- * 字符串 / 数字项直接当值用，其余类型视为配置错误。
+ * 选项归一化：字典与接口共用同一份（避免两套严格度）。
+ * 对象项按 labelField / valueField 取字段（接口默认 label / value，字典默认 dictLabel / dictValue），
+ * 缺 value 或值不是字符串 / 数字的项告警一次并跳过 —— 字典接口返回 `['a','b']` 这类形状不符的数组
+ * 不会产出 `{ label: '', value: undefined }` 的垃圾选项；
+ * 字符串 / 数字项直接当值用（接口返回纯值数组的简写）；其余类型同样告警并跳过。
  */
-function toOptions(list: unknown[], api: string): FieldOption[] {
-  return list.map((item, index) => {
-    if (item !== null && typeof item === 'object') {
+function toOptions(
+  list: unknown[],
+  api: string,
+  mapping: { labelField: string, valueField: string } = { labelField: 'label', valueField: 'value' },
+): FieldOption[] {
+  const options: FieldOption[] = []
+  list.forEach((item, index) => {
+    if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
       const row = item as Record<string, any>
-      return {
-        label: String(row.label ?? ''),
-        value: row.value,
-        ...(row.disabled === undefined ? {} : { disabled: !!row.disabled }),
+      const value = row[mapping.valueField]
+      if (typeof value === 'string' || typeof value === 'number') {
+        options.push({
+          label: String(row[mapping.labelField] ?? ''),
+          value,
+          ...(row.disabled === undefined ? {} : { disabled: !!row.disabled }),
+        })
+        return
       }
+      warnOnce(
+        `option:${api}:${mapping.valueField}`,
+        `[form-designer] 数据接口返回的选项缺少 ${mapping.valueField}（${api} 第 ${index + 1} 项），已跳过该选项`,
+      )
+      return
     }
-    if (typeof item === 'string' || typeof item === 'number')
-      return { label: String(item), value: item }
-    throw new DataSourceError(`数据接口返回的选项既不是对象也不是值：${api}（第 ${index + 1} 项）`)
-  })
-}
-
-/** 字典项 → 选项：默认 dictLabel → label、dictValue → value，可用 labelField / valueField 改 */
-function dictToOptions(items: unknown[], def: Extract<DataSourceDef, { type: 'dict' }>): FieldOption[] {
-  const labelField = def.labelField || DICT_LABEL_FIELD
-  const valueField = def.valueField || DICT_VALUE_FIELD
-  return items.map((item) => {
-    const row = (item ?? {}) as Record<string, any>
-    return {
-      label: String(row[labelField] ?? ''),
-      value: row[valueField],
-      ...(row.disabled === undefined ? {} : { disabled: !!row.disabled }),
+    if (typeof item === 'string' || typeof item === 'number') {
+      options.push({ label: String(item), value: item })
+      return
     }
+    warnOnce(
+      `option:${api}:type`,
+      `[form-designer] 数据接口返回的选项既不是对象也不是值（${api} 第 ${index + 1} 项），已跳过该选项`,
+    )
   })
+  return options
 }
 
 /** 取数：static 直接用；dict 与 api 都走宿主注册表（包本体不发起任何请求） */
@@ -102,7 +110,10 @@ async function fetchOptions(
     const api = getFormDataApi(DICT_API_NAME)
     if (!api)
       throw new DataSourceError(`未注册的数据接口：${DICT_API_NAME}`)
-    return dictToOptions(requireArray(await api({ dictType: def.dictType }, signal), DICT_API_NAME), def)
+    return toOptions(requireArray(await api({ dictType: def.dictType }, signal), DICT_API_NAME), DICT_API_NAME, {
+      labelField: def.labelField || DICT_LABEL_FIELD,
+      valueField: def.valueField || DICT_VALUE_FIELD,
+    })
   }
 
   const api = getFormDataApi(def.api)
@@ -149,7 +160,6 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
   latestRef.current = { hooks, form, schema }
 
   const [options, setOptions] = useState<FieldOption[] | undefined>(undefined)
-  const [loading, setLoading] = useState(false)
   const seqRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -169,9 +179,11 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
     const events = runtime?.events
     const payload = { field: fieldName, config: source }
     const label = currentSchema.label || fieldName || '未命名字段'
+    // static 不发出任何请求：它没有「加载数据」这件事，因此不走请求类的 beforeLoadData / afterLoadData
+    const isRemote = source.type !== 'static'
 
     // beforeLoadData 是关键场景：return false（或抛错）即中断本次加载，不取数也不算失败
-    if (buildCtx && !await runHooks('beforeLoadData', events?.beforeLoadData, buildCtx({ payload }), custom))
+    if (buildCtx && isRemote && !await runHooks('beforeLoadData', events?.beforeLoadData, buildCtx({ payload }), custom))
       return
 
     const seq = seqRef.current + 1
@@ -179,14 +191,13 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
-    setLoading(true)
     try {
       const result = await fetchOptions(source, latestRef.current.form, controller.signal)
       // 后写胜：过期结果直接丢弃（宿主忽略 signal 时请求仍会返回）
       if (seq !== seqRef.current)
         return
       setOptions(result)
-      if (buildCtx)
+      if (buildCtx && isRemote)
         await runHooks('afterLoadData', events?.afterLoadData, buildCtx({ payload: { ...payload, result } }), custom)
     }
     catch (e) {
@@ -197,10 +208,6 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
       const ctx = buildCtx?.()
       if (ctx)
         notifyError(ctx, e instanceof DataSourceError ? e.message : `数据源加载失败：${label}`, e, DATA_SOURCE_ERROR_KEY)
-    }
-    finally {
-      if (seq === seqRef.current)
-        setLoading(false)
     }
   }, [])
 
@@ -256,5 +263,5 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
     return register({ key, field, reload: load })
   }, [register, def, key, field, load])
 
-  return { options, loading }
+  return { options }
 }

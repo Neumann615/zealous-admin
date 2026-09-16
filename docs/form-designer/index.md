@@ -37,7 +37,9 @@ packages/form-designer
 │   ├── ValidateEditor.tsx      # 校验规则编辑器
 │   ├── ColEditor.tsx           # 字段级栅格编辑器
 │   ├── DataSourceEditor.tsx    # 数据来源编辑器（静态 / 字典 / 接口 / 命名引用）
+│   ├── dataSourceType.ts       # 数据来源归一化纯函数（切类型丢弃无关字段）
 │   ├── ControlEditor.tsx       # 联动规则编辑器
+│   ├── controlRule.ts          # 联动规则归一化纯函数（切 operator 归一化 value）
 │   ├── useRemoveField.ts       # 删除统一入口（含子字段的容器二次确认）
 │   └── store.ts                # Zustand：schema + 选中态 + 历史栈 + 连续编辑合并
 ├── renderer

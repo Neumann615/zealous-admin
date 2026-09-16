@@ -121,9 +121,13 @@ interface FieldDataSource {
 
 | 类型 | 取数方式 |
 |------|----------|
-| `static` | 直接用 `def.options`（schema 里写死） |
+| `static` | 直接用 `def.options`（schema 里写死）；**不触发 `beforeLoadData` / `afterLoadData`** —— 它没有请求 |
 | `dict` | 调宿主注册的 `dict` 接口，参数 `{ dictType }`，按 `labelField` / `valueField` 映射（默认 `dictLabel` → `label`、`dictValue` → `value`） |
 | `api` | 调宿主注册名 `def.api` 对应的接口，`params` 经 `{{}}` 插值后传入，返回结果按 `parse`（名路径）取出数组 |
+
+取数结果**写进 `props.options`**，因此只对声明了选项能力的组件生效（`ComponentDef.optionProp === 'options'`）：内置的下拉 / 单选 / 多选是本期支持的三个，属性面板也只对它们显示「数据来源」分组。树选择（`treeData`）、穿梭框（`dataSource`）、级联选择的树形选项与 `input` 这类原生组件都**暂不支持** —— 面板不显示该分组，导入的 JSON 里配了也不会写进组件。
+
+另一个必须记住的语义：**取数结果会覆盖组件属性里的选项，空列表同样覆盖**。面板在切到「静态选项」时会用组件属性里的选项播种初值（避免一切换就清空），但静态来源自身为空时仍然覆盖。
 
 **接口只接受宿主注册名，不填裸 URL**：鉴权、错误提示、loading 都走宿主统一的 `http` 实例，而表单定义是可导入 / 导出 / 跨环境复制的**数据**，不该携带请求实现。因此本包不依赖 `@zealous-admin/layout` 与 `src/apis`，也不自行发起任何请求。
 
@@ -167,6 +171,8 @@ setFormDataApiCatalog(['dict', 'orgTree'])
 - 名路径支持嵌套（`contact.name`、`items.0.title`），且**不受事件钩子 `watch` 的「只上报顶层段名」限制** —— 数据源是直接读值的
 - 触发来源是值版本号：用户输入（`onValuesChange`）与钩子里的 `ctx.setValue` / `setValues` 都会让它自增，依赖取值比较随之重跑；写的正是被监听的字段且值确实变了才会重取
 
+**数组行内字段的名路径要带行下标**：`items.0.title` 能取到值，`items.title` 恒为 `undefined`（配 `为空` 会变成永久隐藏 / 禁用 / 必填，配 `不为空` 则永不生效）。行下标是运行期才有的，面板列不出这类路径、只能手写；依赖字段与 `watch` 两处都会对解析不了的路径（缺下标、字段已不存在、往非容器里下探）就地红字提示。
+
 ### 竞态收口与失败降级
 
 | 情况 | 行为 |
@@ -184,8 +190,8 @@ setFormDataApiCatalog(['dict', 'orgTree'])
 
 | 场景 | 时机 | `ctx.payload` |
 |------|------|---------------|
-| `beforeLoadData` | 每次请求前（**关键场景**，`return false` 或抛错即中断本次加载，不取数也不算失败） | `{ field, config }` |
-| `afterLoadData` | 取数成功、写入 `options` 之后 | `{ field, config, result }` |
+| `beforeLoadData` | 每次请求前（**关键场景**，`return false` 或抛错即中断本次加载，不取数也不算失败）；只对 `dict` / `api` 来源触发 | `{ field, config }` |
+| `afterLoadData` | 取数成功、写入 `options` 之后；只对 `dict` / `api` 来源触发 | `{ field, config, result }` |
 | `onReload` | **手动**重取（`ctx.reload()`）之后 | `{ field }` |
 
 `field` 是字段名，`config` 是解析后的 `DataSourceDef`（`ref` 引用会解析成命名表里的定义），`result` 是归一化前的原始数组。
@@ -246,6 +252,9 @@ interface ControlRule {
 | `hidden` + `required` 同时命中 = 死局 | 隐藏的字段仍是已注册字段、仍参与校验：提交会被必填拦住，而错误提示渲染在 `display:none` 的 `Form.Item` 里，用户只看到「点了提交没反应」。面板在规则合并后同时含这两种效果时会红字提示。需要「按条件必填」时请**不要同时隐藏**（例如用 `disabled` 代替隐藏，或把必填条件收窄到字段可见的分支）；目前没有既能隐藏、又能在命中时把提示露出来的替代方案 —— antd `Form.Item hidden` 不渲染错误气泡 |
 | 联动需要值版本号 | 只要 schema 里声明了 `watch` 或 `control`，渲染器就会在值变化时重渲染整棵表单（未声明时保持原有的「值变化不重渲染」行为） |
 | 失败保留旧选项 | 取数失败时不清空 `options`，因此可能短时间显示过期选项（有提示与 `console.error`） |
+| 数据来源只支持 `options` | 取数结果写的是 `props.options`，只对声明 `optionProp: 'options'` 的组件生效（内置为下拉 / 单选 / 多选）；树选择（`treeData`）、穿梭框（`dataSource`）、级联选择的树形选项与 `input` 等原生组件都不支持，面板不显示数据来源分组 |
+| 空选项也是覆盖 | 静态来源的 `options: []` 会清掉组件属性里的选项（取数结果优先，空列表同样优先）；面板切到静态时会用组件属性里的选项播种初值 |
+| 数组行内字段要手写行下标 | 依赖字段 / `watch` 里的 `items.title` 恒为 `undefined`，必须写 `items.0.title`；面板会对解析不了的路径红字提示 |
 | `ctx.reload` 无递归护栏 | 在 `onReload` 钩子里无条件再次 `ctx.reload()` 会沿微任务无限递归（与「同步死循环无护栏」同一类已知风险） |
 | `ctx.reload(field)` 的命中口径 | 按字段的**名路径**（顶层即字段名、子表单为 `contact.name`）或**字段名**命中；`tableForm` 行内实例登记的是行相对路径 `0.title`，因此 `ctx.reload('items.0.title')` 命中不到，请用字段名 `ctx.reload('title')`（重取所有行的该字段实例） |
 | `await ctx.reload()` 不保证 DOM 已更新 | Promise 只保证取数、写入选项与 `onReload` 都已结束，视图更新在随后的渲染帧；要读新数据请用 `afterLoadData` / `onReload` 里的 `ctx.payload.result` |

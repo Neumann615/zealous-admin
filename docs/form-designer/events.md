@@ -63,8 +63,8 @@ await ctx.emit('refreshOrgTree', { deptId: ctx.getValues().deptId })
 | `onFormMounted` | `onFormCreated` 之后 | 可在此拉取初始数据 |
 | `onFormUnmount` | 组件卸载的清理阶段 | 清理副作用 |
 | `onFieldChange` | 任意已注册字段的值变化 | `ctx.changed` 带 `field` / `value`；可用 `watch` 限定字段；嵌套字段只上报顶层段名，见[已知限制](#已知限制) |
-| `beforeLoadData` | 数据源取数前 | **关键场景**；每次请求前触发，`return false` 中断本次加载；`ctx.payload = { field, config }` |
-| `afterLoadData` | 数据源取数成功后 | `ctx.payload = { field, config, result }` |
+| `beforeLoadData` | 数据源取数前 | **关键场景**；每次请求前触发（只对 `dict` / `api` 来源，静态来源不取数也不触发），`return false` 中断本次加载；`ctx.payload = { field, config }` |
+| `afterLoadData` | 数据源取数成功后 | 同样只对 `dict` / `api` 来源触发；`ctx.payload = { field, config, result }` |
 | `onReload` | **手动**重跑数据源后 | 只有 `ctx.reload()` 触发；`watch` 引起的自动重取不触发；`ctx.payload = { field }` |
 | `beforeSubmit` | 提交校验通过、调用 `onSubmit` 之前 | **关键场景**；可改值（只对已注册字段生效，见[改值与提交报文](#改值与提交报文)）、可 `return false` 中断 |
 | `onValidateFail` | 提交校验未通过 | 只覆盖提交这条路径，见[已知限制](#已知限制) |

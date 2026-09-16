@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { FieldDataSource } from '../types/schema'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setFormDataApiCatalog } from '../renderer/dataApis'
 import { DataSourceEditor } from './DataSourceEditor'
@@ -49,10 +50,12 @@ describe('数据来源面板归一化', () => {
     expect(withDataSourceKind(previous, 'ref')).toEqual({ watch: ['dept'], debounce: 500, ref: '' })
   })
 
-  it('同类型之间切换保留已填参数（api → api 保住注册名与参数）', () => {
-    const previous: FieldDataSource = { def: { type: 'api', api: 'orgTree', params: { id: '1' } } }
+  it('同类型之间切换保留已填参数（api → api 保住注册名、参数与 parse）', () => {
+    const previous: FieldDataSource = { def: { type: 'api', api: 'orgTree', params: { id: '1' }, parse: 'data.list' } }
 
-    expect(withDataSourceKind(previous, 'api')).toEqual({ def: { type: 'api', api: 'orgTree', params: { id: '1' } } })
+    expect(withDataSourceKind(previous, 'api')).toEqual({
+      def: { type: 'api', api: 'orgTree', params: { id: '1' }, parse: 'data.list' },
+    })
     expect(withDataSourceKind({ def: { type: 'dict', dictType: 'sex' } }, 'dict')).toEqual({ def: { type: 'dict', dictType: 'sex' } })
   })
 
@@ -168,5 +171,64 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
 
     expect(screen.getByPlaceholderText('命名数据源名字')).toBeTruthy()
     expect(screen.getByText(/还没有命名数据源/)).toBeTruthy()
+  })
+
+  it('接口参数名连续输入时不丢焦点（参数名不能当 React key）', () => {
+    setFormDataApiCatalog(['orgTree'])
+
+    // 受控组件：用带状态的宿主承接 onChange，才能验证「连续输入」的结果
+    function Harness() {
+      const [value, setValue] = useState<FieldDataSource>({ def: { type: 'api', api: 'orgTree', params: { deptId: '' } } })
+      return <DataSourceEditor value={value} onChange={next => setValue(next ?? {})} />
+    }
+    render(<Harness />)
+
+    const keyInput = screen.getByPlaceholderText('参数名')
+    keyInput.focus()
+    fireEvent.change(keyInput, { target: { value: 'd' } })
+    expect(document.activeElement).toBe(screen.getByPlaceholderText('参数名'))
+    fireEvent.change(keyInput, { target: { value: 'd' } })
+    fireEvent.change(keyInput, { target: { value: 'de' } })
+    fireEvent.change(keyInput, { target: { value: 'dept' } })
+
+    // 焦点仍在同一个输入框（key 用了参数名的话，每次按键会重挂节点、焦点掉到 body）
+    expect(document.activeElement).toBe(screen.getByPlaceholderText('参数名'))
+    expect((screen.getByPlaceholderText('参数名') as HTMLInputElement).value).toBe('dept')
+    setFormDataApiCatalog([])
+  })
+
+  it('切到静态选项时用组件属性里的选项播种初值（不静默清空已有选项）', async () => {
+    const onChange = vi.fn()
+    render(
+      <DataSourceEditor
+        value={{ def: { type: 'dict', dictType: 'sys' } }}
+        componentOptions={[{ label: '甲', value: 'a' }]}
+        onChange={onChange}
+      />,
+    )
+
+    await pickOption(0, '静态选项')
+    expect(onChange).toHaveBeenCalledWith({ def: { type: 'static', options: [{ label: '甲', value: 'a' }] } })
+  })
+
+  it('切到静态选项且没有组件属性选项时落空数组', async () => {
+    const onChange = vi.fn()
+    render(<DataSourceEditor value={{ def: { type: 'dict', dictType: 'sys' } }} onChange={onChange} />)
+
+    await pickOption(0, '静态选项')
+    expect(onChange).toHaveBeenCalledWith({ def: { type: 'static', options: [] } })
+  })
+
+  it('解析不了的监听字段就地红字提示', () => {
+    render(
+      <DataSourceEditor
+        value={{ def: { type: 'static', options: [] }, watch: ['items.title'] }}
+        pathIssueOf={path => (path === 'items.title' ? '「items」是数组容器：行内字段要带行下标，如 items.0.title' : null)}
+        onChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('监听字段「items.title」：「items」是数组容器：行内字段要带行下标，如 items.0.title')).toBeTruthy()
+    expect(screen.getByText(/数组行内字段的名路径要带行下标/)).toBeTruthy()
   })
 })

@@ -50,15 +50,22 @@ describe('联动 control 的渲染器行为', () => {
       </App>,
     )
 
-    // initialValues 未经装载时 hasCompany 为空 → eq false 未命中，公司名可见
+    // 初始 hasCompany 为 undefined → eq false 未命中，公司名可见
     expect(screen.getByText('公司名')).toBeTruthy()
 
     const input = container.querySelector('input#company') as HTMLInputElement
     fireEvent.change(input, { target: { value: '示例科技' } })
-
-    // 勾选「有公司」→ 不再等于 false → 规则不再命中，字段依旧可见
+    // 打开开关 → true，仍未命中
     fireEvent.click(container.querySelector('button#hasCompany')!)
     await waitFor(() => expect(screen.getByText('公司名')).toBeTruthy())
+
+    // 再关掉开关 → false，命中：字段隐藏
+    fireEvent.click(container.querySelector('button#hasCompany')!)
+    await waitFor(() => expect(container.querySelector('.ant-form-item-hidden')).not.toBeNull())
+
+    // 隐藏不改变值：再打开开关恢复可见时，之前输入的值还在
+    fireEvent.click(container.querySelector('button#hasCompany')!)
+    await waitFor(() => expect(container.querySelector('.ant-form-item-hidden')).toBeNull())
     expect((container.querySelector('input#company') as HTMLInputElement).value).toBe('示例科技')
   })
 
