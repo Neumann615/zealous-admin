@@ -46,4 +46,25 @@ describe('渲染器冒烟（FormRenderer）', () => {
       children: [{ id: 'x1', type: 'not-registered', props: {} }],
     })
   })
+
+  it('字段级 col 在运行态包一层 Col（辅助组件同样适用）', () => {
+    const input = pick('input').defaultSchema()
+    input.col = { span: 12, md: 8 }
+    const divider = pick('divider').defaultSchema()
+    divider.col = { span: 18 }
+
+    const { container, unmount } = render(
+      <FormRenderer
+        showActions={false}
+        schema={{ version: 2, form: {}, children: [input, divider] }}
+      />,
+    )
+    // 断点类一并落到 Col 上
+    const inputCol = container.querySelector('.ant-col-12.ant-col-md-8')
+    expect(inputCol?.querySelector('.ant-form-item')).not.toBeNull()
+    // 辅助组件（无 Form.Item）同样被 Col 包裹
+    const dividerCol = container.querySelector('.ant-col-18')
+    expect(dividerCol?.querySelector('.ant-divider')).not.toBeNull()
+    unmount()
+  })
 })

@@ -4,6 +4,7 @@ import { useDraggable } from '@dnd-kit/react'
 import { Form } from 'antd'
 import { createStyles } from 'antd-style'
 import { getComponent } from '../registry/registry'
+import { shellStyleFromCol } from '../renderer/colProps'
 import { DropGap } from './DropGap'
 import { useDesignerStore } from './store'
 import { useRemoveField } from './useRemoveField'
@@ -118,6 +119,14 @@ export function CanvasItem({ node }: CanvasItemProps) {
   /** 画布渲染入口：组件可用 canvasRender 覆盖画布呈现（运行时仍走 render） */
   const render = def.canvasRender ?? def.render
 
+  /**
+   * 外壳样式：组件自身的外壳样式（如 col 容器的 props.span）与字段级栅格合并。
+   * 两者都表达「这一格占多宽」，字段级 col 更具体，冲突时以它为准。
+   */
+  const shellStyle = node.col
+    ? { ...def.canvasShellStyle?.(node), ...shellStyleFromCol(node.col) }
+    : def.canvasShellStyle?.(node)
+
   const body = def.isContainer
     ? render(node, renderChildren())
     : def.noFormItem
@@ -137,7 +146,7 @@ export function CanvasItem({ node }: CanvasItemProps) {
     <div
       ref={dragRef}
       className={cx(styles.item, selected && styles.selected)}
-      style={def.canvasShellStyle?.(node)}
+      style={shellStyle}
       onClick={(e) => {
         e.stopPropagation()
         select(node.id)

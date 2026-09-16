@@ -263,6 +263,55 @@ describe('内置组件字段名校验', () => {
   })
 })
 
+/** 画布外壳：字段级栅格落在 CanvasItem 外壳上（.ant-form-item 的直接父节点） */
+function shellOf(container: HTMLElement): HTMLElement {
+  const item = container.querySelector('.ant-form-item')
+  expect(item, '画布中应有 Form.Item').toBeTruthy()
+  return item!.parentElement as HTMLElement
+}
+
+describe('字段级栅格（col）', () => {
+  it('选中字段后可用 span 预设设置栅格，画布外壳同步 flex 尺寸', () => {
+    const { container } = renderDesigner(schemaOf(['input']))
+    selectFirst('input')
+
+    fireEvent.click(screen.getByRole('button', { name: '1/2' }))
+    expect(useDesignerStore.getState().schema.children[0].col).toEqual({ span: 12 })
+    expect(shellOf(container).style.flex).toBe('0 0 50%')
+    expect(shellOf(container).style.maxWidth).toBe('50%')
+  })
+
+  it('再次点击同一预设置空 col，导出不含空 col 键', () => {
+    const { container } = renderDesigner(schemaOf(['input']))
+    selectFirst('input')
+
+    const preset = screen.getByRole('button', { name: '1/2' })
+    fireEvent.click(preset)
+    expect(useDesignerStore.getState().schema.children[0].col).toEqual({ span: 12 })
+
+    fireEvent.click(preset)
+    expect(useDesignerStore.getState().schema.children[0].col).toBeUndefined()
+    expect(useDesignerStore.getState().exportSchema()).not.toContain('"col"')
+    // 未配置时外壳不再写 flex 尺寸，回到默认的整行流
+    expect(shellOf(container).style.flex).toBe('')
+  })
+
+  it('响应式断点写入 col', () => {
+    renderDesigner(schemaOf(['input']))
+    selectFirst('input')
+
+    fireEvent.change(screen.getByPlaceholderText('md'), { target: { value: '8' } })
+    expect(useDesignerStore.getState().schema.children[0].col).toEqual({ md: 8 })
+  })
+
+  it('辅助组件（无 Form.Item）不提供布局分组', () => {
+    renderDesigner(schemaOf(['divider']))
+    selectFirst('divider')
+
+    expect(screen.queryByText('响应式断点（1-24，留空表示不设）')).toBeNull()
+  })
+})
+
 describe('设计器全局事件与公共事件', () => {
   it('全局事件里写入语法错误的钩子时保存被拦截', async () => {
     const onSave = vi.fn()

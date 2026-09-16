@@ -29,6 +29,16 @@ export interface ValidateRule {
   pattern?: string
 }
 
+/** 字段级栅格（渲染时自动包裹 Col，字段自带，不必再拖 row + col 容器） */
+export interface FieldCol {
+  span?: number
+  xs?: number
+  sm?: number
+  md?: number
+  lg?: number
+  xl?: number
+}
+
 export interface FieldSchema {
   /** 唯一 id，拖拽/选中主键 */
   id: string
@@ -39,6 +49,8 @@ export interface FieldSchema {
   label?: string
   /** 直接透传给 antd 组件的 props */
   props: Record<string, any>
+  /** 字段级栅格；设置后渲染器会为该字段包一层 Col */
+  col?: FieldCol
   /** Form.Item 层面配置 */
   formItem?: {
     rules?: ValidateRule[]

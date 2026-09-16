@@ -2,6 +2,7 @@ import type { ConfigMeta } from '../registry/registry'
 import { Divider, Tabs } from 'antd'
 import { getComponent } from '../registry/registry'
 import { getFieldNameIssue, nodeBindsField } from '../utils/fieldName'
+import { ColEditor } from './ColEditor'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
 import { FormEventsPanel } from './FormEventsPanel'
 import { useDesignerStore } from './store'
@@ -34,6 +35,8 @@ function FieldConfig() {
   // 值绑定容器（嵌套对象/数组）同样需要配置字段名；校验规则仍只对挂 Form.Item 的非容器开放
   const hasField = nodeBindsField(node)
   const hasRules = !def.isContainer && !def.noFormItem
+  // 辅助组件（文字/分隔线）在渲染器里也支持 col，但面板只对能进入栅格的节点开放该项
+  const hasCol = !def.noFormItem
   const commonMetas = getCommonMetas(hasField)
   const nameIssue = getFieldNameIssue(schema, node.id)
 
@@ -46,6 +49,15 @@ function FieldConfig() {
         metas={commonMetas}
         errorOf={field => (field === 'field' ? nameIssue : null)}
       />
+      {hasCol && (
+        <>
+          <Divider titlePlacement="start" plain style={{ margin: '16px 0 12px' }}>布局</Divider>
+          <ColEditor
+            value={node.col}
+            onChange={col => updateField(node.id, 'col', col)}
+          />
+        </>
+      )}
       {hasRules && (
         <>
           <Divider titlePlacement="start" plain style={{ margin: '16px 0 12px' }}>校验规则</Divider>

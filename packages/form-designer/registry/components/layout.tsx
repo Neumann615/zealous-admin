@@ -10,6 +10,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons'
 import { Card, Col, Collapse, Descriptions, Divider, Flex, Row, Space, Tabs } from 'antd'
+import { shellStyleFromCol } from '../../renderer/colProps'
 import { registerComponent } from '../registry'
 import { bareSchema } from './helpers'
 
@@ -38,12 +39,8 @@ registerComponent({
   defaultSchema: () => bareSchema('col', { span: 12 }, []),
   render: (schema, children) => <Col {...schema.props}>{children}</Col>,
   // 画布中 Col 被 CanvasItem 外壳（.item）包裹，外壳才是 Row 的 flex item：
-  // span 换算成外壳的 flex 尺寸，Col 自身在画布内恒为 span:24 占满外壳
-  canvasShellStyle: (schema) => {
-    const span = schema.props.span ?? 24
-    const pct = `${(span / 24) * 100}%`
-    return { flex: `0 0 ${pct}`, maxWidth: pct }
-  },
+  // span 换算成外壳的 flex 尺寸（与字段级 col 共用同一份换算），Col 自身在画布内恒为 span:24 占满外壳
+  canvasShellStyle: schema => shellStyleFromCol({ span: schema.props.span ?? 24 }),
   canvasRender: (schema, children) => {
     const { span, ...rest } = schema.props
     return <Col span={24} {...rest}>{children}</Col>
