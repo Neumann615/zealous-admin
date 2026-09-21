@@ -186,6 +186,8 @@ export interface FormSchema {
   events?: FormEventConfig
   /** 命名全局数据源：字段用 `dataSource.ref` 按名引用 */
   dataSources?: Record<string, DataSourceDef>
+  /** 运行时字段权限；key 为字段名路径，数组行内字段使用 `items.*.field` */
+  permissions?: Record<string, FieldPermission>
   children: FieldSchema[]
 }
 

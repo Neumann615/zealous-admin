@@ -6,6 +6,7 @@ export interface FormRecord {
   name: string
   description: string
   schema: string
+  permissions?: string
   status: number
   version: number
   createTime: string
@@ -55,7 +56,7 @@ export function createFormAPI(data: { name: string, description?: string }) {
   })
 }
 
-/** 更新表单（名称/描述/schema/状态） */
+/** 更新表单（名称/描述/schema/权限/状态） */
 export function updateFormAPI(data: { id: number, name?: string, description?: string, schema?: string, status?: number }) {
   return http({
     url: '/form/update',

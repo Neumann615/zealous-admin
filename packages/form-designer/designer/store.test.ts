@@ -266,6 +266,40 @@ describe('designer store', () => {
     expect(store().schema.children[0].label).toBe('输入框') // 撤销的是 undo 后的整段编辑
   })
 
+  it('updateFieldPermission 保留默认省略并随字段改名迁移', () => {
+    store().addField('input', { parentId: null, index: 0 })
+    const id = store().schema.children[0].id
+    store().updateField(id, 'field', 'name')
+    store().updateFieldPermission('name', {
+      visible: false,
+      editable: false,
+      required: true,
+    })
+    expect(store().schema.permissions?.name).toEqual({
+      visible: false,
+      editable: false,
+      required: true,
+    })
+
+    store().updateField(id, 'field', 'username')
+    expect(store().schema.permissions?.name).toBeUndefined()
+    expect(store().schema.permissions?.username).toEqual({
+      visible: false,
+      editable: false,
+      required: true,
+    })
+  })
+
+  it('删除字段后清理对应权限', () => {
+    store().addField('input', { parentId: null, index: 0 })
+    const id = store().schema.children[0].id
+    const field = store().schema.children[0].field!
+    store().updateFieldPermission(field, { editable: false })
+    expect(store().schema.permissions?.[field]).toEqual({ editable: false })
+    store().removeField(id)
+    expect(store().schema.permissions).toBeUndefined()
+  })
+
   it('同 key 间隔 ≥500ms 推新快照，窗口内合并', () => {
     vi.useFakeTimers()
     try {

@@ -1,11 +1,12 @@
 import type { CustomHookDef, FormEventConfig } from '../events/types'
-import type { FieldSchema, FormSchema } from '../types/schema'
+import type { FieldPermission, FieldSchema, FormSchema } from '../types/schema'
 import { create } from 'zustand'
 import { getComponent } from '../registry/registry'
 import { createEmptySchema } from '../types/schema'
 import { validateSchemaFieldNames } from '../utils/fieldName'
 import { parseSchema } from '../utils/parseSchema'
 import { setByPath } from '../utils/path'
+import { getFieldPermissionKey, pruneFieldPermissions, renameFieldPermissions } from '../utils/permissions'
 import { childrenOf, cloneNode, findNode, isDescendant, removeNode } from '../utils/schemaTree'
 import { uniqueId } from '../utils/uniqueId'
 
@@ -39,6 +40,7 @@ interface DesignerState {
   updateFormConfig: (patch: Partial<FormSchema['form']>) => void
   updateEvents: (patch: Partial<FormEventConfig>) => void
   updateCustomHooks: (custom: Record<string, CustomHookDef>) => void
+  updateFieldPermission: (path: string, patch: FieldPermission) => void
   undo: () => void
   redo: () => void
   clear: () => void
@@ -135,6 +137,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
       mutate((draft) => {
         if (!removeNode(draft, id))
           return false
+        draft.permissions = pruneFieldPermissions(draft.permissions, draft.children)
       })
       // 删除的可能是包含选中节点的容器，统一校验选中态
       if (get().selectedId && !findNode(get().schema.children, get().selectedId!))
@@ -156,7 +159,13 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
         const located = findNode(draft.children, id)
         if (!located)
           return false
+        const oldPermissionKey = path === 'field' ? getFieldPermissionKey(draft.children, id) : null
         setByPath(located.node as unknown as Record<string, any>, path, value)
+        if (oldPermissionKey) {
+          const newPermissionKey = getFieldPermissionKey(draft.children, id)
+          if (newPermissionKey)
+            draft.permissions = renameFieldPermissions(draft.permissions, oldPermissionKey, newPermissionKey)
+        }
       }, coalesce ? `${id}:${path}` : undefined)
     },
 
@@ -170,6 +179,26 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
     updateCustomHooks: custom => mutate((draft) => {
       draft.events = { ...(draft.events || {}), custom }
     }, 'events:custom'),
+
+    updateFieldPermission: (path, patch) => mutate((draft) => {
+      const next: FieldPermission = {
+        ...(draft.permissions?.[path] ?? {}),
+        ...patch,
+      }
+      if (next.visible !== false)
+        delete next.visible
+      if (next.editable !== false)
+        delete next.editable
+      if (next.required !== true)
+        delete next.required
+
+      const permissions = { ...(draft.permissions ?? {}) }
+      if (Object.keys(next).length)
+        permissions[path] = next
+      else
+        delete permissions[path]
+      draft.permissions = Object.keys(permissions).length ? permissions : undefined
+    }, `permission:${path}`),
 
     undo: () => {
       const { past, schema, future } = get()
@@ -197,7 +226,10 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
       })
     },
 
-    clear: () => mutate(draft => void (draft.children = [])),
+    clear: () => mutate((draft) => {
+      draft.children = []
+      draft.permissions = pruneFieldPermissions(draft.permissions, draft.children)
+    }),
 
     importSchema: (json) => {
       let parsed: FormSchema
@@ -222,6 +254,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
         // events / dataSources 也必须回填：否则「导出 → 导入」会静默丢掉全部钩子与数据源
         draft.events = parsed.events
         draft.dataSources = parsed.dataSources
+        draft.permissions = pruneFieldPermissions(parsed.permissions, children)
       })
       set({ selectedId: null })
       return { ok: true }
@@ -237,6 +270,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
         form: schema.form,
         events: schema.events,
         dataSources: schema.dataSources,
+        permissions: schema.permissions,
       }, null, 2)
     },
 
@@ -257,6 +291,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
         return { ok: false, reason: '渲染规则中没有有效字段节点' }
       mutate((draft) => {
         draft.children = valid
+        draft.permissions = pruneFieldPermissions(draft.permissions, valid)
       })
       set({ selectedId: null })
       return { ok: true }
@@ -279,6 +314,8 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
           draft.events = options.events
         if (options.dataSources !== undefined)
           draft.dataSources = options.dataSources
+        if (options.permissions !== undefined)
+          draft.permissions = options.permissions
       })
       return { ok: true }
     },

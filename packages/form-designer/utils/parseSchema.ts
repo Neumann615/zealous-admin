@@ -1,5 +1,5 @@
 import type { FormEventConfig } from '../events/types'
-import type { ControlRule, DataSourceDef, FieldDataSource, FieldOption, FieldSchema, FormSchema, ValidateRule } from '../types/schema'
+import type { ControlRule, DataSourceDef, FieldDataSource, FieldOption, FieldPermission, FieldSchema, FormSchema, ValidateRule } from '../types/schema'
 import { isFnSource } from '../events/fnSource'
 import { validateEvents, validateHookFn } from '../events/validateEvents'
 import { CONTROL_EFFECTS, CONTROL_OPERATORS, createEmptySchema, DATA_SOURCE_TYPES, SCHEMA_VERSION, THRESHOLD_RULE_TYPES, VALIDATE_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
@@ -47,6 +47,28 @@ function validateCol(node: FieldSchema, where: string): string[] {
       issues.push(`${issue}：${key} 必须是 0-24 的整数`)
   }
   return issues
+}
+
+function validatePermissions(value: unknown): string[] {
+  if (value === undefined)
+    return []
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    return ['字段权限格式不正确：应为对象']
+
+  return Object.entries(value).flatMap(([key, permission]) => {
+    if (!key.trim())
+      return ['字段权限格式不正确：权限 key 不能为空']
+    if (!permission || typeof permission !== 'object' || Array.isArray(permission))
+      return [`字段权限格式不正确（${key}）：应为对象`]
+    const item = permission as FieldPermission
+    if (item.visible !== undefined && typeof item.visible !== 'boolean')
+      return [`字段权限格式不正确（${key}）：visible 必须是布尔值`]
+    if (item.editable !== undefined && typeof item.editable !== 'boolean')
+      return [`字段权限格式不正确（${key}）：editable 必须是布尔值`]
+    if (item.required !== undefined && typeof item.required !== 'boolean')
+      return [`字段权限格式不正确（${key}）：required 必须是布尔值`]
+    return []
+  })
 }
 
 function validateOneRule(rule: unknown, where: string): string[] {
@@ -264,6 +286,9 @@ export function parseSchema(input: string | unknown): FormSchema {
     throw new Error('表单结构解析失败：children 应为数组')
   if (raw.form !== undefined && (typeof raw.form !== 'object' || raw.form === null))
     throw new Error('表单结构解析失败：form 应为对象')
+  const permissionIssues = validatePermissions(raw.permissions)
+  if (permissionIssues.length)
+    throw new Error(`表单结构解析失败：${permissionIssues[0]}`)
   // 与设计器保存拦截共用同一份校验（events/validateEvents），避免两边规则分叉
   const eventIssues = validateEvents(raw.events as FormEventConfig | undefined)
   if (eventIssues.length)

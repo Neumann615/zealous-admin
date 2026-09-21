@@ -2,11 +2,13 @@ import type { ConfigMeta } from '../registry/registry'
 import { Divider } from 'antd'
 import { getComponent } from '../registry/registry'
 import { collectFieldNamePaths, getFieldNameIssue, getFieldPathIssue, nodeBindsField } from '../utils/fieldName'
+import { getFieldPermissionKey } from '../utils/permissions'
 import { ColEditor } from './ColEditor'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
 import { ControlEditor } from './ControlEditor'
 import { DataSourceEditor } from './DataSourceEditor'
 import { FormEventsPanel } from './FormEventsPanel'
+import { PermissionEditor } from './PermissionEditor'
 import { useDesignerStore } from './store'
 import { ValidateEditor } from './ValidateEditor'
 
@@ -25,7 +27,7 @@ function getCommonMetas(hasField: boolean): ConfigMeta[] {
 }
 
 function FieldConfig() {
-  const { getSelected, updateField, schema } = useDesignerStore()
+  const { getSelected, updateField, updateFieldPermission, schema } = useDesignerStore()
   const node = getSelected()
   if (!node)
     return null
@@ -46,6 +48,7 @@ function FieldConfig() {
   const commonMetas = getCommonMetas(hasField)
   const nameIssue = getFieldNameIssue(schema, node.id)
   const fieldNames = collectFieldNamePaths(schema.children)
+  const permissionKey = hasField ? getFieldPermissionKey(schema.children, node.id) : null
   const dataSourceNames = Object.keys(schema.dataSources ?? {})
   const pathIssueOf = (path: string) => getFieldPathIssue(schema.children, path)
 
@@ -106,6 +109,15 @@ function FieldConfig() {
         <>
           <Divider titlePlacement="start" plain style={{ margin: '16px 0 12px' }}>组件属性</Divider>
           <ConfigFormRenderer key={node.id} node={node} metas={def.configForm} />
+        </>
+      )}
+      {permissionKey && (
+        <>
+          <Divider titlePlacement="start" plain style={{ margin: '16px 0 12px' }}>运行权限</Divider>
+          <PermissionEditor
+            value={schema.permissions?.[permissionKey]}
+            onChange={permission => updateFieldPermission(permissionKey, permission)}
+          />
         </>
       )}
     </div>

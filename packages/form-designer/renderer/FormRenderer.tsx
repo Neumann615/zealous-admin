@@ -89,23 +89,34 @@ interface ResolvedSchema {
  * 把后端 permissions 就地应用到 schema 树（调用方已 deep clone）：
  * visible:false → hidden；editable:false → disabled；required:true → required
  */
-function applyPermissions(children: FieldSchema[], permissions: Record<string, FieldPermission> | undefined): void {
+function applyPermissions(
+  children: FieldSchema[],
+  permissions: Record<string, FieldPermission> | undefined,
+  prefixes: string[][] = [[]],
+): void {
   if (!permissions)
     return
   for (const node of children) {
-    if (!node.field)
-      continue
-    const perm = permissions[node.field]
-    if (!perm)
-      continue
-    if (perm.visible === false)
+    const paths = prefixes.map(prefix => node.field ? [...prefix, node.field] : prefix)
+    const keys = [...new Set(paths.map(path => path.join('.')))]
+    const perm = keys.length ? keys.map(key => permissions[key]).find(Boolean) : undefined
+    if (perm?.visible === false)
       node.formItem = { ...node.formItem, hidden: true }
-    if (perm.editable === false)
+    if (perm?.editable === false)
       node.props = { ...node.props, disabled: true }
-    if (perm.required === true)
+    if (perm?.required === true)
       node.formItem = { ...node.formItem, required: true }
-    if (node.children?.length)
-      applyPermissions(node.children, permissions)
+    if (node.children?.length) {
+      applyPermissions(
+        node.children,
+        permissions,
+        paths.flatMap((path) => {
+          if (!path.length)
+            return [path]
+          return [path, [...path, '*']]
+        }),
+      )
+    }
   }
 }
 
@@ -130,6 +141,7 @@ function useFormRendererLoader(
   useEffect(() => {
     if (schema) {
       const clone: FormSchema = JSON.parse(JSON.stringify(schema))
+      applyPermissions(clone.children, clone.permissions)
       setResolved({ schema: clone, data: initialValues })
       setError('')
       return
@@ -161,7 +173,10 @@ function useFormRendererLoader(
             throw new Error('render 接口返回缺少 schema')
           const parsed = typeof contract.schema === 'string' ? parseSchema(contract.schema) : contract.schema as FormSchema
           const clone: FormSchema = JSON.parse(JSON.stringify(parsed))
-          applyPermissions(clone.children, contract.permissions)
+          applyPermissions(clone.children, {
+            ...parsed.permissions,
+            ...contract.permissions,
+          })
           setResolved({ schema: clone, data: contract.data ?? initialValues })
         })
         .catch((e: any) => {

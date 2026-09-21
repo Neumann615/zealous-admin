@@ -87,6 +87,18 @@ router.post('/form/update', (req, res) => {
       res.json(failed('表单不存在'))
       return
     }
+    let permissionsText: string | null = null
+    if (schema !== undefined) {
+      try {
+        const parsedSchema = JSON.parse(schema)
+        permissionsText = JSON.stringify(parsedSchema.permissions ?? {})
+      }
+      catch {
+        res.json(failed('表单 Schema 不是合法 JSON'))
+        return
+      }
+    }
+
     // schema 变化时版本号 +1
     const versionBump = schema !== undefined ? 1 : 0
     db.prepare(
@@ -95,10 +107,11 @@ router.post('/form/update', (req, res) => {
         description = COALESCE(?, description),
         schema = COALESCE(?, schema),
         status = COALESCE(?, status),
+        permissions = COALESCE(?, permissions),
         version = version + ?,
         update_time = ?
       WHERE id = ?`,
-    ).run(name ?? null, description ?? null, schema ?? null, status ?? null, versionBump, now(), id)
+    ).run(name ?? null, description ?? null, schema ?? null, status ?? null, permissionsText, versionBump, now(), id)
     res.json(success(null, '更新成功'))
   }
   catch (e: any) {
