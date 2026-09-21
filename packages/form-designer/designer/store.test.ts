@@ -73,6 +73,16 @@ describe('designer store', () => {
     expect(store().schema.children[0].id).toBe(cardId) // 未变化
   })
 
+  it('moveField 拒绝拖入非容器节点', () => {
+    store().addField('input', { parentId: null, index: 0 })
+    store().addField('input', { parentId: null, index: 1 })
+    const [first, second] = store().schema.children.map(node => node.id)
+
+    store().moveField(first, { parentId: second, index: 0 })
+
+    expect(store().schema.children.map(node => node.id)).toEqual([first, second])
+  })
+
   it('removeField / duplicateField', () => {
     store().addField('input', { parentId: null, index: 0 })
     const id = store().schema.children[0].id

@@ -4,7 +4,8 @@ import { create } from 'zustand'
 import { getComponent } from '../registry/registry'
 import { createEmptySchema } from '../types/schema'
 import { validateSchemaFieldNames } from '../utils/fieldName'
-import { parseSchema } from '../utils/parseSchema'
+import { validateOptionsImport, validateRuleImport } from '../utils/importValidation'
+import { parseSchema, validateFieldRules } from '../utils/parseSchema'
 import { setByPath } from '../utils/path'
 import { getFieldPermissionKey, pruneFieldPermissions, renameFieldPermissions } from '../utils/permissions'
 import { childrenOf, cloneNode, findNode, isDescendant, removeNode } from '../utils/schemaTree'
@@ -113,6 +114,11 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
     moveField: (id, target) => {
       if (target.parentId === id)
         return // 不能拖入自身
+      if (target.parentId) {
+        const parent = findNode(get().schema.children, target.parentId)
+        if (!parent || !getComponent(parent.node.type)?.isContainer)
+          return // 只允许容器接收子节点
+      }
       const located = findNode(get().schema.children, id)
       if (!located)
         return
@@ -282,16 +288,17 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
       catch {
         return { ok: false, reason: '渲染规则不是合法 JSON' }
       }
-      if (!Array.isArray(children))
-        return { ok: false, reason: '渲染规则应为字段树数组' }
-      const valid = children.filter(
-        (c: any) => typeof c?.id === 'string' && typeof c?.type === 'string',
-      )
-      if (!valid.length)
-        return { ok: false, reason: '渲染规则中没有有效字段节点' }
+      const issues = validateRuleImport(children)
+      if (issues.length) {
+        const brief = issues.slice(0, 3).join('；')
+        return { ok: false, reason: `渲染规则校验未通过，未导入：${brief}${issues.length > 3 ? ' 等' : ''}` }
+      }
+      const ruleIssues = validateFieldRules(children, get().schema.dataSources)
+      if (ruleIssues.length)
+        return { ok: false, reason: `校验规则与当前数据源冲突：${ruleIssues[0]}` }
       mutate((draft) => {
-        draft.children = valid
-        draft.permissions = pruneFieldPermissions(draft.permissions, valid)
+        draft.children = children
+        draft.permissions = pruneFieldPermissions(draft.permissions, children)
       })
       set({ selectedId: null })
       return { ok: true }
@@ -305,8 +312,11 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
       catch {
         return { ok: false, reason: '表单配置不是合法 JSON' }
       }
-      if (!options || typeof options !== 'object' || Array.isArray(options))
-        return { ok: false, reason: '表单配置应为对象' }
+      const issues = validateOptionsImport(options, get().schema)
+      if (issues.length) {
+        const brief = issues.slice(0, 3).join('；')
+        return { ok: false, reason: `表单配置校验未通过，未导入：${brief}${issues.length > 3 ? ' 等' : ''}` }
+      }
       mutate((draft) => {
         if (options.form !== undefined)
           draft.form = { ...draft.form, ...options.form }

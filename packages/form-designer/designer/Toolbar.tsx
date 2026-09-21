@@ -1,5 +1,6 @@
 import {
   ClearOutlined,
+  CodeOutlined,
   ExportOutlined,
   EyeOutlined,
   ImportOutlined,
@@ -7,9 +8,10 @@ import {
   SaveOutlined,
   UndoOutlined,
 } from '@ant-design/icons'
-import { App, Button, Divider, Input, Modal, Space, Tabs } from 'antd'
-import { useState } from 'react'
+import { Alert, App, Button, Divider, Input, Modal, Space, Tabs } from 'antd'
+import { useMemo, useState } from 'react'
 import { FormRenderer } from '../renderer/FormRenderer'
+import { validateOptionsImport, validateRuleImport } from '../utils/importValidation'
 import { useDesignerStore } from './store'
 
 interface ToolbarProps {
@@ -21,9 +23,10 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
   const { message, modal } = App.useApp()
   const canUndo = useDesignerStore(s => s.past.length > 0)
   const canRedo = useDesignerStore(s => s.future.length > 0)
-  const { undo, redo, clear, importRule, importOptions, exportRule, exportOptions, schema } = useDesignerStore()
+  const { undo, redo, clear, importRule, importOptions, exportRule, exportOptions, exportSchema, schema } = useDesignerStore()
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [jsonOpen, setJsonOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [importTab, setImportTab] = useState<'rule' | 'options'>('rule')
@@ -61,6 +64,20 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
     })
   }
 
+  const importIssues = useMemo(() => {
+    if (!importText.trim())
+      return []
+    try {
+      const value = JSON.parse(importText)
+      return importTab === 'rule'
+        ? validateRuleImport(value)
+        : validateOptionsImport(value, schema)
+    }
+    catch {
+      return [importTab === 'rule' ? '渲染规则不是合法 JSON' : '表单配置不是合法 JSON']
+    }
+  }, [importTab, importText, schema])
+
   return (
     <Space split={<Divider type="vertical" />}>
       <Space>
@@ -70,6 +87,7 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
       <Space>
         <Button size="small" icon={<ImportOutlined />} onClick={openImport}>导入</Button>
         <Button size="small" icon={<ExportOutlined />} onClick={() => setExportOpen(true)}>导出</Button>
+        <Button size="small" icon={<CodeOutlined />} onClick={() => setJsonOpen(true)}>JSON</Button>
         <Button size="small" danger icon={<ClearOutlined />} onClick={handleClear}>清空</Button>
       </Space>
       <Space>
@@ -118,6 +136,36 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
               ),
             },
           ]}
+        />
+        {importIssues.length > 0 && (
+          <Alert
+            type="error"
+            showIcon
+            title="配置校验未通过"
+            description={(
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {importIssues.slice(0, 8).map(issue => <li key={issue}>{issue}</li>)}
+              </ul>
+            )}
+            style={{ marginTop: 12 }}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        title="Schema JSON 预览"
+        open={jsonOpen}
+        footer={null}
+        width={760}
+        centered
+        onCancel={() => setJsonOpen(false)}
+        styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+      >
+        <Input.TextArea
+          rows={20}
+          readOnly
+          value={exportSchema()}
+          onFocus={event => event.target.select()}
         />
       </Modal>
 

@@ -35,6 +35,8 @@ const useStyles = createStyles(({ token, css }) => ({
   left: css`
     width: 250px;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
     background: ${token.colorBgContainer};
     border-right: 1px solid ${token.colorBorderSecondary};
     overflow-y: auto;

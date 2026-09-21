@@ -101,6 +101,39 @@ describe('设计器交互（P5 新组件）', () => {
       expect(screen.getAllByText(def(type).title).length).toBeGreaterThan(0)
   })
 
+  it('结构树展示嵌套字段并支持定位选中', () => {
+    const subForm = def('subForm').defaultSchema()
+    subForm.label = '联系人'
+    subForm.field = 'contact'
+    subForm.children = [{ id: 'nested-name', type: 'input', field: 'name', label: '姓名', props: {} }]
+    renderDesigner({ version: 2, form: { layout: 'vertical' }, children: [subForm] })
+
+    fireEvent.click(screen.getByText('结构'))
+    const tree = document.querySelector('.ant-tree') as HTMLElement
+    expect(tree).toBeTruthy()
+    expect(within(tree).getByText('联系人')).toBeTruthy()
+    fireEvent.click(within(tree).getByText('姓名'))
+
+    expect(useDesignerStore.getState().selectedId).toBe('nested-name')
+    expect(screen.getByText('· name')).toBeTruthy()
+  })
+
+  it('导入弹窗实时提示结构错误，非法配置不写入 store', () => {
+    renderDesigner(createEmptySchema())
+    fireEvent.click(screen.getByRole('button', { name: /导\s*入/ }))
+
+    const textarea = document.querySelector('.ant-modal textarea') as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: '[{"id":"bad","type":"not-exists","props":{}}]' } })
+    expect(screen.getByText('配置校验未通过')).toBeTruthy()
+    expect(screen.getByText(/未注册组件类型/)).toBeTruthy()
+
+    const modal = document.querySelector('.ant-modal') as HTMLElement
+    const okButtons = Array.from(modal.querySelectorAll('button')).filter(button => /导\s*入/.test(button.textContent ?? ''))
+    fireEvent.click(okButtons[okButtons.length - 1])
+
+    expect(useDesignerStore.getState().schema.children).toHaveLength(0)
+  })
+
   it('画布渲染 6 个新组件的设计态外壳不抛错', () => {
     const { container } = renderDesigner(schemaOf(NEW_TYPES))
 
