@@ -196,3 +196,28 @@ export function createEmptySchema(): FormSchema {
     children: [],
   }
 }
+
+/** 单字段权限（后端 render 接口下发） */
+export interface FieldPermission {
+  /** 是否可见；false 时渲染器不渲染该字段（但值仍进提交报文） */
+  visible?: boolean
+  /** 是否可编辑；false 时字段 disabled */
+  editable?: boolean
+  /** 是否必填；true 时叠加 required 规则 */
+  required?: boolean
+}
+
+/**
+ * render 接口返回的完整契约：schema + 回显数据 + 字段权限。
+ * 调用方只传表单标识，渲染器自动请求后端合并结果后按此契约渲染。
+ */
+export interface RenderContract {
+  /** FormSchema JSON 字符串（或已解析对象，渲染器兼容两种形态） */
+  schema: string | FormSchema
+  /** 服务端合并后的回显数据 */
+  data?: Record<string, unknown>
+  /** 每字段权限；key = 字段名（含嵌套路径如 contact.name） */
+  permissions?: Record<string, FieldPermission>
+  /** 当前表单版本号（后端 schema 变更时自增） */
+  formVersion?: number
+}

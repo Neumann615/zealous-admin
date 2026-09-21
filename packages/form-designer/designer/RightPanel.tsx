@@ -1,5 +1,5 @@
 import type { ConfigMeta } from '../registry/registry'
-import { Divider, Tabs } from 'antd'
+import { Divider } from 'antd'
 import { getComponent } from '../registry/registry'
 import { collectFieldNamePaths, getFieldNameIssue, getFieldPathIssue, nodeBindsField } from '../utils/fieldName'
 import { ColEditor } from './ColEditor'
@@ -28,8 +28,7 @@ function FieldConfig() {
   const { getSelected, updateField, schema } = useDesignerStore()
   const node = getSelected()
   if (!node)
-    return <div style={{ color: '#999', padding: 12 }}>在画布中点击选择一个字段</div>
-
+    return null
   const def = getComponent(node.type)
   if (!def)
     return <div style={{ color: '#999', padding: 12 }}>未注册的组件类型</div>
@@ -113,16 +112,14 @@ function FieldConfig() {
   )
 }
 
+/**
+ * 右侧面板两级配置上下文（对齐 form-manage 交互）：
+ * - 未选中字段 → 默认显示「表单配置」（布局 / 全局事件 / 公共事件）
+ * - 选中字段 → 自动切换为「字段配置」（基础 / 布局 / 校验 / 数据来源 / 联动 / 组件属性）
+ */
 export function RightPanel() {
-  return (
-    <Tabs
-      size="small"
-      centered
-      style={{ height: '100%' }}
-      items={[
-        { key: 'field', label: '属性', children: <FieldConfig /> },
-        { key: 'form', label: '表单', children: <FormEventsPanel /> },
-      ]}
-    />
-  )
+  const selectedId = useDesignerStore(s => s.selectedId)
+  if (selectedId)
+    return <FieldConfig />
+  return <FormEventsPanel />
 }

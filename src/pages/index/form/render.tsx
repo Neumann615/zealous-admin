@@ -1,38 +1,17 @@
-import type { FormSchema } from '@zealous-admin/form-designer/index'
-import { FormRenderer, parseSchema } from '@zealous-admin/form-designer/index'
+import { FormRenderer } from '@zealous-admin/form-designer/index'
 import { useAppMessage } from '@zealous-admin/layout/index'
-import { Card, Empty, Form, Spin, Tag } from 'antd'
-import { useEffect, useState } from 'react'
+import { Card, Form, Tag } from 'antd'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getFormDetailAPI, submitFormDataAPI } from '@/apis/form'
+import { submitFormDataAPI } from '@/apis/form'
 
 export default function FormRenderPage() {
   const { message } = useAppMessage()
   const [searchParams] = useSearchParams()
   const id = Number(searchParams.get('id'))
   const [form] = Form.useForm()
-  const [loading, setLoading] = useState(!!id)
-  const [schema, setSchema] = useState<FormSchema | null>(null)
-  const [name, setName] = useState('')
   const [submitted, setSubmitted] = useState<{ dataId: number, values: Record<string, any> } | null>(null)
 
-  useEffect(() => {
-    if (!id)
-      return
-    getFormDetailAPI(id).then((res) => {
-      setName(res.data.name)
-      if (res.data.schema) {
-        try {
-          setSchema(parseSchema(res.data.schema))
-        }
-        catch (e: any) {
-          message.warning(e?.message || '表单数据解析失败')
-        }
-      }
-    }).finally(() => setLoading(false))
-  }, [id])
-
-  // 提交即落库，成功后清空表单并记录本次数据编号
   const handleSubmit = async (values: Record<string, any>) => {
     try {
       const res = await submitFormDataAPI({ formId: id, data: values })
@@ -43,15 +22,10 @@ export default function FormRenderPage() {
     catch { /* 失败提示由 http 拦截器统一弹出 */ }
   }
 
-  if (loading)
-    return <Spin style={{ display: 'block', margin: '120px auto' }} />
-  if (!schema)
-    return <Empty description="未找到表单或尚未保存设计" />
-
   return (
     <div className="app-container">
-      <Card title={`渲染测试：${name}`} style={{ maxWidth: 860, margin: '0 auto' }}>
-        <FormRenderer form={form} schema={schema} onSubmit={handleSubmit} />
+      <Card title={`表单 #${id}`} style={{ maxWidth: 860, margin: '0 auto' }}>
+        <FormRenderer formId={id} form={form} onSubmit={handleSubmit} />
         {submitted && (
           <div style={{ marginTop: 16 }}>
             <Tag color="green">

@@ -123,4 +123,49 @@ router.post('/form/delete', (req, res) => {
   }
 })
 
+/**
+ * 运行时统一渲染接口：调用方只传 formId + 可选回显数据，
+ * 服务端合并 schema + 回显数据 + 字段权限后返回 RenderContract。
+ * 权限来源：za_form 表的 permissions 列（JSON，key = 字段名）；未配置时不返回 permissions。
+ */
+router.post('/form/render', (req, res) => {
+  try {
+    const { formId, data } = req.body
+    if (!formId) {
+      res.json(failed('缺少 formId'))
+      return
+    }
+    const form = db.prepare('SELECT id, name, schema, status, version, permissions FROM za_form WHERE id = ?').get(Number(formId)) as any
+    if (!form) {
+      res.json(failed('表单不存在'))
+      return
+    }
+    if (!form.schema) {
+      res.json(failed('表单尚未保存设计'))
+      return
+    }
+
+    // 权限解析（可选）：permissions 列为 JSON，key = 字段名
+    let permissions: Record<string, any> | undefined
+    if (form.permissions) {
+      try {
+        permissions = typeof form.permissions === 'string' ? JSON.parse(form.permissions) : form.permissions
+      }
+      catch { permissions = undefined }
+    }
+
+    // 回显数据：调用方传入的 data 优先（工作流场景由服务端合并）；无传入时返回空对象
+    const contract = {
+      schema: form.schema,
+      data: data || {},
+      permissions,
+      formVersion: form.version,
+    }
+    res.json(success({ name: form.name, renderContract: contract }))
+  }
+  catch (e: any) {
+    res.json(failed(e.message || '表单渲染失败'))
+  }
+})
+
 export default router

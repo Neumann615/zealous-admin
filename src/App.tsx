@@ -5,6 +5,17 @@ import { Navigate, useRoutes } from 'react-router'
 import routes from '~react-pages'
 import './App.css'
 
+// formId 模式渲染器的取数接口：渲染器通过 __render key 调用
+import { registerFormDataApis } from '@zealous-admin/form-designer/index'
+import { renderFormAPI } from './apis/form'
+
+registerFormDataApis({
+  __render: async (params) => {
+    const res = await renderFormAPI(params)
+    return res.data.renderContract
+  },
+})
+
 // 路由守卫
 function RouteGuard(props: { children: React.ReactNode }) {
   const userStore = useUserStore.getState()

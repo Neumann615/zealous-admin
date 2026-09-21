@@ -91,6 +91,22 @@ export function getFormDataListAPI(params: PageParam & { formId: number, submitt
   })
 }
 
+export interface RenderContract {
+  schema: string
+  data: Record<string, unknown>
+  permissions?: Record<string, { visible?: boolean, editable?: boolean, required?: boolean }>
+  formVersion?: number
+}
+
+/** 运行时统一渲染：传 formId，服务端合并 schema + 回显数据 + 权限后返回契约 */
+export function renderFormAPI(data: Record<string, any>) {
+  return http<{ name: string, renderContract: RenderContract }>({
+    url: '/form/render',
+    method: 'post',
+    data,
+  })
+}
+
 /** 获取单条填写数据详情 */
 export function getFormDataDetailAPI(id: number) {
   return http<FormDataRecord>({

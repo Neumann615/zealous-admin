@@ -44,6 +44,14 @@ interface DesignerState {
   clear: () => void
   importSchema: (json: string) => ImportResult
   exportSchema: () => string
+  /** 导出渲染规则（children 字段树，对应 form-create 的 rule） */
+  exportRule: () => string
+  /** 导出表单配置（form + events + dataSources，对应 form-create 的 options） */
+  exportOptions: () => string
+  /** 导入渲染规则（仅替换字段树，保留当前表单配置） */
+  importRule: (json: string) => ImportResult
+  /** 导入表单配置（仅替换全局配置，保留当前字段树） */
+  importOptions: (json: string) => ImportResult
   setSchema: (schema: FormSchema) => void
   getSelected: () => FieldSchema | null
 }
@@ -220,6 +228,60 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
     },
 
     exportSchema: () => JSON.stringify(get().schema, null, 2),
+
+    exportRule: () => JSON.stringify(get().schema.children, null, 2),
+
+    exportOptions: () => {
+      const { schema } = get()
+      return JSON.stringify({
+        form: schema.form,
+        events: schema.events,
+        dataSources: schema.dataSources,
+      }, null, 2)
+    },
+
+    importRule: (json) => {
+      let children: any[]
+      try {
+        children = JSON.parse(json)
+      }
+      catch {
+        return { ok: false, reason: '渲染规则不是合法 JSON' }
+      }
+      if (!Array.isArray(children))
+        return { ok: false, reason: '渲染规则应为字段树数组' }
+      const valid = children.filter(
+        (c: any) => typeof c?.id === 'string' && typeof c?.type === 'string',
+      )
+      if (!valid.length)
+        return { ok: false, reason: '渲染规则中没有有效字段节点' }
+      mutate((draft) => {
+        draft.children = valid
+      })
+      set({ selectedId: null })
+      return { ok: true }
+    },
+
+    importOptions: (json) => {
+      let options: any
+      try {
+        options = JSON.parse(json)
+      }
+      catch {
+        return { ok: false, reason: '表单配置不是合法 JSON' }
+      }
+      if (!options || typeof options !== 'object' || Array.isArray(options))
+        return { ok: false, reason: '表单配置应为对象' }
+      mutate((draft) => {
+        if (options.form !== undefined)
+          draft.form = { ...draft.form, ...options.form }
+        if (options.events !== undefined)
+          draft.events = options.events
+        if (options.dataSources !== undefined)
+          draft.dataSources = options.dataSources
+      })
+      return { ok: true }
+    },
 
     setSchema: schema => set({ schema, selectedId: null, past: [], future: [], lastCoalesce: null }),
 

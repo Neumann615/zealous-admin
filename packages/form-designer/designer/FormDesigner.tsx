@@ -58,9 +58,10 @@ export interface FormDesignerProps {
   /** 初始 schema。身份（引用）变化时重新装载；同实例切换编辑对象时建议配合 key 使用 */
   initialSchema?: FormSchema
   onSave?: (schema: FormSchema) => void
+  onSubmit?: (values: Record<string, any>) => void | Promise<void>
 }
 
-export function FormDesigner({ initialSchema, onSave }: FormDesignerProps) {
+export function FormDesigner({ initialSchema, onSave, onSubmit }: FormDesignerProps) {
   const { styles } = useStyles()
   const { message } = App.useApp()
   const { setSchema, schema } = useDesignerStore()
@@ -147,7 +148,7 @@ export function FormDesigner({ initialSchema, onSave }: FormDesignerProps) {
   return (
     <div ref={rootRef} className={styles.root}>
       <div className={styles.toolbar}>
-        <Toolbar onSave={onSave ? handleSave : undefined} />
+        <Toolbar onSubmit={onSubmit} onSave={onSave ? handleSave : undefined} />
       </div>
       <DragDropProvider onDragEnd={handleDragEnd}>
         <div className={styles.body}>

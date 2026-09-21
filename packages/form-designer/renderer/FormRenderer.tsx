@@ -1,16 +1,32 @@
 import type { FormInstance } from 'antd'
 import type { FormHookContext } from '../events/types'
-import type { FieldSchema, FormSchema } from '../types/schema'
+import type { FieldPermission, FieldSchema, FormSchema } from '../types/schema'
 import type { EffectiveState } from './control'
 import type { DataSourceReloadHandle } from './hooksContext'
-import { App, Button, Form, Space, message as staticMessage } from 'antd'
+import { Alert, App, Button, Flex, Form, Spin, message as staticMessage } from 'antd'
+import { createStyles } from 'antd-style'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { emitHook, filterRefsForField, runHooks } from '../events/runHooks'
+import { parseSchema } from '../utils/parseSchema'
 import { findNodeByField } from '../utils/schemaTree'
 import { evalControl } from './control'
-import { buildFormProps, isHorizontalLayout, resolveLabelWidth } from './formProps'
+import { getFormDataApi } from './dataApis'
+import { buildFormProps } from './formProps'
 import { FormHooksProvider } from './hooksContext'
 import { renderField } from './renderField'
+
+const useStyles = createStyles(({ css, token }) => ({
+  actions: css`
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-top: ${token.marginLG}px;
+    margin-bottom: 0;
+    padding: ${token.marginSM}px 0;
+    background: ${token.colorBgContainer};
+    border-top: 1px solid ${token.colorBorderSecondary};
+  `,
+}))
 
 /**
  * 是否有字段依赖表单值：数据源的 `watch`（依赖重跑）或联动 `control`（有效态重算）。
@@ -44,8 +60,18 @@ function collectControlStates(
 }
 
 export interface FormRendererProps {
-  schema: FormSchema
+  /** 通道①：调用方已有 FormSchema，直接传入（零网络请求） */
+  schema?: FormSchema
+
+  /** 通道②：传表单 ID，渲染器通过宿主注册的 `__render` API 自动加载 */
+  formId?: number
+
+  /** 通道③：FormSchema JSON 字符串直传（调试 / 降级路径） */
+  schemaJson?: string
+
   initialValues?: Record<string, any>
+  /** 整体只读（叠加在权限 editable: false 之上） */
+  readonly?: boolean
   onSubmit?: (values: Record<string, any>) => void | Promise<void>
   /** 是否显示提交/重置按钮，业务页面可自行接管提交 */
   showActions?: boolean
@@ -53,7 +79,129 @@ export interface FormRendererProps {
   form?: FormInstance
 }
 
-export function FormRenderer({ schema, initialValues, onSubmit, showActions = true, form: externalForm }: FormRendererProps) {
+/** 三通道收敛后的就绪状态 */
+interface ResolvedSchema {
+  schema: FormSchema
+  data?: Record<string, any>
+}
+
+/**
+ * 把后端 permissions 就地应用到 schema 树（调用方已 deep clone）：
+ * visible:false → hidden；editable:false → disabled；required:true → required
+ */
+function applyPermissions(children: FieldSchema[], permissions: Record<string, FieldPermission> | undefined): void {
+  if (!permissions)
+    return
+  for (const node of children) {
+    if (!node.field)
+      continue
+    const perm = permissions[node.field]
+    if (!perm)
+      continue
+    if (perm.visible === false)
+      node.formItem = { ...node.formItem, hidden: true }
+    if (perm.editable === false)
+      node.props = { ...node.props, disabled: true }
+    if (perm.required === true)
+      node.formItem = { ...node.formItem, required: true }
+    if (node.children?.length)
+      applyPermissions(node.children, permissions)
+  }
+}
+
+/**
+ * 三通道收敛 hook：schema 直传 > formId API > schemaJson 降级。
+ * formId 模式走宿主注册的 `__render` API（与数据源 api 共用注册机制），
+ * 后端合并 schema + 回显数据 + 权限后返回 RenderContract。
+ */
+function useFormRendererLoader(
+  props: FormRendererProps,
+): { resolved: ResolvedSchema | null, loading: boolean, error: string } {
+  const { schema, formId, schemaJson, initialValues } = props
+  const [resolved, setResolved] = useState<ResolvedSchema | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  // 序列化 key 避免调用方每次渲染传新引用导致重复加载
+  const schemaKey = schema ? JSON.stringify(schema) : ''
+  const schemaJsonKey = schemaJson || ''
+  const initialDataKey = initialValues ? JSON.stringify(initialValues) : ''
+
+  useEffect(() => {
+    if (schema) {
+      const clone: FormSchema = JSON.parse(JSON.stringify(schema))
+      setResolved({ schema: clone, data: initialValues })
+      setError('')
+      return
+    }
+    if (schemaJson) {
+      try {
+        const parsed = parseSchema(schemaJson)
+        setResolved({ schema: parsed, data: initialValues })
+        setError('')
+      }
+      catch (e: any) {
+        setError(e?.message || 'Schema 解析失败')
+        setResolved(null)
+      }
+      return
+    }
+    if (formId) {
+      const renderApi = getFormDataApi('__render')
+      if (!renderApi) {
+        setError('formId 模式需要在宿主注册 __render 数据接口（registerFormDataApis）')
+        setResolved(null)
+        return
+      }
+      setLoading(true)
+      setError('')
+      renderApi({ formId, data: initialValues })
+        .then((contract: any) => {
+          if (!contract?.schema)
+            throw new Error('render 接口返回缺少 schema')
+          const parsed = typeof contract.schema === 'string' ? parseSchema(contract.schema) : contract.schema as FormSchema
+          const clone: FormSchema = JSON.parse(JSON.stringify(parsed))
+          applyPermissions(clone.children, contract.permissions)
+          setResolved({ schema: clone, data: contract.data ?? initialValues })
+        })
+        .catch((e: any) => {
+          setError(e?.message || '表单加载失败')
+          setResolved(null)
+        })
+        .finally(() => setLoading(false))
+    }
+  }, [formId, schemaKey, schemaJsonKey, initialDataKey])
+
+  return { resolved, loading, error }
+}
+
+/**
+ * 对外组件：三通道加载 + 加载态/错误态展示；
+ * 加载完成后把 schema 和回显数据交给 FormRendererInner 渲染。
+ */
+export function FormRenderer(props: FormRendererProps) {
+  const { resolved, loading, error } = useFormRendererLoader(props)
+
+  if (loading)
+    return <Spin style={{ display: 'block', margin: '80px auto' }} />
+  if (error)
+    return <Alert type="error" showIcon message={error} style={{ margin: '80px auto', maxWidth: 500 }} />
+  if (!resolved)
+    return null
+
+  return <FormRendererInner {...props} schema={resolved.schema} initialValues={resolved.data} />
+}
+
+/** 内部渲染组件：只负责渲染已就绪的 schema */
+function FormRendererInner({
+  schema,
+  initialValues,
+  onSubmit,
+  showActions = true,
+  readonly,
+  form: externalForm,
+}: FormRendererProps & { schema: FormSchema }) {
+  const { styles } = useStyles()
   const app = App.useApp()
   // 缺 <App> 祖先时 antd 只返回 { message: {} }（无降级、无告警），钩子里 ctx.message.xxx 会
   // 直接 TypeError 并从 runHooks 的 catch 里逃逸。降级到静态 message。
@@ -83,15 +231,10 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
   }, [watchesValues])
 
   const { submitBtn, resetBtn } = schema.form
-  const showSubmit = showActions && (submitBtn ?? true)
-  const showReset = showActions && (resetBtn ?? true)
+  const showSubmit = showActions && !readonly && (submitBtn ?? true)
+  const showReset = showActions && !readonly && (resetBtn ?? true)
   // labelWidth 是像素、offset 是栅格列数，两者无法互相换算；
   // 设了标签宽度就用 marginLeft 对齐，否则沿用原来的 offset: 4
-  const labelWidth = resolveLabelWidth(schema.form)
-  const actionWrapperCol = labelWidth
-    ? { style: { marginLeft: `${labelWidth}px` } }
-    : (isHorizontalLayout(schema.form) ? { offset: 4 } : undefined)
-
   // 事件表与 children 都经 ref 读取：schema 引用变化时既不重建 buildCtx（否则业务页内联传
   // schema 时父组件每次渲染都会让挂载 effect 重跑），也不会拿到旧配置
   const schemaRef = useRef(schema)
@@ -251,11 +394,11 @@ export function FormRenderer({ schema, initialValues, onSubmit, showActions = tr
       <FormHooksProvider value={hooksRuntime}>
         {schema.children.map(c => renderChild(c))}
         {(showSubmit || showReset) && (
-          <Form.Item wrapperCol={actionWrapperCol}>
-            <Space>
+          <Form.Item className={styles.actions} wrapperCol={{ span: 24 }}>
+            <Flex justify="center" gap="small">
               {showSubmit && <Button type="primary" htmlType="submit">提交</Button>}
               {showReset && <Button onClick={handleReset}>重置</Button>}
-            </Space>
+            </Flex>
           </Form.Item>
         )}
       </FormHooksProvider>

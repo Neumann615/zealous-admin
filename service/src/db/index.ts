@@ -103,6 +103,7 @@ export function initDb() {
       schema TEXT,
       status INTEGER DEFAULT 0,
       version INTEGER DEFAULT 1,
+      permissions TEXT,
       create_time TEXT,
       update_time TEXT
     )
@@ -312,12 +313,40 @@ export function initDb() {
       'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).run(pid, '表单管理', 1, 0, 'list', 'ai:AiOutlineUnorderedList', 0, nowStr, '/form/list', null)
     const cid = Number(child.lastInsertRowid)
+    const preview = db.prepare(
+      'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(pid, '表单预览', 1, 1, 'preview', 'ai:AiOutlineEye', 0, nowStr, '/form/preview', null)
+    const previewId = Number(preview.lastInsertRowid)
     const roles = db.prepare('SELECT id FROM za_role').all() as any[]
     const rel = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
     for (const r of roles) {
       rel.run(r.id, pid)
       rel.run(r.id, cid)
+      rel.run(r.id, previewId)
     }
+  }
+
+  // 已有数据库迁移：单独检查 /form/preview 是否存在（老库升级用）
+  const existPreview = db.prepare('SELECT id FROM za_menu WHERE path = ?').get('/form/preview')
+  if (!existPreview) {
+    const parent = db.prepare('SELECT id FROM za_menu WHERE path = ?').get('/form')
+    if (parent) {
+      const nowStr = now()
+      const preview = db.prepare(
+        'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ).run(parent.id, '表单预览', 1, 1, 'preview', 'ai:AiOutlineEye', 0, nowStr, '/form/preview', null)
+      const roles = db.prepare('SELECT id FROM za_role').all() as any[]
+      const rel = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
+      for (const r of roles) {
+        rel.run(r.id, Number(preview.lastInsertRowid))
+      }
+    }
+  }
+
+  // 已有数据库迁移：za_form 表补 permissions 列（老库升级用）
+  const formCols = db.prepare('PRAGMA table_info(za_form)').all() as { name: string }[]
+  if (!formCols.some(c => c.name === 'permissions')) {
+    db.exec('ALTER TABLE za_form ADD COLUMN permissions TEXT')
   }
 }
 

@@ -36,10 +36,14 @@ function schemaOf(types: string[]): FormSchema {
   }
 }
 
-function renderDesigner(schema: FormSchema, onSave?: (schema: FormSchema) => void) {
+function renderDesigner(
+  schema: FormSchema,
+  onSave?: (schema: FormSchema) => void,
+  onSubmit?: (values: Record<string, any>) => void,
+) {
   return render(
     <App>
-      <FormDesigner initialSchema={schema} onSave={onSave} />
+      <FormDesigner initialSchema={schema} onSave={onSave} onSubmit={onSubmit} />
     </App>,
   )
 }
@@ -164,7 +168,12 @@ describe('设计器交互（P5 新组件）', () => {
     tableForm.field = 'items'
     tableForm.children = [{ id: 'row-title', type: 'input', field: 'title', label: '品名', props: {} }]
 
-    renderDesigner({ version: 2, form: { layout: 'vertical' }, children: [subForm, tableForm] })
+    const onSubmit = vi.fn()
+    renderDesigner(
+      { version: 2, form: { layout: 'vertical' }, children: [subForm, tableForm] },
+      undefined,
+      onSubmit,
+    )
     const modal = openPreview()
 
     fireEvent.click(within(modal).getByRole('button', { name: /添加一行/ }))
@@ -176,12 +185,11 @@ describe('设计器交互（P5 新组件）', () => {
     fireEvent.change(titleInput, { target: { value: '苹果' } })
 
     fireEvent.click(within(modal).getByRole('button', { name: /提\s*交/ }))
-    await waitFor(() => expect(modal.querySelector('pre')).toBeTruthy())
-
-    expect(JSON.parse(modal.querySelector('pre')!.textContent!)).toEqual({
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({
       contact: { name: '张三' },
       items: [{ title: '苹果' }],
-    })
+    }),
+    )
   })
 
   it('删除含子字段的容器需二次确认，确认后仍可撤销', async () => {
@@ -341,8 +349,11 @@ describe('字段级栅格（col）', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: /导\s*出/ }))
-    await waitFor(() => expect(screen.getByText(/当前 schema 有问题/)).toBeTruthy())
-    // 导出内容照常给出，只是明确告知这份 JSON 回读会被拒
+    await waitFor(() => {
+      const textarea = document.querySelector('.ant-modal textarea') as HTMLTextAreaElement
+      expect(textarea).toBeTruthy()
+    })
+    // 导出内容照常给出（渲染规则 tab）
     const textarea = document.querySelector('.ant-modal textarea') as HTMLTextAreaElement
     expect(textarea.value).toContain('"type": "len"')
   })
@@ -447,7 +458,7 @@ describe('设计器全局事件与公共事件', () => {
 
     clickSave()
     expect(onSave).not.toHaveBeenCalled()
-    await waitFor(() => expect(screen.getByText(/语法错误/)).toBeTruthy())
+    await waitFor(() => expect(screen.getAllByText(/语法错误/)).toBeTruthy())
   })
 
   it('同时带坏 fn 与 hook 的引用同样被拦截（fn 优先）', async () => {
@@ -461,7 +472,7 @@ describe('设计器全局事件与公共事件', () => {
 
     clickSave()
     expect(onSave).not.toHaveBeenCalled()
-    await waitFor(() => expect(screen.getByText(/语法错误/)).toBeTruthy())
+    await waitFor(() => expect(screen.getAllByText(/语法错误/)).toBeTruthy())
   })
 
   it('语法合法的钩子不拦截保存', () => {
@@ -479,7 +490,6 @@ describe('设计器全局事件与公共事件', () => {
 
   it('表单页签可新增命名公共事件', () => {
     renderDesigner(createEmptySchema())
-    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
     fireEvent.click(screen.getByRole('button', { name: /新增公共事件/ }))
 
     const custom = useDesignerStore.getState().schema.events?.custom
@@ -489,7 +499,6 @@ describe('设计器全局事件与公共事件', () => {
 
   it('全局事件里新增钩子后，编辑函数体写回 store，删除后清空', () => {
     renderDesigner(createEmptySchema())
-    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
 
     // 场景按固定顺序渲染，第一个「添加钩子」对应 onFormCreated
     fireEvent.click(screen.getAllByRole('button', { name: /添加钩子/ })[0])
@@ -507,7 +516,6 @@ describe('设计器全局事件与公共事件', () => {
   it('清空钩子正文后仍是合法 schema（存得进、读得回）', () => {
     const onSave = vi.fn()
     renderDesigner(createEmptySchema(), onSave)
-    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
     fireEvent.click(screen.getAllByRole('button', { name: /添加钩子/ })[0])
 
     // 正文存原文、不 trim：纯空白也要留下来（否则从空正文起手打不进前导空格）
@@ -528,7 +536,6 @@ describe('设计器全局事件与公共事件', () => {
 
   it('切换为「引用公共事件」后，钩子真的执行公共事件', async () => {
     renderDesigner(createEmptySchema())
-    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
     fireEvent.click(screen.getAllByRole('button', { name: /添加钩子/ })[0])
     fireEvent.click(screen.getByRole('button', { name: /新增公共事件/ }))
     act(() => {
@@ -574,7 +581,6 @@ describe('设计器全局事件与公共事件', () => {
   it('清空「引用公共事件」下拉后仍是合法 schema（存得进、读得回）', async () => {
     const onSave = vi.fn()
     renderDesigner(createEmptySchema(), onSave)
-    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
     fireEvent.click(screen.getAllByRole('button', { name: /添加钩子/ })[0])
     fireEvent.click(screen.getByRole('button', { name: /新增公共事件/ }))
 
@@ -610,7 +616,6 @@ describe('设计器全局事件与公共事件', () => {
 
   it('切换 / 清空引用后保留 watch 与 order（只能来自导入 JSON 的附加字段）', async () => {
     renderDesigner(createEmptySchema())
-    fireEvent.click(screen.getByRole('tab', { name: /表\s*单/ }))
     fireEvent.click(screen.getByRole('button', { name: /新增公共事件/ }))
     act(() => {
       useDesignerStore.getState().updateEvents({
@@ -657,7 +662,7 @@ describe('设计器全局事件与公共事件', () => {
 
     clickSave()
     expect(onSave).not.toHaveBeenCalled()
-    await waitFor(() => expect(screen.getByText(/钩子正文过长/)).toBeTruthy())
+    await waitFor(() => expect(screen.getAllByText(/钩子正文过长/)).toBeTruthy())
     // 同一份 schema 在解析侧也被拒（此前是「保存放行、回读拒绝」）
     expect(() => parseSchema(useDesignerStore.getState().exportSchema())).toThrow('钩子正文过长')
   })
