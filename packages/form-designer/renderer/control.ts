@@ -15,6 +15,30 @@ function isEmpty(value: unknown): boolean {
   return Array.isArray(value) && value.length === 0
 }
 
+function compareValues(value: unknown, target: unknown): number | null {
+  const rawValue = typeof value === 'string' ? value.trim() : value
+  const rawTarget = typeof target === 'string' ? target.trim() : target
+  const numericValue = Number(rawValue)
+  const numericTarget = Number(rawTarget)
+  if (rawValue !== '' && rawTarget !== ''
+    && Number.isFinite(numericValue) && Number.isFinite(numericTarget)) {
+    return numericValue - numericTarget
+  }
+  if (rawValue === undefined || rawValue === null || rawValue === ''
+    || rawTarget === undefined || rawTarget === null || rawTarget === '') {
+    return null
+  }
+  return String(rawValue).localeCompare(String(rawTarget))
+}
+
+/** contains 的判定：数组看成员，字符串看子串；其它类型不命中 */
+function containsValue(value: unknown, target: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.includes(target)
+  }
+  return typeof value === 'string' && typeof target === 'string' && value.includes(target)
+}
+
 /**
  * 单条规则的条件判定。未配置 operator 或配置了非法 operator（手写 / 外部 JSON）时按 `eq` 处理，
  * 与面板下拉的默认值一致；比较一律用严格相等，因此「1」与 1 不相等。
@@ -25,6 +49,16 @@ function matchRule(rule: ControlRule, value: unknown): boolean {
       return value !== rule.value
     case 'in':
       return Array.isArray(rule.value) && rule.value.includes(value)
+    case 'contains':
+      return containsValue(value, rule.value)
+    case 'gt':
+      return compareValues(value, rule.value) !== null && compareValues(value, rule.value)! > 0
+    case 'gte':
+      return compareValues(value, rule.value) !== null && compareValues(value, rule.value)! >= 0
+    case 'lt':
+      return compareValues(value, rule.value) !== null && compareValues(value, rule.value)! < 0
+    case 'lte':
+      return compareValues(value, rule.value) !== null && compareValues(value, rule.value)! <= 0
     case 'empty':
       return isEmpty(value)
     case 'notEmpty':

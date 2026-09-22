@@ -8,6 +8,11 @@ const OPERATOR_LABELS: Record<ControlOperator, string> = {
   eq: '等于',
   neq: '不等于',
   in: '属于（数组）',
+  contains: '包含',
+  gt: '大于',
+  gte: '大于等于',
+  lt: '小于',
+  lte: '小于等于',
   empty: '为空',
   notEmpty: '不为空',
 }
@@ -50,7 +55,7 @@ export function ControlEditor({ value = [], onChange, fieldNames = [], selfRequi
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {value.map((rule, i) => (
-        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 6, border: '1px solid #f0f0f0', borderRadius: 6 }}>
+        <div key={JSON.stringify(rule)} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 6, border: '1px solid #f0f0f0', borderRadius: 6 }}>
           <div style={{ display: 'flex', gap: 6 }}>
             <Select
               size="small"

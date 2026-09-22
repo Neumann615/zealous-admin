@@ -209,7 +209,7 @@ interface ControlRule {
   /** 条件依赖的字段（名路径） */
   field: string
   /** 比较方式，默认 eq */
-  operator?: 'eq' | 'neq' | 'in' | 'empty' | 'notEmpty'
+  operator?: 'eq' | 'neq' | 'in' | 'contains' | 'gt' | 'gte' | 'lt' | 'lte' | 'empty' | 'notEmpty'
   /** operator 为 in 时为数组 */
   value?: any
   /** 条件命中时施加的效果，可多选 */
@@ -224,10 +224,13 @@ interface ControlRule {
 | `eq`（默认） | `值 === rule.value` |
 | `neq` | `值 !== rule.value` |
 | `in` | `值` 出现在 `rule.value`（数组）里 |
+| `contains` | `值` 是数组且包含目标值，或是字符串且包含目标子串 |
+| `gt` / `gte` | 两侧都能转成数字时按数值比较；否则按字符串字典序比较 |
+| `lt` / `lte` | 同上，方向相反 |
 | `empty` | 值为 `undefined` / `null` / `''` / `[]`（`0` 与 `false` 不算空） |
 | `notEmpty` | 上述之外的一切值 |
 
-比较一律是**严格相等**，因此 `1` 与 `"1"` 不相等。面板的值输入会把数字 / 布尔 / 数组按 JSON 解析（写 `1` 得到数字 1，写 `true` 得到布尔值），其它按字符串处理。未配置或配置了非法 `operator`（手写 / 外部 JSON）一律按 `eq` 处理。
+`eq` / `neq` / `in` / `contains` 使用严格相等判断成员或子串；大小比较会把两侧优先当作数字，无法转数字时按字符串字典序比较，因此 `10` 大于 `9`。面板的值输入会把数字 / 布尔 / 数组按 JSON 解析（写 `1` 得到数字 1，写 `true` 得到布尔值），其它按字符串处理。未配置或配置了非法 `operator`（手写 / 外部 JSON）一律按 `eq` 处理。
 
 ### 效果语义
 

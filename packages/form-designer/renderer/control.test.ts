@@ -47,6 +47,26 @@ describe('evalControl', () => {
     }
   })
 
+  it('contains：数组成员或字符串子串命中', () => {
+    const rules: ControlRule[] = [{ field: 'tags', operator: 'contains', value: 'a', effects: ['hidden'] }]
+    expect(evalControl(rules, { tags: ['a', 'b'] })).toEqual({ hidden: true })
+    expect(evalControl(rules, { tags: 'abc' })).toEqual({ hidden: true })
+    expect(evalControl(rules, { tags: ['c'] })).toEqual({})
+    expect(evalControl(rules, { tags: 1 })).toEqual({})
+  })
+
+  it('gt / gte / lt / lte：数字优先，文本回退字典序', () => {
+    const value = 10
+    const effects = ['hidden'] as const
+
+    expect(evalControl([{ field: 'count', operator: 'gt', value: 9, effects }], { count: value })).toEqual({ hidden: true })
+    expect(evalControl([{ field: 'count', operator: 'gte', value: 10, effects }], { count: value })).toEqual({ hidden: true })
+    expect(evalControl([{ field: 'count', operator: 'lt', value: 11, effects }], { count: value })).toEqual({ hidden: true })
+    expect(evalControl([{ field: 'count', operator: 'lte', value: 9, effects }], { count: value })).toEqual({})
+    expect(evalControl([{ field: 'text', operator: 'gt', value: '9', effects }], { text: '10' })).toEqual({ hidden: true })
+    expect(evalControl([{ field: 'count', operator: 'gt', value: '', effects }], { count: value })).toEqual({})
+  })
+
   it('嵌套名路径：contact.name / items.0.title', () => {
     expect(evalControl([{ field: 'contact.name', operator: 'empty', effects: ['disabled'] }], { contact: { name: '' } }))
       .toEqual({ disabled: true })

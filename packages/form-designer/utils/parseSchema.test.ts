@@ -429,8 +429,8 @@ describe('parseSchema 联动规则形状', () => {
   })
 
   it('operator 必须在枚举内', () => {
-    expect(() => parseSchema(withControl([{ field: 'a', operator: 'contains', effects: ['hidden'] }])))
-      .toThrow('联动规则格式不正确（公司名）：未知的比较方式 contains')
+    expect(() => parseSchema(withControl([{ field: 'a', operator: 'between', effects: ['hidden'] }])))
+      .toThrow('联动规则格式不正确（公司名）：未知的比较方式 between')
   })
 
   it('effects 必须是非空数组且每项在枚举内', () => {

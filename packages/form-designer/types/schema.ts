@@ -97,7 +97,7 @@ export const DATA_SOURCE_TYPES = ['static', 'dict', 'api'] as const
 export type DataSourceType = (typeof DATA_SOURCE_TYPES)[number]
 
 /** 联动比较方式全集 */
-export const CONTROL_OPERATORS = ['eq', 'neq', 'in', 'empty', 'notEmpty'] as const
+export const CONTROL_OPERATORS = ['eq', 'neq', 'in', 'contains', 'gt', 'gte', 'lt', 'lte', 'empty', 'notEmpty'] as const
 
 export type ControlOperator = (typeof CONTROL_OPERATORS)[number]
 
