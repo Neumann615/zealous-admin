@@ -1,0 +1,15 @@
+{
+  "name": "@zealous-admin/metadata",
+  "type": "module",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts"
+    }
+  },
+  "peerDependencies": {
+    "react": "catalog:"
+  }
+}

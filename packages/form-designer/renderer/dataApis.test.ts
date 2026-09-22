@@ -22,19 +22,19 @@ describe('数据接口注册表', () => {
   it('接口名清单未设置时为空数组，设置后按值返回（改不动内部态）', () => {
     expect(getFormDataApiCatalog()).toEqual([])
 
-    const names = ['dict', 'orgTree']
+    const names = ['metadata', 'orgTree']
     setFormDataApiCatalog(names)
     names.push('afterSet')
 
-    expect(getFormDataApiCatalog()).toEqual(['dict', 'orgTree'])
+    expect(getFormDataApiCatalog()).toEqual(['metadata', 'orgTree'])
     getFormDataApiCatalog().push('mutated')
-    expect(getFormDataApiCatalog()).toEqual(['dict', 'orgTree'])
+    expect(getFormDataApiCatalog()).toEqual(['metadata', 'orgTree'])
   })
 
   it('注册接口不会污染接口名清单（清单由宿主显式提供）', () => {
-    setFormDataApiCatalog(['dict'])
+    setFormDataApiCatalog(['metadata'])
     registerFormDataApis({ 'dataApis.test.silent': async () => [] })
 
-    expect(getFormDataApiCatalog()).toEqual(['dict'])
+    expect(getFormDataApiCatalog()).toEqual(['metadata'])
   })
 })

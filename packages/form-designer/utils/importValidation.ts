@@ -5,7 +5,7 @@ import { getFormulaIssue } from '../renderer/formula'
 import { validateSchemaFieldNames } from './fieldName'
 import { validateSchemaShape } from './parseSchema'
 
-const DATA_SOURCE_TYPES = new Set(['static', 'dict', 'api'])
+const DATA_SOURCE_TYPES = new Set(['static', 'metadata', 'api'])
 
 export function validateRuleImport(value: unknown): string[] {
   if (!Array.isArray(value))
@@ -88,13 +88,13 @@ export function validateOptionsImport(value: unknown, currentSchema: FormSchema)
     else {
       Object.entries(options.dataSources as Record<string, any>).forEach(([name, definition]) => {
         if (!definition || typeof definition !== 'object' || !DATA_SOURCE_TYPES.has(definition.type)) {
-          issues.push(`数据源「${name}」类型必须是 static / dict / api`)
+          issues.push(`数据源「${name}」类型必须是 static / metadata / api`)
           return
         }
         if (definition.type === 'static' && !Array.isArray(definition.options))
           issues.push(`数据源「${name}」的 options 应为数组`)
-        if (definition.type === 'dict' && typeof definition.dictType !== 'string')
-          issues.push(`数据源「${name}」缺少 dictType`)
+        if (definition.type === 'metadata' && typeof definition.enumCode !== 'string')
+          issues.push(`数据源「${name}」缺少 enumCode`)
         if (definition.type === 'api' && typeof definition.api !== 'string')
           issues.push(`数据源「${name}」缺少注册的 api 名称`)
       })

@@ -8,12 +8,12 @@
  * ```ts
  * // 宿主侧（一次注册，全局可用）
  * registerFormDataApis({
- *   dict: (params, signal) => getDictDataByTypeAPI(params.dictType, { signal }),
+ *   metadata: (params, signal) => getEnumValueOptionsAPI(params, { signal }),
  *   orgTree: params => getOrgTreeAPI(params),
  * })
  *
  * // 面板的「接口」下拉需要一份名字清单（包不知道宿主注册了哪些名字）
- * setFormDataApiCatalog(['dict', 'orgTree'])
+ * setFormDataApiCatalog(['metadata', 'orgTree'])
  * ```
  */
 
@@ -26,8 +26,8 @@ const apis = new Map<string, FormDataApi>()
 let catalog: string[] | null = null
 
 /**
- * 注册数据接口（字典、组织树、业务查询…），同名覆盖。
- * 只登记函数，不触发任何请求；名字是 schema 里 `dataSource.def.api` / 约定的 `'dict'` 的取值。
+ * 注册数据接口（元数据、组织树、业务查询…），同名覆盖。
+ * 只登记函数，不触发任何请求；名字是 schema 里 `dataSource.def.api` / 约定的 `'metadata'` 的取值。
  */
 export function registerFormDataApis(map: Record<string, FormDataApi>): void {
   for (const [name, fn] of Object.entries(map))

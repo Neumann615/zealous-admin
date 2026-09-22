@@ -89,10 +89,11 @@ export interface FieldOption {
   label: string
   value: string | number
   disabled?: boolean
+  children?: FieldOption[]
 }
 
 /** 数据来源类型全集：面板下拉与形状校验共用这一份，避免两处枚举分叉 */
-export const DATA_SOURCE_TYPES = ['static', 'dict', 'api'] as const
+export const DATA_SOURCE_TYPES = ['static', 'metadata', 'api'] as const
 
 export type DataSourceType = (typeof DATA_SOURCE_TYPES)[number]
 
@@ -141,12 +142,20 @@ export interface ControlRule {
 /**
  * 声明式数据来源定义。三种类型都由渲染器取数后写进 `props.options`：
  * - `static`：schema 里直接写死的选项
- * - `dict`：走宿主注册名 `'dict'`，参数 `{ dictType }`，按字段映射成 label / value
+ * - `metadata`：走宿主注册名 `'metadata'`，参数 `{ enumCode, systemName }`
  * - `api`：走宿主注册名 `def.api`（**只接受注册名，不填裸 URL**），`params` 经 `{{}}` 插值后传入
  */
 export type DataSourceDef
   = | { type: 'static', options: FieldOption[] }
-    | { type: 'dict', dictType: string, labelField?: string, valueField?: string }
+    | {
+      type: 'metadata'
+      enumCode: string
+      systemName?: string
+      onlyValid?: boolean
+      shape?: 'flat' | 'tree' | 'path'
+      labelField?: string
+      valueField?: string
+    }
     | { type: 'api', api: string, params?: Record<string, string>, parse?: string }
 
 /** 字段的数据来源：`def` 优先于 `ref`（与 HookRef 的「内联优先」同规则） */

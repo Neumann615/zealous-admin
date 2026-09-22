@@ -1,14 +1,14 @@
 import type { DataSourceDef, DataSourceType, FieldDataSource, FieldOption } from '../types/schema'
 import type { DataSourceKind } from './dataSourceType'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Input, InputNumber, Select } from 'antd'
+import { Button, Checkbox, Input, InputNumber, Select } from 'antd'
 import { getFormDataApiCatalog } from '../renderer/dataApis'
 import { dataSourceKind, withDataSourceKind } from './dataSourceType'
 import { OptionsEditor } from './OptionsEditor'
 
 const KIND_OPTIONS: { label: string, value: DataSourceType | 'ref' }[] = [
   { label: '静态选项', value: 'static' },
-  { label: '字典', value: 'dict' },
+  { label: '元数据编码', value: 'metadata' },
   { label: '宿主注册接口', value: 'api' },
   { label: '引用命名数据源', value: 'ref' },
 ]
@@ -127,27 +127,51 @@ export function DataSourceEditor({
         />
       )}
 
-      {kind === 'dict' && (
+      {kind === 'metadata' && (
         <>
           <Input
             size="small"
-            placeholder="字典类型 dictType"
-            value={value?.def?.type === 'dict' ? value.def.dictType : ''}
-            onChange={e => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'dict' }>), type: 'dict', dictType: e.target.value })}
+            placeholder="枚举编码 enumCode"
+            value={value?.def?.type === 'metadata' ? value.def.enumCode : ''}
+            onChange={e => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>), type: 'metadata', enumCode: e.target.value })}
           />
           <Input
             size="small"
-            placeholder="label 字段（默认 dictLabel）"
-            value={value?.def?.type === 'dict' ? value.def.labelField ?? '' : ''}
-            onChange={e => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'dict' }>), labelField: e.target.value || undefined })}
+            placeholder="系统名称 systemName（可选）"
+            value={value?.def?.type === 'metadata' ? value.def.systemName ?? '' : ''}
+            onChange={e => patchDef({
+              ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>),
+              type: 'metadata',
+              systemName: e.target.value || undefined,
+            })}
           />
-          <Input
+          <Select
             size="small"
-            placeholder="value 字段（默认 dictValue）"
-            value={value?.def?.type === 'dict' ? value.def.valueField ?? '' : ''}
-            onChange={e => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'dict' }>), valueField: e.target.value || undefined })}
+            allowClear
+            placeholder="展示形态（默认平铺）"
+            value={value?.def?.type === 'metadata' ? value.def.shape : undefined}
+            options={[
+              { label: '平铺', value: 'flat' },
+              { label: '层级路径', value: 'path' },
+              { label: '树结构', value: 'tree' },
+            ]}
+            onChange={shape => patchDef({
+              ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>),
+              type: 'metadata',
+              shape,
+            })}
           />
-          <div style={{ fontSize: 12, color: '#999' }}>字典走宿主注册的 dict 接口，包本体不发起请求</div>
+          <Checkbox
+            checked={value?.def?.type === 'metadata' ? value.def.onlyValid ?? false : false}
+            onChange={e => patchDef({
+              ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>),
+              type: 'metadata',
+              onlyValid: e.target.checked || undefined,
+            })}
+          >
+            只取有效数据
+          </Checkbox>
+          <div style={{ fontSize: 12, color: '#999' }}>元数据编码走宿主注册的 metadata 接口，包本体不发起请求</div>
         </>
       )}
 

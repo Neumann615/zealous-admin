@@ -74,6 +74,7 @@ registerComponent({
   title: '级联选择',
   menu: 'main',
   icon: <ApartmentOutlined />,
+  optionProp: 'options',
   defaultSchema: () => fieldSchema('cascader', '级联选择', {
     options: [
       { label: '选项1', value: '1', children: [{ label: '子选项1', value: '1-1' }] },

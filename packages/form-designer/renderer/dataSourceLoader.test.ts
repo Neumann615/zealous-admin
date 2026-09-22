@@ -24,25 +24,26 @@ describe('dataSourceLoader', () => {
     await expect(loadFieldOptions({ type: 'static', options }, {})).resolves.toBe(options)
   })
 
-  it('dict 来源走宿主接口，默认和自定义映射都会归一化选项', async () => {
-    const dict = vi.fn().mockResolvedValue([
-      { dictLabel: '男', dictValue: '1' },
+  it('metadata 来源走宿主接口，默认和自定义映射都会归一化选项', async () => {
+    const metadata = vi.fn().mockResolvedValue([
+      { label: '男', value: '1' },
       { label: '无效', code: 'bad' },
       '女',
     ])
-    registerFormDataApis({ dict })
+    registerFormDataApis({ metadata })
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    await expect(loadFieldOptions({ type: 'dict', dictType: 'sex' }, {})).resolves.toEqual([
+    const definition = { type: 'metadata', enumCode: 'sex' } as DataSourceDef
+    await expect(loadFieldOptions(definition, {})).resolves.toEqual([
       { label: '男', value: '1' },
       { label: '女', value: '女' },
     ])
-    expect(dict).toHaveBeenCalledWith({ dictType: 'sex' }, undefined)
+    expect(metadata).toHaveBeenCalledWith(definition, undefined)
     expect(warning).toHaveBeenCalled()
 
-    dict.mockResolvedValue([{ name: '研发部', code: 9, disabled: true }])
+    metadata.mockResolvedValue([{ name: '研发部', code: 9, disabled: true }])
     await expect(loadFieldOptions(
-      { type: 'dict', dictType: 'dept', labelField: 'name', valueField: 'code' },
+      { type: 'metadata', enumCode: 'dept', labelField: 'name', valueField: 'code' },
       {},
     )).resolves.toEqual([{ label: '研发部', value: 9, disabled: true }])
   })

@@ -32,7 +32,7 @@ describe('数据来源面板归一化', () => {
     expect(dataSourceKind(undefined)).toBeUndefined()
     expect(dataSourceKind({ ref: 'shared' })).toBe('ref')
     expect(dataSourceKind({ def: { type: 'static', options: [] } })).toBe('static')
-    expect(dataSourceKind({ ref: 'shared', def: { type: 'dict', dictType: 'sex' } })).toBe('dict')
+    expect(dataSourceKind({ ref: 'shared', def: { type: 'metadata', enumCode: 'sex' } })).toBe('metadata')
   })
 
   it('切类型时丢弃无关参数（含 def / ref 二选一），保留 watch 与 debounce', () => {
@@ -42,10 +42,10 @@ describe('数据来源面板归一化', () => {
       debounce: 500,
     }
 
-    expect(withDataSourceKind(previous, 'dict')).toEqual({
+    expect(withDataSourceKind(previous, 'metadata')).toEqual({
       watch: ['dept'],
       debounce: 500,
-      def: { type: 'dict', dictType: '' },
+      def: { type: 'metadata', enumCode: '' },
     })
     expect(withDataSourceKind(previous, 'ref')).toEqual({ watch: ['dept'], debounce: 500, ref: '' })
   })
@@ -56,15 +56,15 @@ describe('数据来源面板归一化', () => {
     expect(withDataSourceKind(previous, 'api')).toEqual({
       def: { type: 'api', api: 'orgTree', params: { id: '1' }, parse: 'data.list' },
     })
-    expect(withDataSourceKind({ def: { type: 'dict', dictType: 'sex' } }, 'dict')).toEqual({ def: { type: 'dict', dictType: 'sex' } })
+    expect(withDataSourceKind({ def: { type: 'metadata', enumCode: 'sex' } }, 'metadata')).toEqual({ def: { type: 'metadata', enumCode: 'sex' } })
   })
 
   it('静态选项从 static 切走再切回时不残留旧选项', () => {
     const previous: FieldDataSource = { def: { type: 'static', options: [{ label: 'A', value: 'a' }] } }
-    const dict = withDataSourceKind(previous, 'dict')
+    const metadata = withDataSourceKind(previous, 'metadata')
 
-    expect(dict.def).toEqual({ type: 'dict', dictType: '' })
-    expect(withDataSourceKind(dict, 'static')).toEqual({ def: { type: 'static', options: [] } })
+    expect(metadata.def).toEqual({ type: 'metadata', enumCode: '' })
+    expect(withDataSourceKind(metadata, 'static')).toEqual({ def: { type: 'static', options: [] } })
   })
 })
 
@@ -84,7 +84,7 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(undefined))
   })
 
-  it('切到字典类型写回空 dictType（由保存拦截提示补全），并丢弃原接口参数', async () => {
+  it('切到元数据类型写回空 enumCode（由保存拦截提示补全），并丢弃原接口参数', async () => {
     const onChange = vi.fn()
     render(
       <DataSourceEditor
@@ -93,16 +93,16 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
       />,
     )
 
-    await pickOption(0, '字典')
-    expect(onChange).toHaveBeenCalledWith({ watch: ['dept'], def: { type: 'dict', dictType: '' } })
+    await pickOption(0, '元数据编码')
+    expect(onChange).toHaveBeenCalledWith({ watch: ['dept'], def: { type: 'metadata', enumCode: '' } })
   })
 
-  it('字典类型下填 dictType 与字段映射', () => {
+  it('元数据类型下填 enumCode', () => {
     const onChange = vi.fn()
-    render(<DataSourceEditor value={{ def: { type: 'dict', dictType: '' } }} onChange={onChange} />)
+    render(<DataSourceEditor value={{ def: { type: 'metadata', enumCode: '' } }} onChange={onChange} />)
 
-    fireEvent.change(screen.getByPlaceholderText('字典类型 dictType'), { target: { value: 'sys_sex' } })
-    expect(onChange).toHaveBeenCalledWith({ def: { type: 'dict', dictType: 'sys_sex' } })
+    fireEvent.change(screen.getByPlaceholderText('枚举编码 enumCode'), { target: { value: 'sys_sex' } })
+    expect(onChange).toHaveBeenCalledWith({ def: { type: 'metadata', enumCode: 'sys_sex' } })
   })
 
   it('接口类型未提供清单时退化为自由文本并提示', () => {
@@ -114,7 +114,7 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
   })
 
   it('接口类型有清单时给下拉，选中写回注册名', async () => {
-    setFormDataApiCatalog(['dict', 'orgTree'])
+    setFormDataApiCatalog(['metadata', 'orgTree'])
     const onChange = vi.fn()
     render(<DataSourceEditor value={{ def: { type: 'api', api: '' } }} onChange={onChange} />)
 
@@ -201,7 +201,7 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
     const onChange = vi.fn()
     render(
       <DataSourceEditor
-        value={{ def: { type: 'dict', dictType: 'sys' } }}
+        value={{ def: { type: 'metadata', enumCode: 'sys' } }}
         componentOptions={[{ label: '甲', value: 'a' }]}
         onChange={onChange}
       />,
@@ -213,7 +213,7 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
 
   it('切到静态选项且没有组件属性选项时落空数组', async () => {
     const onChange = vi.fn()
-    render(<DataSourceEditor value={{ def: { type: 'dict', dictType: 'sys' } }} onChange={onChange} />)
+    render(<DataSourceEditor value={{ def: { type: 'metadata', enumCode: 'sys' } }} onChange={onChange} />)
 
     await pickOption(0, '静态选项')
     expect(onChange).toHaveBeenCalledWith({ def: { type: 'static', options: [] } })

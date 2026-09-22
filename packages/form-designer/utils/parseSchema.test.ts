@@ -315,13 +315,13 @@ describe('parseSchema 数据来源形状', () => {
 
   it('三种合法定义穿过解析', () => {
     expect(() => parseSchema(withDataSource({ def: { type: 'static', options: [{ label: 'A', value: 'a' }] } }))).not.toThrow()
-    expect(() => parseSchema(withDataSource({ def: { type: 'dict', dictType: 'sys_sex', labelField: 'name' } }))).not.toThrow()
+    expect(() => parseSchema(withDataSource({ def: { type: 'metadata', enumCode: 'sys_sex', labelField: 'name' } }))).not.toThrow()
     expect(() => parseSchema(withDataSource({
       def: { type: 'api', api: 'orgTree', params: { id: '{{dept}}' }, parse: 'data.list' },
       watch: ['city', 'contact.name'],
       debounce: 0,
     }))).not.toThrow()
-    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'dict', dictType: 'sex' } } }))).not.toThrow()
+    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'metadata', enumCode: 'sex' } } }))).not.toThrow()
     // 未配置 dataSource 当然也合法
     expect(() => parseSchema(JSON.stringify({
       version: 2,
@@ -340,7 +340,7 @@ describe('parseSchema 数据来源形状', () => {
   it('类型不在枚举内、或不是对象时被拒', () => {
     expect(() => parseSchema(withDataSource({ def: { type: 'graphql' } }))).toThrow('数据来源格式不正确（部门）')
     expect(() => parseSchema(withDataSource({ def: [] }))).toThrow('数据来源格式不正确（部门）')
-    expect(() => parseSchema(withDataSource('dict'))).toThrow('数据来源格式不正确（部门）')
+    expect(() => parseSchema(withDataSource('metadata'))).toThrow('数据来源格式不正确（部门）')
   })
 
   it('static 的 options 必须是数组，每项要有 label 与 value', () => {
@@ -352,10 +352,10 @@ describe('parseSchema 数据来源形状', () => {
       .toThrow('disabled 应为布尔值')
   })
 
-  it('dict 需要非空 dictType', () => {
-    expect(() => parseSchema(withDataSource({ def: { type: 'dict', dictType: '' } })))
-      .toThrow('数据来源格式不正确（部门）：dict 需要非空的 dictType')
-    expect(() => parseSchema(withDataSource({ def: { type: 'dict', labelField: 1 } })))
+  it('metadata 需要非空 enumCode', () => {
+    expect(() => parseSchema(withDataSource({ def: { type: 'metadata', enumCode: '' } })))
+      .toThrow('数据来源格式不正确（部门）：metadata 需要非空的 enumCode')
+    expect(() => parseSchema(withDataSource({ def: { type: 'metadata', labelField: 1 } })))
       .toThrow('数据来源格式不正确（部门）')
   })
 
@@ -380,8 +380,8 @@ describe('parseSchema 数据来源形状', () => {
   it('命名数据源表逐项校验（dataSources 非对象、或某项非法）', () => {
     expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: [] })))
       .toThrow('数据来源格式不正确（dataSources 应为对象）')
-    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'dict', dictType: '' } } })))
-      .toThrow('数据来源格式不正确（dataSources.shared）：dict 需要非空的 dictType')
+    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'metadata', enumCode: '' } } })))
+      .toThrow('数据来源格式不正确（dataSources.shared）：metadata 需要非空的 enumCode')
   })
 
   it('嵌套子表单里的数据来源同样校验', () => {

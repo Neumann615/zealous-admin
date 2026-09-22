@@ -11,6 +11,10 @@ interface ImportMetaEnv {
   readonly VITE_OSS_UPLOAD_URL: string
   /** Minio上传相对路径 */
   readonly VITE_MINIO_UPLOAD_URL: string
+  /** 元数据平台默认系统编码 */
+  readonly VITE_METADATA_DEFAULT_SYSTEM_NAME?: string
+  /** 是否使用元数据演示数据 */
+  readonly VITE_METADATA_USE_MOCK_DATA?: string
 }
 /** 扩展import.meta对象类型 */
 interface ImportMeta {

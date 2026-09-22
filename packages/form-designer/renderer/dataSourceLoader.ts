@@ -6,9 +6,9 @@ import { interpolateDeep } from './interpolate'
 
 export const DEFAULT_DATA_SOURCE_DEBOUNCE = 300
 
-const DICT_API_NAME = 'dict'
-const DICT_LABEL_FIELD = 'dictLabel'
-const DICT_VALUE_FIELD = 'dictValue'
+const METADATA_API_NAME = 'metadata'
+const METADATA_LABEL_FIELD = 'label'
+const METADATA_VALUE_FIELD = 'value'
 
 export class DataSourceError extends Error {}
 
@@ -40,10 +40,14 @@ function normalizeOptions(
       const row = item as Record<string, any>
       const value = row[mapping.valueField]
       if (typeof value === 'string' || typeof value === 'number') {
+        const children = Array.isArray(row.children)
+          ? normalizeOptions(row.children, api, mapping)
+          : undefined
         options.push({
           label: String(row[mapping.labelField] ?? ''),
           value,
           ...(row.disabled === undefined ? {} : { disabled: !!row.disabled }),
+          ...(children?.length ? { children } : {}),
         })
         return
       }
@@ -75,16 +79,16 @@ export async function loadFieldOptions(
   if (def.type === 'static')
     return def.options
 
-  if (def.type === 'dict') {
-    const api = getFormDataApi(DICT_API_NAME)
+  if (def.type === 'metadata') {
+    const api = getFormDataApi(METADATA_API_NAME)
     if (!api)
-      throw new DataSourceError(`未注册的数据接口：${DICT_API_NAME}`)
+      throw new DataSourceError(`未注册的数据接口：${METADATA_API_NAME}`)
     return normalizeOptions(
-      requireArray(await api({ dictType: def.dictType }, signal), DICT_API_NAME),
-      DICT_API_NAME,
+      requireArray(await api(def, signal), METADATA_API_NAME),
+      METADATA_API_NAME,
       {
-        labelField: def.labelField || DICT_LABEL_FIELD,
-        valueField: def.valueField || DICT_VALUE_FIELD,
+        labelField: def.labelField || METADATA_LABEL_FIELD,
+        valueField: def.valueField || METADATA_VALUE_FIELD,
       },
     )
   }

@@ -112,27 +112,27 @@ describe('声明式数据来源（useFieldDataSource）', () => {
     await waitFor(() => expect(screen.getByText('命名表')).toBeTruthy())
   })
 
-  it('dict 走宿主注册的 dict 接口，默认按 dictLabel / dictValue 映射', async () => {
-    const dict = vi.fn().mockResolvedValue([
-      { dictLabel: '男', dictValue: '1' },
-      { dictLabel: '女', dictValue: '2' },
+  it('metadata 走宿主注册的 metadata 接口，默认按 label / value 映射', async () => {
+    const metadata = vi.fn().mockResolvedValue([
+      { label: '男', value: '1' },
+      { label: '女', value: '2' },
     ])
-    registerFormDataApis({ dict })
+    registerFormDataApis({ metadata })
 
-    renderForm(schemaWith([radio('a', 'sex', { def: { type: 'dict', dictType: 'sys_sex' } })]))
+    renderForm(schemaWith([radio('a', 'sex', { def: { type: 'metadata', enumCode: 'sys_sex' } })]))
 
     await waitFor(() => expect(screen.getByText('男')).toBeTruthy())
-    expect(dict).toHaveBeenCalledWith({ dictType: 'sys_sex' }, expect.anything())
+    expect(metadata).toHaveBeenCalledWith({ type: 'metadata', enumCode: 'sys_sex' }, expect.anything())
     expect(screen.getByText('女')).toBeTruthy()
   })
 
-  it('dict 的 labelField / valueField 可改字段映射', async () => {
+  it('metadata 的 labelField / valueField 可改字段映射', async () => {
     registerFormDataApis({
-      dict: vi.fn().mockResolvedValue([{ name: '研发部', code: 9 }]),
+      metadata: vi.fn().mockResolvedValue([{ name: '研发部', code: 9 }]),
     })
 
     renderForm(schemaWith([
-      radio('a', 'dept', { def: { type: 'dict', dictType: 'dept', labelField: 'name', valueField: 'code' } }),
+      radio('a', 'dept', { def: { type: 'metadata', enumCode: 'dept', labelField: 'name', valueField: 'code' } }),
     ]))
 
     await waitFor(() => expect(screen.getByText('研发部')).toBeTruthy())
@@ -413,14 +413,14 @@ describe('声明式数据来源（useFieldDataSource）', () => {
     expect(screen.queryByText('组件属性里的选项')).toBeNull()
   })
 
-  it('字典返回形状不符的数组时跳过无效项并告警（不产出垃圾选项）', async () => {
+  it('元数据返回形状不符的数组时跳过无效项并告警（不产出垃圾选项）', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     registerFormDataApis({
-      // 对象项缺 dictValue → 跳过；字符串项直接当值用；布尔项无法当值 → 跳过
-      dict: vi.fn().mockResolvedValue([{ dictLabel: '缺值' }, 'b', true, { dictLabel: '正常', dictValue: '1' }]),
+      // 对象项缺 value → 跳过；字符串项直接当值用；布尔项无法当值 → 跳过
+      metadata: vi.fn().mockResolvedValue([{ label: '缺值' }, 'b', true, { label: '正常', value: '1' }]),
     })
 
-    renderForm(schemaWith([radio('a', 'dept', { def: { type: 'dict', dictType: 'x' } })]))
+    renderForm(schemaWith([radio('a', 'dept', { def: { type: 'metadata', enumCode: 'x' } })]))
 
     await waitFor(() => expect(screen.getByText('正常')).toBeTruthy())
     expect(screen.getByText('b')).toBeTruthy()

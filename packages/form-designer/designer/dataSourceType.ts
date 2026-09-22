@@ -4,7 +4,7 @@ import type { DataSourceDef, DataSourceType, FieldDataSource, FieldOption } from
 export type DataSourceKind = DataSourceType | 'ref'
 
 /** 面板与形状校验共用的类型枚举（DataSourceType 全集 + ref 这个面板专有项） */
-export const DATA_SOURCE_KINDS: DataSourceKind[] = ['static', 'dict', 'api', 'ref']
+export const DATA_SOURCE_KINDS: DataSourceKind[] = ['static', 'metadata', 'api', 'ref']
 
 /** 当前来源类型；def 与 ref 同时存在时按运行时的「def 优先」口径取 def */
 export function dataSourceKind(dataSource?: FieldDataSource): DataSourceKind | undefined {
@@ -42,8 +42,18 @@ export function withDataSourceKind(
       def: { type: 'static', options: prev?.type === 'static' ? prev.options : (seedOptions ?? []) },
     }
   }
-  if (kind === 'dict')
-    return { ...next, def: { type: 'dict', dictType: prev?.type === 'dict' ? prev.dictType : '' } }
+  if (kind === 'metadata') {
+    return {
+      ...next,
+      def: {
+        type: 'metadata',
+        enumCode: prev?.type === 'metadata' ? prev.enumCode : '',
+        ...(prev?.type === 'metadata' && prev.systemName ? { systemName: prev.systemName } : {}),
+        ...(prev?.type === 'metadata' && prev.onlyValid !== undefined ? { onlyValid: prev.onlyValid } : {}),
+        ...(prev?.type === 'metadata' && prev.shape ? { shape: prev.shape } : {}),
+      },
+    }
+  }
   return {
     ...next,
     def: {
