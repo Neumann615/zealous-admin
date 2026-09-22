@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evalFormula, getFormulaIssue } from './formula'
+import { createFormulaRowScope, evalFormula, getFormulaIssue } from './formula'
 
 describe('计算字段公式', () => {
   it('支持四则运算、优先级和一元负号', () => {
@@ -17,6 +17,12 @@ describe('计算字段公式', () => {
     expect(evalFormula('ROUND({contact.score} * 1.1, 0)', values)).toBe(95)
     expect(evalFormula('MAX({items.0.price}, {items.1.price})', values)).toBe(18)
     expect(evalFormula('MIN(PI, E)', values)).toBeCloseTo(Math.E)
+  })
+
+  it('行内引用优先读当前行，未命中时回落表单全局值', () => {
+    const values = { taxRate: 0.1, price: 999, items: [{ price: 20 }] }
+    const scope = createFormulaRowScope(values.items[0], values)
+    expect(evalFormula('{price} * (1 + {taxRate})', scope)).toBeCloseTo(22)
   })
 
   it('运行时引用缺失或非法时抛出可读错误', () => {

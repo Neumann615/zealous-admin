@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { FormInstance } from 'antd'
 import type { FormSchema } from '../types/schema'
-import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Form } from 'antd'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getMenus } from '../registry/registry'
@@ -235,6 +235,47 @@ describe('渲染器计算字段（FormRenderer）', () => {
 
     fireEvent.click(container.querySelector('button[type="submit"]')!)
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ price: '20', count: '3', total: 60 }))
+  })
+
+  it('表格行内公式按当前行计算，新增行也进入提交报文', async () => {
+    const table = pick('tableForm').defaultSchema()
+    table.field = 'items'
+    const price = pick('input').defaultSchema()
+    price.field = 'price'
+    const quantity = pick('input').defaultSchema()
+    quantity.field = 'quantity'
+    const amount = pick('formula').defaultSchema()
+    amount.field = 'amount'
+    amount.computed = { expression: '{price} * {quantity}' }
+    table.children = [price, quantity, amount]
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical' },
+      children: [table],
+    }
+    const onSubmit = vi.fn()
+    const { container } = render(
+      <FormRenderer
+        schema={schema}
+        initialValues={{ items: [{ price: '20', quantity: '3' }] }}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    await waitFor(() => expect((container.querySelector('input#items_0_amount') as HTMLInputElement).value).toBe('60'))
+    fireEvent.click(screen.getByRole('button', { name: /添加\s*一行/ }))
+    await waitFor(() => expect(container.querySelector('input#items_1_amount')).toBeTruthy())
+    fireEvent.change(container.querySelector('input#items_1_price')!, { target: { value: '4' } })
+    fireEvent.change(container.querySelector('input#items_1_quantity')!, { target: { value: '5' } })
+    await waitFor(() => expect((container.querySelector('input#items_1_amount') as HTMLInputElement).value).toBe('20'))
+
+    fireEvent.click(container.querySelector('button[type="submit"]')!)
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({
+      items: [
+        { amount: 60, price: '20', quantity: '3' },
+        { amount: 20, price: '4', quantity: '5' },
+      ],
+    }))
   })
 })
 

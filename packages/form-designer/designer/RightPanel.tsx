@@ -1,7 +1,7 @@
 import type { ConfigMeta } from '../registry/registry'
 import { Divider } from 'antd'
 import { getComponent } from '../registry/registry'
-import { collectFieldNamePaths, getFieldNameIssue, getFieldPathIssue, nodeBindsField } from '../utils/fieldName'
+import { collectFieldNamePaths, getFieldNameIssue, getFieldPathIssue, getFormulaFieldContext, nodeBindsField } from '../utils/fieldName'
 import { getFieldPermissionKey } from '../utils/permissions'
 import { ColEditor } from './ColEditor'
 import { ConfigFormRenderer } from './ConfigFormRenderer'
@@ -52,6 +52,13 @@ function FieldConfig() {
   const fieldNames = collectFieldNamePaths(schema.children).filter(name => name !== permissionKey)
   const dataSourceNames = Object.keys(schema.dataSources ?? {})
   const pathIssueOf = (path: string) => getFieldPathIssue(schema.children, path)
+  const formulaContext = node.type === 'formula' ? getFormulaFieldContext(schema.children, node.id) : null
+  const formulaFieldNames = formulaContext?.inList
+    ? [...new Set([...fieldNames, ...formulaContext.rowFields.filter(name => name !== formulaContext.selfPath)])]
+    : fieldNames
+  const formulaPathIssueOf = formulaContext?.inList
+    ? (path: string) => (formulaContext.rowFields.includes(path) ? null : pathIssueOf(path))
+    : pathIssueOf
 
   return (
     <div style={{ padding: 12 }}>
@@ -87,8 +94,9 @@ function FieldConfig() {
           <FormulaEditor
             value={node.computed}
             onChange={computed => updateField(node.id, 'computed', computed, true)}
-            fieldNames={fieldNames}
-            pathIssueOf={pathIssueOf}
+            fieldNames={formulaFieldNames}
+            pathIssueOf={formulaPathIssueOf}
+            rowMode={formulaContext?.inList}
           />
         </>
       )}

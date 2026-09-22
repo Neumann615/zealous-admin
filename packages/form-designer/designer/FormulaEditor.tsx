@@ -7,10 +7,11 @@ interface FormulaEditorProps {
   onChange?: (value: FieldComputed | undefined) => void
   fieldNames?: string[]
   pathIssueOf?: (path: string) => string | null
+  rowMode?: boolean
 }
 
 /** 计算字段公式编辑器：显式引用语法 + 保存前语法校验，不提供任意 JavaScript 输入 */
-export function FormulaEditor({ value, onChange, fieldNames = [], pathIssueOf }: FormulaEditorProps) {
+export function FormulaEditor({ value, onChange, fieldNames = [], pathIssueOf, rowMode = false }: FormulaEditorProps) {
   const expression = value?.expression ?? ''
   const issue = getFormulaIssue(expression)
   const pathIssues = [...expression.matchAll(/\{([^{}]+)\}/g)]
@@ -33,7 +34,7 @@ export function FormulaEditor({ value, onChange, fieldNames = [], pathIssueOf }:
       <Input.TextArea
         rows={3}
         value={expression}
-        placeholder="例：ROUND({price} * {count}, 2)"
+        placeholder={rowMode ? '例：ROUND({price} * {qty}, 2)' : '例：ROUND({price} * {count}, 2)'}
         onChange={event => update(event.target.value)}
       />
       <Select
@@ -54,16 +55,9 @@ export function FormulaEditor({ value, onChange, fieldNames = [], pathIssueOf }:
         支持 + - * / %、括号，函数 ABS / CEIL / FLOOR / ROUND / MIN / MAX / POW / SQRT，常量 PI / E。
       </div>
       <div style={{ fontSize: 12, color: '#999' }}>
-        字段引用写作
-        {' '}
-        {`{字段名}`}
-        ，嵌套用
-        {' '}
-        {`{contact.name}`}
-        ，数组行用
-        {' '}
-        {`{items.0.qty}`}
-        。
+        {rowMode
+          ? '行内引用写作 {qty}，会优先读取当前行；未命中行内字段时回落表单全局字段。'
+          : '字段引用写作 {字段名}，嵌套用 {contact.name}，数组行用 {items.0.qty}。'}
       </div>
       <Button type="text" danger onClick={() => update('')}>清空公式</Button>
     </div>

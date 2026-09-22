@@ -273,3 +273,21 @@ export function evalFormula(expression: string, values: Record<string, any>): nu
     throw new Error('公式结果不是有效数字')
   return result
 }
+
+/**
+ * 表格行内公式的作用域：行内字段优先于表单全局字段，
+ * 未命中的引用仍可跨行读取全局值（例如 `{qty} * {taxRate}`）。
+ */
+export function createFormulaRowScope(
+  row: Record<string, any>,
+  values: Record<string, any>,
+): Record<string, any> {
+  return new Proxy({}, {
+    get(_target, property) {
+      if (typeof property !== 'string')
+        return undefined
+      const rowValue = getByPathName(row, property)
+      return rowValue === undefined ? getByPathName(values, property) : rowValue
+    },
+  })
+}

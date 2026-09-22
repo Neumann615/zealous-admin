@@ -131,6 +131,65 @@ export function getFieldPathIssue(children: FieldSchema[], path: string): string
   return null
 }
 
+export interface FormulaFieldContext {
+  /** 当前公式是否位于数组行作用域内 */
+  inList: boolean
+  /** 行作用域内可用的相对名路径 */
+  rowFields: string[]
+  /** 公式字段自身的行内相对路径，供下拉剔除自引用 */
+  selfPath: string | null
+}
+
+/** 解析公式字段所处的引用作用域：表格行内用 `{qty}`，普通字段用完整名路径 */
+export function getFormulaFieldContext(children: FieldSchema[], nodeId: string): FormulaFieldContext {
+  const empty: FormulaFieldContext = { inList: false, rowFields: [], selfPath: null }
+
+  function collectRowFields(nodes: FieldSchema[], prefix: string[], out: string[]): string[] {
+    for (const node of nodes) {
+      const path = node.field ? [...prefix, node.field] : prefix
+      if (node.field && nodeBindsField(node))
+        out.push(path.join('.'))
+      if (node.children?.length) {
+        const def = getComponent(node.type)
+        if (def?.nestList)
+          continue
+        collectRowFields(node.children, path, out)
+      }
+    }
+    return out
+  }
+
+  function find(nodes: FieldSchema[], insideList: boolean, prefix: string[], rowFields: string[]): FormulaFieldContext | null {
+    for (const node of nodes) {
+      const path = node.field ? [...prefix, node.field] : prefix
+      if (node.id === nodeId) {
+        return {
+          inList: insideList,
+          rowFields,
+          selfPath: insideList && node.field ? path.join('.') : null,
+        }
+      }
+      if (!node.children?.length)
+        continue
+      const def = getComponent(node.type)
+      if (def?.nestList && node.field) {
+        const nextRowFields = collectRowFields(node.children, [], [])
+        const found = find(node.children, true, [], nextRowFields)
+        if (found)
+          return found
+        continue
+      }
+      const nextPrefix = opensNameScope(node) ? path : prefix
+      const found = find(node.children, insideList, nextPrefix, rowFields)
+      if (found)
+        return found
+    }
+    return null
+  }
+
+  return find(children, false, [], []) ?? empty
+}
+
 /** 找出各命名作用域内重名的字段（跨作用域同名合法） */
 export function findDuplicateFieldNames(children: FieldSchema[], out: DuplicateFieldName[] = []): DuplicateFieldName[] {
   const scope: FieldSchema[] = []

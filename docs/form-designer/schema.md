@@ -300,6 +300,8 @@ interface ValidateRule {
 
 字段引用写作 `{price}`、`{contact.name}`、`{items.0.qty}`。公式可引用其他公式字段，渲染器会按依赖顺序计算；不支持任意 JavaScript。公式结果不是有效数字时会清空结果并在控制台警告。
 
+放在 `tableForm` 行内的公式使用行内相对引用，例如行字段 `price` / `qty` / `amount` 写作 `{price} * {qty}`。运行器会为每一行展开真实路径；行内引用优先读取当前行，未命中时回落表单全局字段。新增 / 删除行后按当前行集合重算。
+
 `events` 段有自己的一份形状约束，见 [`events` 段的形状约束](#events-段的形状约束)。
 
 ## 解析与迁移

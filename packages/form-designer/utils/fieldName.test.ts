@@ -1,7 +1,7 @@
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { describe, expect, it } from 'vitest'
 import { registerComponent } from '../registry/registry'
-import { collectFieldNamePaths, findDuplicateFieldNames, getFieldNameIssue, getFieldPathIssue, nodeBindsField, validateFieldNameFormat, validateSchemaFieldNames } from './fieldName'
+import { collectFieldNamePaths, findDuplicateFieldNames, getFieldNameIssue, getFieldPathIssue, getFormulaFieldContext, nodeBindsField, validateFieldNameFormat, validateSchemaFieldNames } from './fieldName'
 
 // 注册测试用组件，覆盖「普通字段 / 无值容器 / 值绑定容器（对象、数组）/ 辅助组件」四类；
 // 名称加 t- 前缀避免与其它用例共享的注册表冲突
@@ -298,5 +298,25 @@ describe('getFieldPathIssue', () => {
     expect(getFieldPathIssue(children, 'top.price')).toBe('「top」不是容器，不能继续往下取值')
     expect(getFieldPathIssue(children, 'contact.ghost')).toBe('未找到字段「contact.ghost」')
     expect(getFieldPathIssue(children, '')).toBe('名路径不能为空')
+  })
+})
+
+describe('getFormulaFieldContext', () => {
+  it('识别普通公式与表格行内公式的相对引用集合', () => {
+    const children = [
+      { id: 'formula', type: 't-input', field: 'total', props: {} },
+      container('s', 't-sub', [input('d', 'name')], 'contact'),
+      container('l', 't-list', [
+        input('e', 'qty'),
+        container('g', 't-sub', [input('n', 'rate')], 'detail'),
+        { id: 'amount', type: 't-input', field: 'amount', props: {} },
+      ], 'items'),
+    ]
+    expect(getFormulaFieldContext(children, 'formula')).toEqual({ inList: false, rowFields: [], selfPath: null })
+    expect(getFormulaFieldContext(children, 'amount')).toEqual({
+      inList: true,
+      rowFields: ['qty', 'detail', 'detail.rate', 'amount'],
+      selfPath: 'amount',
+    })
   })
 })

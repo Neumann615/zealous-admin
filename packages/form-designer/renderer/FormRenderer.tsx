@@ -7,13 +7,15 @@ import { Alert, App, Button, Flex, Form, Spin, message as staticMessage } from '
 import { createStyles } from 'antd-style'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { emitHook, filterRefsForField, runHooks } from '../events/runHooks'
+import { getComponent } from '../registry/registry'
 import { nodeBindsField, opensNameScope } from '../utils/fieldName'
 import { parseSchema } from '../utils/parseSchema'
+import { getByPathName } from '../utils/path'
 import { findNodeByField } from '../utils/schemaTree'
 import { evalControl } from './control'
 import { getFormDataApi } from './dataApis'
 import { buildFormProps } from './formProps'
-import { evalFormula, getFormulaReferences } from './formula'
+import { createFormulaRowScope, evalFormula, getFormulaReferences } from './formula'
 import { FormHooksProvider } from './hooksContext'
 import { renderField } from './renderField'
 
@@ -42,25 +44,67 @@ function consumesValues(children: FieldSchema[]): boolean {
 
 interface ComputedField {
   expression: string
-  namePath: string[]
+  /** 普通字段的绝对输出路径 */
+  namePath?: string[]
+  /** 表格行内字段：数组绝对路径 + 当前行内的相对路径 */
+  row?: {
+    listPath: string[]
+    childPath: string[]
+  }
 }
 
 function collectComputedFields(
   children: FieldSchema[],
-  prefix: string[][] = [[]],
+  context: { path: string[], row?: { listPath: string[], childPath: string[] } } = { path: [] },
   out: ComputedField[] = [],
 ): ComputedField[] {
   for (const node of children) {
-    const paths = prefix.map(item => node.field ? [...item, node.field] : item)
+    const path = node.field ? [...context.path, node.field] : context.path
+    const childPath = node.field && context.row ? [...context.row.childPath, node.field] : context.row?.childPath
     if (node.computed?.expression && nodeBindsField(node)) {
-      const namePath = paths[0]
-      if (namePath?.length)
-        out.push({ expression: node.computed.expression, namePath })
+      if (context.row && childPath?.length)
+        out.push({ expression: node.computed.expression, row: { listPath: context.row.listPath, childPath } })
+      else if (path.length)
+        out.push({ expression: node.computed.expression, namePath: path })
     }
     if (node.children?.length)
-      collectComputedFields(node.children, opensNameScope(node) ? paths : prefix, out)
+      collectComputedFields(node.children, childContextOf(node, context, path, childPath), out)
   }
   return out
+}
+
+function childContextOf(
+  node: FieldSchema,
+  context: { path: string[], row?: { listPath: string[], childPath: string[] } },
+  path: string[],
+  childPath?: string[],
+) {
+  if (node.field && getComponent(node.type)?.nestList)
+    return { path, row: { listPath: path, childPath: [] } }
+  if (opensNameScope(node) && context.row && childPath)
+    return { path, row: { listPath: context.row.listPath, childPath } }
+  return context
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+/** antd 首次装载 initialValues 前，公式也需要能算：store 已有值优先，缺失处回落 initial 值 */
+function mergeInitialValues(values: Record<string, any>, initialValues: Record<string, any>): Record<string, any> {
+  const walk = (current: unknown, initial: unknown): any => {
+    if (Array.isArray(current) && Array.isArray(initial))
+      return current.map((item, index) => walk(item, initial[index]))
+    if (isRecord(current) && isRecord(initial)) {
+      const merged: Record<string, any> = { ...current }
+      for (const [key, initialValue] of Object.entries(initial)) {
+        merged[key] = key in current ? walk(current[key], initialValue) : initialValue
+      }
+      return merged
+    }
+    return current
+  }
+  return walk(values, initialValues)
 }
 
 /**
@@ -68,7 +112,28 @@ function collectComputedFields(
  * 循环引用保留原有顺序，执行时引用缺失会走统一的运行时降级。
  */
 function orderComputedFields(fields: ComputedField[]): ComputedField[] {
-  const byName = new Map(fields.map(item => [item.namePath.join('.'), item]))
+  const byName = new Map(fields.filter(item => item.namePath).map(item => [item.namePath!.join('.'), item]))
+  const rowGroups = new Map<string, Map<string, ComputedField>>()
+  for (const item of fields.filter(item => item.row)) {
+    const groupKey = item.row!.listPath.join('.')
+    const group = rowGroups.get(groupKey) ?? new Map<string, ComputedField>()
+    group.set(item.row!.childPath.join('.'), item)
+    rowGroups.set(groupKey, group)
+  }
+  const dependencyOf = (item: ComputedField, reference: string) => {
+    if (item.row)
+      return rowGroups.get(item.row.listPath.join('.'))?.get(reference)
+    for (const [listPath, group] of rowGroups.entries()) {
+      const prefix = listPath ? `${listPath}.` : ''
+      if (!reference.startsWith(prefix))
+        continue
+      const childPath = reference.slice(prefix.length).replace(/^\d+\./, '')
+      const target = group.get(childPath)
+      if (target)
+        return target
+    }
+    return byName.get(reference)
+  }
   const visited = new Set<ComputedField>()
   const visiting = new Set<ComputedField>()
   const ordered: ComputedField[] = []
@@ -80,7 +145,7 @@ function orderComputedFields(fields: ComputedField[]): ComputedField[] {
       return
     visiting.add(item)
     for (const reference of getFormulaReferences(item.expression)) {
-      const target = byName.get(reference)
+      const target = dependencyOf(item, reference)
       if (target)
         visit(target)
     }
@@ -329,36 +394,59 @@ function FormRendererInner({
   useEffect(() => {
     if (!computedFields.length)
       return
-    const values = form.getFieldsValue(true)
+    const values = initialValues ? mergeInitialValues(form.getFieldsValue(true), initialValues) : form.getFieldsValue(true)
     const patch: Record<string, any> = {}
-    for (const item of computedFields) {
-      const name = item.namePath.join('.')
-      try {
-        patch[name] = evalFormula(item.expression, values)
-      }
-      catch (error) {
-        if (form.getFieldValue(item.namePath) !== undefined) {
-          patch[name] = undefined
-          console.warn('[form-designer] 计算字段执行失败', name, error)
+    const setPatch = (namePath: (string | number)[], value: any) => {
+      const keys = namePath.map(String)
+      let current: Record<string, any> = patch
+      let source: unknown = values
+      keys.forEach((key, index) => {
+        if (index === keys.length - 1) {
+          current[key] = value
+          return
         }
-      }
+        const sourceNext = isRecord(source) || Array.isArray(source) ? (source as any)[key] : undefined
+        const next = Array.isArray(sourceNext) ? [...sourceNext] : isRecord(sourceNext) ? { ...sourceNext } : {}
+        current[key] = next
+        current = next
+        source = sourceNext
+      })
     }
-    if (Object.keys(patch).length) {
-      const next: Record<string, any> = {}
-      for (const [name, value] of Object.entries(patch)) {
-        const keys = name.split('.')
-        keys.reduce((current: Record<string, any>, key, index) => {
-          if (index === keys.length - 1) {
-            current[key] = value
-            return current
+    for (const item of computedFields) {
+      if (item.namePath) {
+        try {
+          setPatch(item.namePath, evalFormula(item.expression, values))
+        }
+        catch (error) {
+          if (form.getFieldValue(item.namePath) !== undefined) {
+            setPatch(item.namePath, undefined)
+            console.warn('[form-designer] 计算字段执行失败', item.namePath.join('.'), error)
           }
-          current[key] = current[key] && typeof current[key] === 'object' ? current[key] : {}
-          return current[key]
-        }, next)
+        }
+        continue
       }
-      form.setFieldsValue(next)
+      if (!item.row)
+        continue
+      const rows = getByPathName(values, item.row.listPath.join('.'))
+      if (!Array.isArray(rows))
+        continue
+      rows.forEach((row, rowIndex) => {
+        const namePath = [...item.row!.listPath, rowIndex, ...item.row!.childPath]
+        try {
+          const result = evalFormula(item.expression, createFormulaRowScope(row, values))
+          setPatch(namePath, result)
+        }
+        catch (error) {
+          if (form.getFieldValue(namePath) !== undefined) {
+            setPatch(namePath, undefined)
+            console.warn('[form-designer] 计算字段执行失败', namePath.join('.'), error)
+          }
+        }
+      })
     }
-  }, [computedFields, form, valuesVersion])
+    if (Object.keys(patch).length)
+      form.setFieldsValue(patch)
+  }, [computedFields, form, initialValues, valuesVersion])
 
   const buildCtx = useCallback((over?: Partial<FormHookContext>): FormHookContext => {
     const current = schemaRef.current.events
