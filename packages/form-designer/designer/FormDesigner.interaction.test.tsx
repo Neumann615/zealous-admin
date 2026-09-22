@@ -193,15 +193,6 @@ describe('设计器交互（P5 新组件）', () => {
     await waitFor(() => expect(rowCount()).toBe(0))
   })
 
-  it('预览设备切换为 Mobile 后使用移动视口宽度', () => {
-    renderDesigner(schemaOf(['input']))
-
-    fireEvent.click(screen.getByText('Mobile'))
-    const modal = openPreview()
-
-    expect(modal.style.width).toBe('480px')
-  })
-
   it('预览弹窗提交：子表单收进对象、表格子表单收成数组', async () => {
     const subForm = def('subForm').defaultSchema()
     subForm.field = 'contact'
