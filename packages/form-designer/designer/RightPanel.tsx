@@ -27,7 +27,7 @@ function getCommonMetas(hasField: boolean): ConfigMeta[] {
   return metas
 }
 
-function FieldConfig() {
+function FieldConfig({ optionSets }: { optionSets?: Array<{ code: string, name: string, status: number }> }) {
   const { getSelected, updateField, updateFieldPermission, schema } = useDesignerStore()
   const node = getSelected()
   if (!node)
@@ -110,6 +110,7 @@ function FieldConfig() {
             dataSourceNames={dataSourceNames}
             componentOptions={node.props.options}
             pathIssueOf={pathIssueOf}
+            optionSets={optionSets}
           />
         </>
       )}
@@ -149,9 +150,9 @@ function FieldConfig() {
  * - 未选中字段 → 默认显示「表单配置」（布局 / 全局事件 / 公共事件）
  * - 选中字段 → 自动切换为「字段配置」（基础 / 布局 / 校验 / 数据来源 / 联动 / 组件属性）
  */
-export function RightPanel() {
+export function RightPanel({ optionSets }: { optionSets?: Array<{ code: string, name: string, status: number }> }) {
   const selectedId = useDesignerStore(s => s.selectedId)
   if (selectedId)
-    return <FieldConfig />
+    return <FieldConfig optionSets={optionSets} />
   return <FormEventsPanel />
 }

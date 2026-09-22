@@ -13,6 +13,7 @@ im
 dist-ssr
 pnpm-lock.yaml
 *.local
+service/data/*.db
 yarn.lock
 stats.html
 

@@ -21,6 +21,20 @@ interface MetadataItemInput {
   status?: number
 }
 
+function runInTransaction<T>(operation: () => T): T {
+  const db = getDb()
+  db.exec('BEGIN')
+  try {
+    const result = operation()
+    db.exec('COMMIT')
+    return result
+  }
+  catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
+}
+
 function assertSetCodeAvailable(code: string, excludeId?: number): void {
   const row = getDb().prepare('SELECT id FROM za_metadata_set WHERE code = ?').get(code) as any
   if (row && row.id !== excludeId)
@@ -60,19 +74,23 @@ export function getMetadataSetPage(params: {
   const args: string[] = []
 
   if (params.keyword) {
-    conditions.push('(code LIKE ? OR name LIKE ?)')
+    conditions.push('(set_table.code LIKE ? OR set_table.name LIKE ?)')
     const keyword = `%${params.keyword}%`
     args.push(keyword, keyword)
   }
   if (params.status !== undefined) {
-    conditions.push('status = ?')
+    conditions.push('set_table.status = ?')
     args.push(String(params.status))
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
   const total = (db.prepare(`SELECT COUNT(*) AS count FROM za_metadata_set ${where}`).get(...args) as any).count
   const list = toCamelCaseList<MetadataSet>(db.prepare(
-    `SELECT * FROM za_metadata_set ${where} ORDER BY id LIMIT ? OFFSET ?`,
+    `SELECT set_table.*, COUNT(item.id) AS item_count
+     FROM za_metadata_set set_table
+     LEFT JOIN za_metadata_item item ON item.set_id = set_table.id
+     GROUP BY set_table.id
+     ORDER BY set_table.id LIMIT ? OFFSET ?`,
   ).all(...args, params.pageSize, (params.pageNum - 1) * params.pageSize) as any[])
 
   return { list, total, pageNum: params.pageNum, pageSize: params.pageSize }
@@ -120,11 +138,18 @@ export function deleteMetadataSet(id: number) {
   db.prepare('DELETE FROM za_metadata_set WHERE id = ?').run(id)
 }
 
-export function getOptionSet(setCode: string, onlyValid: boolean) {
+export function getOptionSet(setCode: string, onlyValid: boolean, includeDisabledSet = false) {
   const db = getDb()
   const setRow = db.prepare('SELECT * FROM za_metadata_set WHERE code = ?').get(setCode) as any
   if (!setRow)
     throw new NotFoundError('编码集不存在')
+
+  if (setRow.status !== 1 && !includeDisabledSet) {
+    return {
+      set: toCamelCase<MetadataSet>(setRow),
+      items: [],
+    }
+  }
 
   const itemRows = db.prepare(`
     SELECT * FROM za_metadata_item
@@ -178,12 +203,31 @@ export function createMetadataItem(data: MetadataItemInput & { setCode: string, 
   return { id: Number(result.lastInsertRowid) }
 }
 
+export function createMetadataItems(setCode: string, items: Array<MetadataItemInput & { code: string, name: string }>) {
+  return runInTransaction(() => items.map(item => createMetadataItem({ ...item, setCode }).id))
+}
+
 export function updateMetadataItem(id: number, data: MetadataItemInput) {
-  getItemRow(id)
+  const current = getItemRow(id)
+  const db = getDb()
+
+  if (data.code && data.code !== current.code) {
+    const exists = db.prepare('SELECT id FROM za_metadata_item WHERE set_id = ? AND code = ?').get(current.setId, data.code)
+    if (exists)
+      throw new ConflictError('编码项代码已存在')
+  }
+
   if (data.parentId) {
     const parent = getItemRow(data.parentId)
-    if (parent.id === id)
-      throw new ConflictError('父级编码项不能是自身')
+    if (parent.setId !== current.setId)
+      throw new ConflictError('父级编码项不属于当前编码集')
+
+    let ancestor: MetadataItem | undefined = parent
+    while (ancestor) {
+      if (ancestor.id === current.id)
+        throw new ConflictError('父级编码项不能是自身或后代')
+      ancestor = ancestor.parentId ? getItemRow(ancestor.parentId) : undefined
+    }
   }
 
   getDb().prepare(`
@@ -218,6 +262,13 @@ export function changeMetadataItemStatus(id: number, status: 0 | 1) {
 export function deleteMetadataItem(id: number) {
   getItemRow(id)
   const db = getDb()
-  db.prepare('DELETE FROM za_metadata_item WHERE parent_id = ?').run(id)
-  db.prepare('DELETE FROM za_metadata_item WHERE id = ?').run(id)
+  db.prepare(`
+    WITH RECURSIVE descendants(id) AS (
+      SELECT id FROM za_metadata_item WHERE id = ?
+      UNION ALL
+      SELECT item.id FROM za_metadata_item item
+      JOIN descendants ON item.parent_id = descendants.id
+    )
+    DELETE FROM za_metadata_item WHERE id IN (SELECT id FROM descendants)
+  `).run(id)
 }

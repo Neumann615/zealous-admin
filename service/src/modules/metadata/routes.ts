@@ -7,6 +7,7 @@ import {
   changeMetadataItemStatus,
   changeMetadataSetStatus,
   createMetadataItem,
+  createMetadataItems,
   createMetadataSet,
   deleteMetadataItem,
   deleteMetadataSet,
@@ -47,7 +48,11 @@ router.get('/sets/page', validate(metadataSetPageSchema, 'query'), asyncHandler(
 }))
 
 router.get('/sets/code/:setCode/items', asyncHandler(async (req, res) => {
-  const result = getOptionSet(req.params.setCode, req.query.onlyValid === 'true')
+  const result = getOptionSet(
+    req.params.setCode,
+    req.query.onlyValid === 'true',
+    req.query.includeDisabled === 'true',
+  )
   res.json(success(result))
 }))
 
@@ -95,7 +100,7 @@ router.post('/items/add', validate(metadataItemCreateSchema), asyncHandler(async
 }))
 
 router.post('/items/batch', validate(metadataItemBatchSchema), asyncHandler(async (req, res) => {
-  const ids = req.body.items.map((item: any) => createMetadataItem({ ...item, setCode: req.body.setCode }).id)
+  const ids = createMetadataItems(req.body.setCode, req.body.items)
   res.json(success({ ids }, '批量创建成功'))
 }))
 

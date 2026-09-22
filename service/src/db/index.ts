@@ -324,6 +324,24 @@ export function initDb() {
     db.exec('ALTER TABLE za_form ADD COLUMN permissions TEXT')
   }
 
+  const existMetadataMenu = db.prepare('SELECT id FROM za_menu WHERE path = ?').get('/metadata')
+  if (!existMetadataMenu) {
+    const nowStr = now()
+    const parent = db.prepare('SELECT id, level FROM za_menu WHERE path = ?').get('/system') as any
+    const menu = parent
+      ? db.prepare(
+          'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        ).run(parent.id, '元数据管理', parent.level + 1, 3, 'metadata', 'ai:AiOutlineDatabase', 0, nowStr, '/metadata', null)
+      : db.prepare(
+          'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        ).run(0, '元数据管理', 0, 95, 'metadata', 'ai:AiOutlineDatabase', 0, nowStr, '/metadata', null)
+    const menuId = Number(menu.lastInsertRowid)
+    const roles = db.prepare('SELECT id FROM za_role').all() as any[]
+    const relation = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
+    for (const role of roles)
+      relation.run(role.id, menuId)
+  }
+
   prepareMetadataSchema(db)
 }
 

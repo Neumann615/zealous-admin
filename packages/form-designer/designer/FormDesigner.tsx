@@ -1,5 +1,5 @@
 import type { DragEndEvent } from '@dnd-kit/react'
-import type { FormSchema } from '../types/schema'
+import type { FieldSchema, FormSchema } from '../types/schema'
 import { DragDropProvider } from '@dnd-kit/react'
 import { App } from 'antd'
 import { createStyles } from 'antd-style'
@@ -61,9 +61,20 @@ export interface FormDesignerProps {
   initialSchema?: FormSchema
   onSave?: (schema: FormSchema) => void | Promise<void>
   onSubmit?: (values: Record<string, any>) => void | Promise<void>
+  /** 宿主加载的编码集清单，用于数据来源面板下拉选择 */
+  optionSets?: Array<{ code: string, name: string, status: number }>
 }
 
-export function FormDesigner({ initialSchema, onSave, onSubmit }: FormDesignerProps) {
+function collectUnknownOptionSets(nodes: FieldSchema[], knownCodes: Set<string>): string[] {
+  const codes = nodes.flatMap((node) => {
+    const code = node.dataSource?.def?.type === 'metadata' ? node.dataSource.def.setCode : ''
+    const childCodes = collectUnknownOptionSets(node.children ?? [], knownCodes)
+    return code && knownCodes.size > 0 && !knownCodes.has(code) ? [code, ...childCodes] : childCodes
+  })
+  return [...new Set(codes)]
+}
+
+export function FormDesigner({ initialSchema, onSave, onSubmit, optionSets }: FormDesignerProps) {
   const { styles } = useStyles()
   const { message } = App.useApp()
   const setSchema = useDesignerStore(s => s.setSchema)
@@ -84,8 +95,12 @@ export function FormDesigner({ initialSchema, onSave, onSubmit }: FormDesignerPr
     const hookIssues = validateEvents(schema.events)
     // 校验规则形状同理：面板可以停在「选了阈值类型但还没填数值」的中间态，保存这一步要拦住
     const ruleIssues = validateSchemaShape(schema)
-    if (issues.length || hookIssues.length || ruleIssues.length) {
-      message.error([...issues, ...hookIssues, ...ruleIssues].join('；'))
+    const unknownOptionSets = optionSets
+      ? collectUnknownOptionSets(schema.children, new Set(optionSets.map(item => item.code)))
+      : []
+    const allIssues = [...issues, ...hookIssues, ...ruleIssues, ...unknownOptionSets.map(code => `数据来源编码集不存在：${code}`)]
+    if (allIssues.length) {
+      message.error(allIssues.join('；'))
       return
     }
     setSaveState('saving')
@@ -174,7 +189,7 @@ export function FormDesigner({ initialSchema, onSave, onSubmit }: FormDesignerPr
         <div className={styles.body}>
           <div className={styles.left}><LeftPanel /></div>
           <div className={styles.canvas}><Canvas /></div>
-          <div className={styles.right}><RightPanel /></div>
+          <div className={styles.right}><RightPanel optionSets={optionSets} /></div>
         </div>
       </DragDropProvider>
     </div>

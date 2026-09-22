@@ -19,11 +19,14 @@ export function getOptionSetAPI(id: number) {
 
 export function getOptionSetByCodeAPI(
   setCode: string,
-  options: { onlyValid?: boolean, signal?: AbortSignal } = {},
+  options: { onlyValid?: boolean, includeDisabled?: boolean, signal?: AbortSignal } = {},
 ) {
   return metadataRequest<OptionSet>({
     url: `/metadata/sets/code/${encodeURIComponent(setCode)}/items`,
-    params: options.onlyValid === undefined ? undefined : { onlyValid: options.onlyValid },
+    params: {
+      ...(options.onlyValid === undefined ? {} : { onlyValid: options.onlyValid }),
+      ...(options.includeDisabled === undefined ? {} : { includeDisabled: options.includeDisabled }),
+    },
     signal: options.signal,
   })
 }

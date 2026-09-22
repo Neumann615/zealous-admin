@@ -24,6 +24,8 @@ interface DataSourceEditorProps {
   componentOptions?: FieldOption[]
   /** 名路径校验：解析不了时返回问题描述（数组行内字段要写成 items.0.title） */
   pathIssueOf?: (path: string) => string | null
+  /** 宿主提供的编码集清单；未提供时保留手填兜底 */
+  optionSets?: Array<{ code: string, name: string, status: number }>
 }
 
 /** 参数键值对编辑器（api 的 params）：值支持 {{字段}} 插值 */
@@ -89,6 +91,7 @@ export function DataSourceEditor({
   dataSourceNames = [],
   componentOptions,
   pathIssueOf,
+  optionSets,
 }: DataSourceEditorProps) {
   const kind = dataSourceKind(value)
   const patch = (next: FieldDataSource) => onChange?.(next)
@@ -129,12 +132,30 @@ export function DataSourceEditor({
 
       {kind === 'metadata' && (
         <>
-          <Input
-            size="small"
-            placeholder="编码集 setCode"
-            value={value?.def?.type === 'metadata' ? value.def.setCode : ''}
-            onChange={e => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>), type: 'metadata', setCode: e.target.value })}
-          />
+          {optionSets?.length
+            ? (
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  size="small"
+                  placeholder="选择编码集"
+                  value={value?.def?.type === 'metadata' && value.def.setCode ? value.def.setCode : undefined}
+                  options={optionSets.map(item => ({
+                    label: `${item.name}（${item.code}）`,
+                    value: item.code,
+                    disabled: item.status !== 1,
+                  }))}
+                  onChange={setCode => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>), type: 'metadata', setCode })}
+                />
+              )
+            : (
+                <Input
+                  size="small"
+                  placeholder="编码集 setCode"
+                  value={value?.def?.type === 'metadata' ? value.def.setCode : ''}
+                  onChange={e => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>), type: 'metadata', setCode: e.target.value })}
+                />
+              )}
           <Select
             size="small"
             allowClear

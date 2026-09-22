@@ -1,5 +1,6 @@
 export type * from './contracts/common'
 export type * from './contracts/metadata'
+export { MetadataManager } from './management'
 export { configureMetadataClient, metadataRequest } from './runtime/client'
 export type { MetadataRequestConfig, MetadataRequester, MetadataResult } from './runtime/client'
 export { normalizeOptionSet } from './runtime/option-set'

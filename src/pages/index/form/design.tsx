@@ -1,6 +1,7 @@
 import type { FormSchema } from '@zealous-admin/form-designer/index'
 import { createEmptySchema, FormDesigner, parseSchema } from '@zealous-admin/form-designer/index'
 import { useAppMessage } from '@zealous-admin/layout/index'
+import { getOptionSetPageAPI } from '@zealous-admin/metadata/index'
 import { Empty, Spin } from 'antd'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -13,6 +14,13 @@ export default function FormDesignPage() {
   const [loading, setLoading] = useState(!!id)
   const [notFound, setNotFound] = useState(false)
   const [initialSchema, setInitialSchema] = useState<FormSchema>()
+  const [optionSets, setOptionSets] = useState<Array<{ code: string, name: string, status: number }>>([])
+
+  useEffect(() => {
+    getOptionSetPageAPI({ pageNum: 1, pageSize: 200 })
+      .then(result => setOptionSets(result.list))
+      .catch(() => setOptionSets([]))
+  }, [])
 
   useEffect(() => {
     if (!id)
@@ -49,7 +57,12 @@ export default function FormDesignPage() {
 
   return (
     <div style={{ height: '100%' }}>
-      <FormDesigner key={id} initialSchema={initialSchema} onSave={id ? handleSave : undefined} />
+      <FormDesigner
+        key={id}
+        initialSchema={initialSchema}
+        optionSets={optionSets}
+        onSave={id ? handleSave : undefined}
+      />
     </div>
   )
 }

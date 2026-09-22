@@ -6,6 +6,7 @@ export interface MetadataSet {
   status: 0 | 1
   createTime?: string
   updateTime?: string
+  itemCount?: number
 }
 
 export interface MetadataItem {

@@ -12,7 +12,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['react'],
+      external: ['@ant-design/icons', 'antd', 'react', 'react/jsx-runtime'],
       input: {
         index: './packages/metadata/index.ts',
       },

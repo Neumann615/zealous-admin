@@ -10,6 +10,8 @@
     }
   },
   "peerDependencies": {
+    "@ant-design/icons": "catalog:",
+    "antd": "catalog:",
     "react": "catalog:"
   }
 }
