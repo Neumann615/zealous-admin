@@ -131,19 +131,9 @@ export function DataSourceEditor({
         <>
           <Input
             size="small"
-            placeholder="枚举编码 enumCode"
-            value={value?.def?.type === 'metadata' ? value.def.enumCode : ''}
-            onChange={e => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>), type: 'metadata', enumCode: e.target.value })}
-          />
-          <Input
-            size="small"
-            placeholder="系统名称 systemName（可选）"
-            value={value?.def?.type === 'metadata' ? value.def.systemName ?? '' : ''}
-            onChange={e => patchDef({
-              ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>),
-              type: 'metadata',
-              systemName: e.target.value || undefined,
-            })}
+            placeholder="编码集 setCode"
+            value={value?.def?.type === 'metadata' ? value.def.setCode : ''}
+            onChange={e => patchDef({ ...(value?.def as Extract<DataSourceDef, { type: 'metadata' }>), type: 'metadata', setCode: e.target.value })}
           />
           <Select
             size="small"

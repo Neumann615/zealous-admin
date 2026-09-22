@@ -47,8 +47,7 @@ export function withDataSourceKind(
       ...next,
       def: {
         type: 'metadata',
-        enumCode: prev?.type === 'metadata' ? prev.enumCode : '',
-        ...(prev?.type === 'metadata' && prev.systemName ? { systemName: prev.systemName } : {}),
+        setCode: prev?.type === 'metadata' ? prev.setCode : '',
         ...(prev?.type === 'metadata' && prev.onlyValid !== undefined ? { onlyValid: prev.onlyValid } : {}),
         ...(prev?.type === 'metadata' && prev.shape ? { shape: prev.shape } : {}),
       },

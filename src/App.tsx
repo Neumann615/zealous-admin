@@ -1,7 +1,7 @@
 import { convertMenus, useUserStore } from '@zealous-admin/auth'
 import { registerFormDataApis } from '@zealous-admin/form-designer/index'
 import { http, LayoutProvider } from '@zealous-admin/layout/index'
-import { configureMetadataClient, getEnumValueByCodeAPI, getMockEnumValueOptions, MOCK_METADATA_SYSTEM_NAME, normalizeEnumValueDetail } from '@zealous-admin/metadata/index'
+import { configureMetadataClient, getOptionSetByCodeAPI, normalizeOptionSet } from '@zealous-admin/metadata/index'
 import { useEffect, useMemo } from 'react'
 import { Navigate, useRoutes } from 'react-router'
 import routes from '~react-pages'
@@ -16,37 +16,20 @@ configureMetadataClient(async config => http({
   signal: config.signal,
 }))
 
-const useMockMetadata = import.meta.env.VITE_METADATA_USE_MOCK_DATA === 'true'
-
 registerFormDataApis({
   metadata: async (params, signal) => {
     const metadataParams = params as {
-      enumCode?: string
-      systemName?: string
+      setCode?: string
       onlyValid?: boolean
       shape?: 'flat' | 'tree' | 'path'
     }
-    if (!metadataParams.enumCode)
-      throw new Error('元数据来源缺少 enumCode')
-    const systemName = metadataParams.systemName
-      || import.meta.env.VITE_METADATA_DEFAULT_SYSTEM_NAME
-      || (useMockMetadata ? MOCK_METADATA_SYSTEM_NAME : '')
-    if (!systemName)
-      throw new Error('元数据来源缺少 systemName，请配置 VITE_METADATA_DEFAULT_SYSTEM_NAME')
-    if (useMockMetadata) {
-      return getMockEnumValueOptions({
-        enumCode: metadataParams.enumCode,
-        onlyValid: metadataParams.onlyValid,
-        shape: metadataParams.shape,
-      }, signal)
-    }
-    const detail = await getEnumValueByCodeAPI(
-      metadataParams.enumCode,
-      systemName,
-      metadataParams.onlyValid ?? false,
+    if (!metadataParams.setCode)
+      throw new Error('元数据来源缺少 setCode')
+    const detail = await getOptionSetByCodeAPI(metadataParams.setCode, {
+      onlyValid: metadataParams.onlyValid,
       signal,
-    )
-    return normalizeEnumValueDetail(detail, { shape: metadataParams.shape })
+    })
+    return normalizeOptionSet(detail, { shape: metadataParams.shape })
   },
   __render: async (params, signal) => {
     const res = await renderFormAPI(params, signal)

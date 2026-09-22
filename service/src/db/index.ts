@@ -3,6 +3,7 @@ import process from 'node:process'
 import { DatabaseSync } from 'node:sqlite'
 import bcrypt from 'bcryptjs'
 import { now } from '../lib/date.js'
+import { prepareMetadataSchema } from '../modules/metadata/schema.js'
 
 const dbPath = process.env.DB_PATH || './data/sqlite.db'
 mkdirSync('./data', { recursive: true })
@@ -322,6 +323,8 @@ export function initDb() {
   if (!formCols.some(c => c.name === 'permissions')) {
     db.exec('ALTER TABLE za_form ADD COLUMN permissions TEXT')
   }
+
+  prepareMetadataSchema(db)
 }
 
 export function getDb() {

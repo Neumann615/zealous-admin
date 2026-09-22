@@ -32,7 +32,7 @@ describe('数据来源面板归一化', () => {
     expect(dataSourceKind(undefined)).toBeUndefined()
     expect(dataSourceKind({ ref: 'shared' })).toBe('ref')
     expect(dataSourceKind({ def: { type: 'static', options: [] } })).toBe('static')
-    expect(dataSourceKind({ ref: 'shared', def: { type: 'metadata', enumCode: 'sex' } })).toBe('metadata')
+    expect(dataSourceKind({ ref: 'shared', def: { type: 'metadata', setCode: 'GENDER' } })).toBe('metadata')
   })
 
   it('切类型时丢弃无关参数（含 def / ref 二选一），保留 watch 与 debounce', () => {
@@ -45,7 +45,7 @@ describe('数据来源面板归一化', () => {
     expect(withDataSourceKind(previous, 'metadata')).toEqual({
       watch: ['dept'],
       debounce: 500,
-      def: { type: 'metadata', enumCode: '' },
+      def: { type: 'metadata', setCode: '' },
     })
     expect(withDataSourceKind(previous, 'ref')).toEqual({ watch: ['dept'], debounce: 500, ref: '' })
   })
@@ -56,14 +56,14 @@ describe('数据来源面板归一化', () => {
     expect(withDataSourceKind(previous, 'api')).toEqual({
       def: { type: 'api', api: 'orgTree', params: { id: '1' }, parse: 'data.list' },
     })
-    expect(withDataSourceKind({ def: { type: 'metadata', enumCode: 'sex' } }, 'metadata')).toEqual({ def: { type: 'metadata', enumCode: 'sex' } })
+    expect(withDataSourceKind({ def: { type: 'metadata', setCode: 'GENDER' } }, 'metadata')).toEqual({ def: { type: 'metadata', setCode: 'GENDER' } })
   })
 
   it('静态选项从 static 切走再切回时不残留旧选项', () => {
     const previous: FieldDataSource = { def: { type: 'static', options: [{ label: 'A', value: 'a' }] } }
     const metadata = withDataSourceKind(previous, 'metadata')
 
-    expect(metadata.def).toEqual({ type: 'metadata', enumCode: '' })
+    expect(metadata.def).toEqual({ type: 'metadata', setCode: '' })
     expect(withDataSourceKind(metadata, 'static')).toEqual({ def: { type: 'static', options: [] } })
   })
 })
@@ -84,7 +84,7 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(undefined))
   })
 
-  it('切到元数据类型写回空 enumCode（由保存拦截提示补全），并丢弃原接口参数', async () => {
+  it('切到元数据类型写回空 setCode（由保存拦截提示补全），并丢弃原接口参数', async () => {
     const onChange = vi.fn()
     render(
       <DataSourceEditor
@@ -94,15 +94,15 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
     )
 
     await pickOption(0, '元数据编码')
-    expect(onChange).toHaveBeenCalledWith({ watch: ['dept'], def: { type: 'metadata', enumCode: '' } })
+    expect(onChange).toHaveBeenCalledWith({ watch: ['dept'], def: { type: 'metadata', setCode: '' } })
   })
 
-  it('元数据类型下填 enumCode', () => {
+  it('元数据类型下填 setCode', () => {
     const onChange = vi.fn()
-    render(<DataSourceEditor value={{ def: { type: 'metadata', enumCode: '' } }} onChange={onChange} />)
+    render(<DataSourceEditor value={{ def: { type: 'metadata', setCode: '' } }} onChange={onChange} />)
 
-    fireEvent.change(screen.getByPlaceholderText('枚举编码 enumCode'), { target: { value: 'sys_sex' } })
-    expect(onChange).toHaveBeenCalledWith({ def: { type: 'metadata', enumCode: 'sys_sex' } })
+    fireEvent.change(screen.getByPlaceholderText('编码集 setCode'), { target: { value: 'GENDER' } })
+    expect(onChange).toHaveBeenCalledWith({ def: { type: 'metadata', setCode: 'GENDER' } })
   })
 
   it('接口类型未提供清单时退化为自由文本并提示', () => {
@@ -201,7 +201,7 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
     const onChange = vi.fn()
     render(
       <DataSourceEditor
-        value={{ def: { type: 'metadata', enumCode: 'sys' } }}
+        value={{ def: { type: 'metadata', setCode: 'GENDER' } }}
         componentOptions={[{ label: '甲', value: 'a' }]}
         onChange={onChange}
       />,
@@ -213,7 +213,7 @@ describe('数据来源编辑器（DataSourceEditor）', () => {
 
   it('切到静态选项且没有组件属性选项时落空数组', async () => {
     const onChange = vi.fn()
-    render(<DataSourceEditor value={{ def: { type: 'metadata', enumCode: 'sys' } }} onChange={onChange} />)
+    render(<DataSourceEditor value={{ def: { type: 'metadata', setCode: 'GENDER' } }} onChange={onChange} />)
 
     await pickOption(0, '静态选项')
     expect(onChange).toHaveBeenCalledWith({ def: { type: 'static', options: [] } })

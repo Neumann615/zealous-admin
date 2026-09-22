@@ -142,15 +142,14 @@ export interface ControlRule {
 /**
  * 声明式数据来源定义。三种类型都由渲染器取数后写进 `props.options`：
  * - `static`：schema 里直接写死的选项
- * - `metadata`：走宿主注册名 `'metadata'`，参数 `{ enumCode, systemName }`
+ * - `metadata`：走宿主注册名 `'metadata'`，参数 `{ setCode }`
  * - `api`：走宿主注册名 `def.api`（**只接受注册名，不填裸 URL**），`params` 经 `{{}}` 插值后传入
  */
 export type DataSourceDef
   = | { type: 'static', options: FieldOption[] }
     | {
       type: 'metadata'
-      enumCode: string
-      systemName?: string
+      setCode: string
       onlyValid?: boolean
       shape?: 'flat' | 'tree' | 'path'
       labelField?: string

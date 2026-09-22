@@ -119,10 +119,10 @@ describe('声明式数据来源（useFieldDataSource）', () => {
     ])
     registerFormDataApis({ metadata })
 
-    renderForm(schemaWith([radio('a', 'sex', { def: { type: 'metadata', enumCode: 'sys_sex' } })]))
+    renderForm(schemaWith([radio('a', 'sex', { def: { type: 'metadata', setCode: 'GENDER' } })]))
 
     await waitFor(() => expect(screen.getByText('男')).toBeTruthy())
-    expect(metadata).toHaveBeenCalledWith({ type: 'metadata', enumCode: 'sys_sex' }, expect.anything())
+    expect(metadata).toHaveBeenCalledWith({ type: 'metadata', setCode: 'GENDER' }, expect.anything())
     expect(screen.getByText('女')).toBeTruthy()
   })
 
@@ -132,7 +132,7 @@ describe('声明式数据来源（useFieldDataSource）', () => {
     })
 
     renderForm(schemaWith([
-      radio('a', 'dept', { def: { type: 'metadata', enumCode: 'dept', labelField: 'name', valueField: 'code' } }),
+      radio('a', 'dept', { def: { type: 'metadata', setCode: 'ORGANIZATION', labelField: 'name', valueField: 'code' } }),
     ]))
 
     await waitFor(() => expect(screen.getByText('研发部')).toBeTruthy())
@@ -420,7 +420,7 @@ describe('声明式数据来源（useFieldDataSource）', () => {
       metadata: vi.fn().mockResolvedValue([{ label: '缺值' }, 'b', true, { label: '正常', value: '1' }]),
     })
 
-    renderForm(schemaWith([radio('a', 'dept', { def: { type: 'metadata', enumCode: 'x' } })]))
+    renderForm(schemaWith([radio('a', 'dept', { def: { type: 'metadata', setCode: 'GENDER' } })]))
 
     await waitFor(() => expect(screen.getByText('正常')).toBeTruthy())
     expect(screen.getByText('b')).toBeTruthy()

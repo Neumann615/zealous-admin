@@ -131,14 +131,12 @@ function validateDataSourceDef(def: unknown, where: string): string[] {
   }
 
   if (source.type === 'metadata') {
-    if (typeof source.enumCode !== 'string' || !source.enumCode)
-      return [`${issue}：metadata 需要非空的 enumCode`]
+    if (typeof source.setCode !== 'string' || !source.setCode)
+      return [`${issue}：metadata 需要非空的 setCode`]
     if (source.labelField !== undefined && typeof source.labelField !== 'string')
       return [issue]
     if (source.valueField !== undefined && typeof source.valueField !== 'string')
       return [issue]
-    if (source.systemName !== undefined && typeof source.systemName !== 'string')
-      return [`${issue}：systemName 应为字符串`]
     if (source.onlyValid !== undefined && typeof source.onlyValid !== 'boolean')
       return [`${issue}：onlyValid 应为布尔值`]
     if (source.shape !== undefined && !['flat', 'tree', 'path'].includes(source.shape))

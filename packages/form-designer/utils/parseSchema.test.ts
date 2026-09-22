@@ -315,13 +315,13 @@ describe('parseSchema 数据来源形状', () => {
 
   it('三种合法定义穿过解析', () => {
     expect(() => parseSchema(withDataSource({ def: { type: 'static', options: [{ label: 'A', value: 'a' }] } }))).not.toThrow()
-    expect(() => parseSchema(withDataSource({ def: { type: 'metadata', enumCode: 'sys_sex', labelField: 'name' } }))).not.toThrow()
+    expect(() => parseSchema(withDataSource({ def: { type: 'metadata', setCode: 'GENDER', labelField: 'name' } }))).not.toThrow()
     expect(() => parseSchema(withDataSource({
       def: { type: 'api', api: 'orgTree', params: { id: '{{dept}}' }, parse: 'data.list' },
       watch: ['city', 'contact.name'],
       debounce: 0,
     }))).not.toThrow()
-    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'metadata', enumCode: 'sex' } } }))).not.toThrow()
+    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'metadata', setCode: 'GENDER' } } }))).not.toThrow()
     // 未配置 dataSource 当然也合法
     expect(() => parseSchema(JSON.stringify({
       version: 2,
@@ -352,9 +352,9 @@ describe('parseSchema 数据来源形状', () => {
       .toThrow('disabled 应为布尔值')
   })
 
-  it('metadata 需要非空 enumCode', () => {
-    expect(() => parseSchema(withDataSource({ def: { type: 'metadata', enumCode: '' } })))
-      .toThrow('数据来源格式不正确（部门）：metadata 需要非空的 enumCode')
+  it('metadata 需要非空 setCode', () => {
+    expect(() => parseSchema(withDataSource({ def: { type: 'metadata', setCode: '' } })))
+      .toThrow('数据来源格式不正确（部门）：metadata 需要非空的 setCode')
     expect(() => parseSchema(withDataSource({ def: { type: 'metadata', labelField: 1 } })))
       .toThrow('数据来源格式不正确（部门）')
   })
@@ -380,8 +380,8 @@ describe('parseSchema 数据来源形状', () => {
   it('命名数据源表逐项校验（dataSources 非对象、或某项非法）', () => {
     expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: [] })))
       .toThrow('数据来源格式不正确（dataSources 应为对象）')
-    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'metadata', enumCode: '' } } })))
-      .toThrow('数据来源格式不正确（dataSources.shared）：metadata 需要非空的 enumCode')
+    expect(() => parseSchema(withDataSource({ ref: 'shared' }, { dataSources: { shared: { type: 'metadata', setCode: '' } } })))
+      .toThrow('数据来源格式不正确（dataSources.shared）：metadata 需要非空的 setCode')
   })
 
   it('嵌套子表单里的数据来源同样校验', () => {

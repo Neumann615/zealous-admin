@@ -33,7 +33,7 @@ describe('dataSourceLoader', () => {
     registerFormDataApis({ metadata })
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    const definition = { type: 'metadata', enumCode: 'sex' } as DataSourceDef
+    const definition = { type: 'metadata', setCode: 'GENDER' } as DataSourceDef
     await expect(loadFieldOptions(definition, {})).resolves.toEqual([
       { label: '男', value: '1' },
       { label: '女', value: '女' },
@@ -43,7 +43,7 @@ describe('dataSourceLoader', () => {
 
     metadata.mockResolvedValue([{ name: '研发部', code: 9, disabled: true }])
     await expect(loadFieldOptions(
-      { type: 'metadata', enumCode: 'dept', labelField: 'name', valueField: 'code' },
+      { type: 'metadata', setCode: 'ORGANIZATION', labelField: 'name', valueField: 'code' },
       {},
     )).resolves.toEqual([{ label: '研发部', value: 9, disabled: true }])
   })

@@ -1,35 +1,43 @@
-import type { Request, Response } from 'express'
 import { z } from 'zod'
 
 export const positiveIdSchema = z.coerce.number().int().positive()
 
-export const enabledStatusSchema = z.union([z.literal(0), z.literal(1)])
+export const statusSchema = z.union([z.literal(0), z.literal(1)])
 
-export const idListSchema = z.array(z.coerce.number().int().positive()).min(1)
+export const metadataSetCreateSchema = z.object({
+  code: z.string().trim().min(1),
+  name: z.string().trim().min(1),
+  description: z.string().optional(),
+  status: statusSchema.optional(),
+})
 
-export function parseIdParam(req: Request, res: Response, key = 'id'): number | undefined {
-  const result = positiveIdSchema.safeParse(req.params[key])
-  if (!result.success) {
-    res.status(400).json({ code: 400, message: `${key} 必须是正整数`, data: null })
-    return undefined
-  }
-  return result.data
-}
+export const metadataSetUpdateSchema = metadataSetCreateSchema.partial()
 
-export function parseEnabledParam(req: Request, res: Response): 0 | 1 | undefined {
-  const result = enabledStatusSchema.safeParse(Number(req.query.enabled))
-  if (!result.success) {
-    res.status(400).json({ code: 400, message: 'enabled 必须是 0 或 1', data: null })
-    return undefined
-  }
-  return result.data
-}
+export const metadataSetStatusSchema = z.object({ status: statusSchema })
 
-export function parseIdBody(req: Request, res: Response): number[] | undefined {
-  const result = idListSchema.safeParse(req.body)
-  if (!result.success) {
-    res.status(400).json({ code: 400, message: 'ID 列表不能为空', data: null })
-    return undefined
-  }
-  return result.data
-}
+export const metadataSetPageSchema = z.object({
+  keyword: z.string().optional(),
+  status: z.coerce.number().pipe(statusSchema).optional(),
+  pageNum: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(200).default(20),
+})
+
+export const metadataItemCreateSchema = z.object({
+  setCode: z.string().trim().min(1),
+  parentId: positiveIdSchema.optional(),
+  code: z.string().trim().min(1),
+  name: z.string().trim().min(1),
+  shortName: z.string().optional(),
+  description: z.string().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  status: statusSchema.optional(),
+})
+
+export const metadataItemUpdateSchema = metadataItemCreateSchema.omit({ setCode: true }).partial()
+
+export const metadataItemStatusSchema = z.object({ status: statusSchema })
+
+export const metadataItemBatchSchema = z.object({
+  setCode: z.string().trim().min(1),
+  items: z.array(metadataItemCreateSchema.omit({ setCode: true })).min(1),
+})

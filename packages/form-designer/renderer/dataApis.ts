@@ -8,7 +8,7 @@
  * ```ts
  * // 宿主侧（一次注册，全局可用）
  * registerFormDataApis({
- *   metadata: (params, signal) => getEnumValueOptionsAPI(params, { signal }),
+ *   metadata: (params, signal) => getOptionSetByCodeAPI(params.setCode, { signal }),
  *   orgTree: params => getOrgTreeAPI(params),
  * })
  *
