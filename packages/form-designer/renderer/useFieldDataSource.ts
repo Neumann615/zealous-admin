@@ -1,23 +1,11 @@
-import type { FormInstance } from 'antd'
-import type { DataSourceDef, FieldOption, FieldSchema } from '../types/schema'
+import type { FieldOption, FieldSchema } from '../types/schema'
 import { Form } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { notifyError, runHooks, warnOnce } from '../events/runHooks'
+import { notifyError, runHooks } from '../events/runHooks'
 import { getByPathName } from '../utils/path'
-import { getFormDataApi } from './dataApis'
+import { DataSourceError, DEFAULT_DATA_SOURCE_DEBOUNCE, loadFieldOptions, resolveDataSourceDef } from './dataSourceLoader'
 import { useFormHooksRuntime } from './hooksContext'
-import { interpolateDeep } from './interpolate'
 import { joinName, useNamePrefix } from './namePrefix'
-
-/** 缺省防抖：watch 命中的字段连续输入时只取最后一次 */
-export const DEFAULT_DATA_SOURCE_DEBOUNCE = 300
-
-/** 字典接口的约定注册名：宿主注册 `dict`，参数 `{ dictType }` */
-const DICT_API_NAME = 'dict'
-
-/** 字典项缺省的 label / value 字段名（宿主 getDictDataByTypeAPI 的返回形状） */
-const DICT_LABEL_FIELD = 'dictLabel'
-const DICT_VALUE_FIELD = 'dictValue'
 
 /** 数据源失败提示的稳定 key：与钩子错误的提示分开，互不覆盖 */
 const DATA_SOURCE_ERROR_KEY = 'form-designer-data-source-error'
@@ -27,102 +15,8 @@ export interface FieldDataSourceResult {
   options: FieldOption[] | undefined
 }
 
-/** 取数失败中「原因可直接展示给用户」的一类；其余错误一律用通用文案 + console 详情 */
-class DataSourceError extends Error {}
-
-/** 解析数据来源：def 优先于 ref（与 HookRef 的「内联优先」同规则） */
-export function resolveDataSourceDef(
-  dataSource: FieldSchema['dataSource'],
-  dataSources?: Record<string, DataSourceDef>,
-): DataSourceDef | undefined {
-  if (!dataSource)
-    return undefined
-  if (dataSource.def)
-    return dataSource.def
-  return dataSource.ref ? dataSources?.[dataSource.ref] : undefined
-}
-
 function isAbortError(e: unknown): boolean {
   return !!e && typeof e === 'object' && (e as { name?: string }).name === 'AbortError'
-}
-
-function requireArray(value: unknown, api: string): unknown[] {
-  if (Array.isArray(value))
-    return value
-  throw new DataSourceError(`数据接口返回的不是数组：${api}`)
-}
-
-/**
- * 选项归一化：字典与接口共用同一份（避免两套严格度）。
- * 对象项按 labelField / valueField 取字段（接口默认 label / value，字典默认 dictLabel / dictValue），
- * 缺 value 或值不是字符串 / 数字的项告警一次并跳过 —— 字典接口返回 `['a','b']` 这类形状不符的数组
- * 不会产出 `{ label: '', value: undefined }` 的垃圾选项；
- * 字符串 / 数字项直接当值用（接口返回纯值数组的简写）；其余类型同样告警并跳过。
- */
-function toOptions(
-  list: unknown[],
-  api: string,
-  mapping: { labelField: string, valueField: string } = { labelField: 'label', valueField: 'value' },
-): FieldOption[] {
-  const options: FieldOption[] = []
-  list.forEach((item, index) => {
-    if (item !== null && typeof item === 'object' && !Array.isArray(item)) {
-      const row = item as Record<string, any>
-      const value = row[mapping.valueField]
-      if (typeof value === 'string' || typeof value === 'number') {
-        options.push({
-          label: String(row[mapping.labelField] ?? ''),
-          value,
-          ...(row.disabled === undefined ? {} : { disabled: !!row.disabled }),
-        })
-        return
-      }
-      warnOnce(
-        `option:${api}:${mapping.valueField}`,
-        `[form-designer] 数据接口返回的选项缺少 ${mapping.valueField}（${api} 第 ${index + 1} 项），已跳过该选项`,
-      )
-      return
-    }
-    if (typeof item === 'string' || typeof item === 'number') {
-      options.push({ label: String(item), value: item })
-      return
-    }
-    warnOnce(
-      `option:${api}:type`,
-      `[form-designer] 数据接口返回的选项既不是对象也不是值（${api} 第 ${index + 1} 项），已跳过该选项`,
-    )
-  })
-  return options
-}
-
-/** 取数：static 直接用；dict 与 api 都走宿主注册表（包本体不发起任何请求） */
-async function fetchOptions(
-  def: DataSourceDef,
-  form: FormInstance | undefined,
-  signal: AbortSignal,
-): Promise<FieldOption[]> {
-  if (def.type === 'static')
-    return def.options
-
-  const values = form?.getFieldsValue(true) ?? {}
-
-  if (def.type === 'dict') {
-    const api = getFormDataApi(DICT_API_NAME)
-    if (!api)
-      throw new DataSourceError(`未注册的数据接口：${DICT_API_NAME}`)
-    return toOptions(requireArray(await api({ dictType: def.dictType }, signal), DICT_API_NAME), DICT_API_NAME, {
-      labelField: def.labelField || DICT_LABEL_FIELD,
-      valueField: def.valueField || DICT_VALUE_FIELD,
-    })
-  }
-
-  const api = getFormDataApi(def.api)
-  if (!api)
-    throw new DataSourceError(`未注册的数据接口：${def.api}`)
-  const result = await api(interpolateDeep(def.params ?? {}, values), signal)
-  // parse 是名路径：接口返回 { data: { list: [...] } } 这类信封时用它取出数组
-  const list = def.parse ? getByPathName(result, def.parse) : result
-  return toOptions(requireArray(list, def.api), def.api)
 }
 
 /**
@@ -192,7 +86,11 @@ export function useFieldDataSource(schema: FieldSchema): FieldDataSourceResult {
     const controller = new AbortController()
     abortRef.current = controller
     try {
-      const result = await fetchOptions(source, latestRef.current.form, controller.signal)
+      const result = await loadFieldOptions(
+        source,
+        latestRef.current.form?.getFieldsValue(true) ?? {},
+        controller.signal,
+      )
       // 后写胜：过期结果直接丢弃（宿主忽略 signal 时请求仍会返回）
       if (seq !== seqRef.current)
         return
