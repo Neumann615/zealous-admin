@@ -1,12 +1,19 @@
-import { convertMenus, useUserStore } from '@zealous-admin/auth'
+import { AuthGuard, configureAuthClient, convertMenus, useUserStore } from '@zealous-admin/auth'
 import { registerFormDataApis } from '@zealous-admin/form-designer/index'
 import { http, LayoutProvider } from '@zealous-admin/layout/index'
 import { configureMetadataClient, getOptionSetByCodeAPI, normalizeOptionSet } from '@zealous-admin/metadata/index'
 import { useEffect, useMemo } from 'react'
-import { Navigate, useRoutes } from 'react-router'
+import { useRoutes } from 'react-router'
 import routes from '~react-pages'
 import { renderFormAPI } from './apis/form'
 import './App.css'
+
+configureAuthClient(async config => http({
+  url: config.url,
+  method: (config.method || 'GET').toLowerCase() as 'get' | 'post',
+  data: config.data,
+  params: config.params,
+}))
 
 configureMetadataClient(async config => http({
   url: config.url,
@@ -38,19 +45,10 @@ registerFormDataApis({
 })
 
 // 路由守卫
-function RouteGuard(props: { children: React.ReactNode }) {
-  const token = useUserStore.getState().token
-  if (token?.length) {
-    return props.children
-  }
-  else {
-    return <Navigate to="/login" />
-  }
-}
 // 为需要权限的路由添加守卫
 for (let i = 0; i < routes.length; i++) {
   if ((routes[i] as any).meta?.auth) {
-    routes[i].element = <RouteGuard>{routes[i].element}</RouteGuard>
+    routes[i].element = <AuthGuard>{routes[i].element}</AuthGuard>
   }
 }
 

@@ -2,7 +2,7 @@ import type { MenuNode, MenuRecord } from '@zealous-admin/auth'
 import type { TableColumnsType } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { ZaIcon, ZaIconPicker } from '@zealous-admin/components/index'
-import { createMenu, deleteMenu, getMenuDetail, getMenuTree, updateMenu } from '@zealous-admin/auth'
+import { createMenu, deleteMenu, getMenuDetail, getMenuTree, updateMenu, updateMenuStatus } from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
@@ -124,7 +124,7 @@ export default function SystemMenu() {
   }
 
   const handleHiddenChange = async (row: MenuRecord, checked: boolean) => {
-    await updateMenu(row.id!, { ...row, hidden: checked ? 0 : 1 })
+    await updateMenuStatus(row.id!, checked ? 0 : 1)
     message.success('修改成功')
     fetchTree()
   }

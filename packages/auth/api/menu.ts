@@ -25,6 +25,10 @@ export function updateMenu(id: number, data: Partial<MenuRecord>) {
   return authRequest<MenuRecord>({ url: `/menu/update/${id}`, method: 'POST', data })
 }
 
+export function updateMenuStatus(id: number, hidden: number) {
+  return authRequest<MenuRecord>({ url: `/menu/update/${id}`, method: 'POST', data: { hidden } })
+}
+
 export function deleteMenu(id: number) {
   return authRequest<null>({ url: `/menu/delete/${id}`, method: 'POST' })
 }
