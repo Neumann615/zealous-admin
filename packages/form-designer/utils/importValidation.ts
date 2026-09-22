@@ -3,7 +3,7 @@ import { validateEvents } from '../events/validateEvents'
 import { getComponent } from '../registry/registry'
 import { getFormulaIssue } from '../renderer/formula'
 import { validateSchemaFieldNames } from './fieldName'
-import { validateFieldRules } from './parseSchema'
+import { validateSchemaShape } from './parseSchema'
 
 const DATA_SOURCE_TYPES = new Set(['static', 'dict', 'api'])
 
@@ -125,6 +125,6 @@ export function validateOptionsImport(value: unknown, currentSchema: FormSchema)
     ...(options.events !== undefined ? { events: options.events } : {}),
     ...(options.dataSources !== undefined ? { dataSources: options.dataSources } : {}),
   }
-  issues.push(...validateFieldRules(merged.children, merged.dataSources).map(issue => `合并当前渲染规则：${issue}`))
+  issues.push(...validateSchemaShape(merged).map(issue => `合并当前渲染规则：${issue}`))
   return [...new Set(issues)]
 }

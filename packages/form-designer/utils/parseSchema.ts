@@ -285,6 +285,14 @@ export function validateFieldRules(children: unknown, dataSources?: unknown): st
   return issues
 }
 
+/** schema 级字段规则校验入口：保存 / 导出 / 解析共用，避免调用方漏传 dataSources */
+export function validateSchemaShape(schema: unknown): string[] {
+  if (!schema || typeof schema !== 'object' || Array.isArray(schema))
+    return ['表单结构解析失败：应为对象']
+  const raw = schema as Pick<FormSchema, 'children' | 'dataSources'>
+  return validateFieldRules(raw.children, raw.dataSources)
+}
+
 /**
  * 单一解析入口：字符串或已解析对象 → 当前版本的 FormSchema。
  * 失败一律抛错，消息面向用户可直接展示。
@@ -328,7 +336,7 @@ export function parseSchema(input: string | unknown): FormSchema {
   const eventIssues = validateEvents(raw.events as FormEventConfig | undefined)
   if (eventIssues.length)
     throw new Error(`表单结构解析失败：${eventIssues[0]}`)
-  const ruleIssues = validateFieldRules(raw.children, raw.dataSources)
+  const ruleIssues = validateSchemaShape(raw)
   if (ruleIssues.length)
     throw new Error(`表单结构解析失败：${ruleIssues[0]}`)
 

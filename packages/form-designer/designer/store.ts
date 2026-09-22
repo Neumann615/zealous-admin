@@ -6,7 +6,7 @@ import { getComponent } from '../registry/registry'
 import { createEmptySchema } from '../types/schema'
 import { validateSchemaFieldNames } from '../utils/fieldName'
 import { validateOptionsImport, validateRuleImport } from '../utils/importValidation'
-import { parseSchema, validateFieldRules } from '../utils/parseSchema'
+import { parseSchema, validateSchemaShape } from '../utils/parseSchema'
 import { setByPath } from '../utils/path'
 import { getFieldPermissionKey, pruneFieldPermissions, renameFieldPermissions } from '../utils/permissions'
 import { childrenOf, cloneNode, findNode, isDescendant, removeNode } from '../utils/schemaTree'
@@ -300,7 +300,7 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
         const brief = issues.slice(0, 3).join('；')
         return { ok: false, reason: `渲染规则校验未通过，未导入：${brief}${issues.length > 3 ? ' 等' : ''}` }
       }
-      const ruleIssues = validateFieldRules(children, get().schema.dataSources)
+      const ruleIssues = validateSchemaShape({ ...get().schema, children })
       if (ruleIssues.length)
         return { ok: false, reason: `校验规则与当前数据源冲突：${ruleIssues[0]}` }
       mutate((draft) => {

@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptySchema } from '../types/schema'
-import { parseSchema } from './parseSchema'
+import { parseSchema, validateSchemaShape } from './parseSchema'
 
 describe('parseSchema', () => {
+  it('schema 级校验入口会一并校验 children 与命名数据源', () => {
+    expect(validateSchemaShape({ children: [], dataSources: { bad: {} } })).toEqual([
+      '数据来源格式不正确（dataSources.bad）',
+    ])
+    expect(validateSchemaShape({
+      children: [{ id: 'a', type: 'input', field: 'name', props: {}, formItem: { rules: [{}] } }],
+      dataSources: {},
+    })).toEqual(['校验规则格式不正确（input）'])
+  })
+
   it('v1 schema 迁移到当前版本并补齐可选段', () => {
     const v1 = JSON.stringify({
       version: 1,
