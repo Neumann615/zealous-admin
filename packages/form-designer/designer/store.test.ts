@@ -27,6 +27,8 @@ registerComponent({
 function reset() {
   useDesignerStore.setState({
     schema: createEmptySchema(),
+    savedSchema: createEmptySchema(),
+    saveState: 'idle',
     selectedId: null,
     past: [],
     future: [],

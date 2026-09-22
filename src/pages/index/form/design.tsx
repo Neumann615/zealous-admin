@@ -38,13 +38,8 @@ export default function FormDesignPage() {
   }, [id])
 
   const handleSave = async (schema: FormSchema) => {
-    try {
-      await updateFormAPI({ id, schema: JSON.stringify(schema) })
-      message.success('保存成功')
-    }
-    catch {
-      // 失败提示由 http 拦截器统一弹出；此处吞掉 rejection，本地 schema 保留可直接重试
-    }
+    await updateFormAPI({ id, schema: JSON.stringify(schema) })
+    message.success('保存成功')
   }
 
   if (loading)

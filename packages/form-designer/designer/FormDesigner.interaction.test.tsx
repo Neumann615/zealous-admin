@@ -38,7 +38,7 @@ function schemaOf(types: string[]): FormSchema {
 
 function renderDesigner(
   schema: FormSchema,
-  onSave?: (schema: FormSchema) => void,
+  onSave?: (schema: FormSchema) => void | Promise<void>,
   onSubmit?: (values: Record<string, any>) => void,
 ) {
   return render(
@@ -302,6 +302,43 @@ describe('设计器交互（P5 新组件）', () => {
 
     clickSave()
     expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('保存成功后刷新保存基线并显示已保存', async () => {
+    const onSave = vi.fn(async () => {})
+    renderDesigner(schemaOf(['input']), onSave)
+    const fieldId = useDesignerStore.getState().schema.children[0].id
+
+    expect(screen.getByText('无更改')).toBeTruthy()
+    act(() => useDesignerStore.getState().updateField(fieldId, 'label', '姓名 2'))
+    expect(screen.getByText('未保存')).toBeTruthy()
+
+    await act(async () => {
+      clickSave()
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1)
+      expect(screen.getByText('已保存')).toBeTruthy()
+    })
+  })
+
+  it('保存失败后保留脏状态并提示保存失败', async () => {
+    const onSave = vi.fn(async () => {
+      throw new Error('save failed')
+    })
+    renderDesigner(schemaOf(['input']), onSave)
+    const fieldId = useDesignerStore.getState().schema.children[0].id
+
+    act(() => useDesignerStore.getState().updateField(fieldId, 'label', '姓名 2'))
+    await act(async () => {
+      clickSave()
+    })
+
+    await waitFor(() => expect(screen.getByText('保存失败')).toBeTruthy())
+    expect(useDesignerStore.getState().schema.children[0].label).toBe('姓名 2')
   })
 })
 

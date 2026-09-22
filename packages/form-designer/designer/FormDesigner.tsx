@@ -59,19 +59,26 @@ const useStyles = createStyles(({ token, css }) => ({
 export interface FormDesignerProps {
   /** 初始 schema。身份（引用）变化时重新装载；同实例切换编辑对象时建议配合 key 使用 */
   initialSchema?: FormSchema
-  onSave?: (schema: FormSchema) => void
+  onSave?: (schema: FormSchema) => void | Promise<void>
   onSubmit?: (values: Record<string, any>) => void | Promise<void>
 }
 
 export function FormDesigner({ initialSchema, onSave, onSubmit }: FormDesignerProps) {
   const { styles } = useStyles()
   const { message } = App.useApp()
-  const { setSchema, schema } = useDesignerStore()
+  const setSchema = useDesignerStore(s => s.setSchema)
+  const schema = useDesignerStore(s => s.schema)
+  const setSaveState = useDesignerStore(s => s.setSaveState)
+  const setSavedSchema = useDesignerStore(s => s.setSavedSchema)
   const rootRef = useRef<HTMLDivElement>(null)
   const removeField = useRemoveField()
+  const mountedRef = useRef(true)
+  useEffect(() => () => {
+    mountedRef.current = false
+  }, [])
 
   // 保存前拦截字段名问题：不一致的字段名会静默产生脏数据（同名绑定到同一 store 槽位）
-  function handleSave() {
+  async function handleSave() {
     const issues = validateSchemaFieldNames(schema)
     // 钩子校验与 parseSchema 共用同一份口径（含正文长度上限），避免「保存放行、回读拒绝」
     const hookIssues = validateEvents(schema.events)
@@ -81,7 +88,18 @@ export function FormDesigner({ initialSchema, onSave, onSubmit }: FormDesignerPr
       message.error([...issues, ...hookIssues, ...ruleIssues].join('；'))
       return
     }
-    onSave?.(schema)
+    setSaveState('saving')
+    try {
+      await onSave?.(schema)
+      if (mountedRef.current) {
+        setSavedSchema(schema)
+        setSaveState('saved')
+      }
+    }
+    catch {
+      if (mountedRef.current)
+        setSaveState('error')
+    }
   }
 
   function handleDragEnd(event: DragEndEvent) {

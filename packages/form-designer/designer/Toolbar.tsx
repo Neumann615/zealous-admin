@@ -28,16 +28,31 @@ const useStyles = createStyles(({ css, token }) => ({
     padding: ${token.paddingSM}px;
     background: ${token.colorBgContainer};
     border: 1px solid ${token.colorBorderSecondary};
-    border-radius: ${token.borderRadiusLG}px;
+  border-radius: ${token.borderRadiusLG}px;
+  `,
+  status: css`
+    color: ${token.colorTextTertiary};
+    font-size: ${token.fontSizeSM}px;
+    white-space: nowrap;
+  `,
+  statusDirty: css`
+    color: ${token.colorWarning};
+  `,
+  statusError: css`
+    color: ${token.colorError};
   `,
 }))
 
 export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
   const { message, modal } = App.useApp()
-  const { styles } = useStyles()
+  const { styles, cx } = useStyles()
   const canUndo = useDesignerStore(s => s.past.length > 0)
   const canRedo = useDesignerStore(s => s.future.length > 0)
-  const { undo, redo, clear, importRule, importOptions, exportRule, exportOptions, exportSchema, schema } = useDesignerStore()
+  const schema = useDesignerStore(s => s.schema)
+  const savedSchema = useDesignerStore(s => s.savedSchema)
+  const saveState = useDesignerStore(s => s.saveState)
+  const dirty = JSON.stringify(schema) !== JSON.stringify(savedSchema)
+  const { undo, redo, clear, importRule, importOptions, exportRule, exportOptions, exportSchema } = useDesignerStore()
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [jsonOpen, setJsonOpen] = useState(false)
@@ -106,6 +121,17 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
         <Button size="small" danger icon={<ClearOutlined />} onClick={handleClear}>清空</Button>
       </Space>
       <Space>
+        {onSave && (
+          <span
+            className={cx(
+              styles.status,
+              dirty && saveState !== 'saving' && styles.statusDirty,
+              saveState === 'error' && styles.statusError,
+            )}
+          >
+            {saveState === 'saving' ? '保存中...' : saveState === 'error' ? '保存失败' : saveState === 'saved' ? '已保存' : dirty ? '未保存' : '无更改'}
+          </span>
+        )}
         <Segmented
           size="small"
           value={previewDevice}
@@ -126,7 +152,18 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
         >
           预览
         </Button>
-        {onSave && <Button size="small" type="primary" icon={<SaveOutlined />} onClick={onSave}>保存</Button>}
+        {onSave && (
+          <Button
+            size="small"
+            type="primary"
+            icon={<SaveOutlined />}
+            disabled={saveState === 'saving'}
+            loading={saveState === 'saving'}
+            onClick={onSave}
+          >
+            保存
+          </Button>
+        )}
       </Space>
 
       <Modal title="导入" open={importOpen} onOk={handleImport} onCancel={() => setImportOpen(false)} okText="导入">

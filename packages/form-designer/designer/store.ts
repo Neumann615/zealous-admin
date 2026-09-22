@@ -1,5 +1,6 @@
 import type { CustomHookDef, FormEventConfig } from '../events/types'
 import type { FieldPermission, FieldSchema, FormSchema } from '../types/schema'
+import type { DesignerSaveState } from './saveState'
 import { create } from 'zustand'
 import { getComponent } from '../registry/registry'
 import { createEmptySchema } from '../types/schema'
@@ -26,6 +27,8 @@ const COALESCE_WINDOW = 500
 
 interface DesignerState {
   schema: FormSchema
+  savedSchema: FormSchema | null
+  saveState: DesignerSaveState
   selectedId: string | null
   past: FormSchema[]
   future: FormSchema[]
@@ -56,6 +59,8 @@ interface DesignerState {
   /** 导入表单配置（仅替换全局配置，保留当前字段树） */
   importOptions: (json: string) => ImportResult
   setSchema: (schema: FormSchema) => void
+  setSaveState: (state: DesignerSaveState) => void
+  setSavedSchema: (schema: FormSchema) => void
   getSelected: () => FieldSchema | null
 }
 
@@ -87,6 +92,8 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
 
   return {
     schema: createEmptySchema(),
+    savedSchema: createEmptySchema(),
+    saveState: 'idle',
     selectedId: null,
     past: [],
     future: [],
@@ -330,7 +337,19 @@ export const useDesignerStore = create<DesignerState>((set, get) => {
       return { ok: true }
     },
 
-    setSchema: schema => set({ schema, selectedId: null, past: [], future: [], lastCoalesce: null }),
+    setSchema: schema => set({
+      schema,
+      savedSchema: schema,
+      saveState: 'idle',
+      selectedId: null,
+      past: [],
+      future: [],
+      lastCoalesce: null,
+    }),
+
+    setSaveState: saveState => set({ saveState }),
+
+    setSavedSchema: savedSchema => set({ savedSchema }),
 
     getSelected: () => {
       const { schema, selectedId } = get()
