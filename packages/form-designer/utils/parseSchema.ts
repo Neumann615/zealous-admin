@@ -204,14 +204,33 @@ function validateFieldControl(node: FieldSchema, where: string): string[] {
     if (!rule || typeof rule !== 'object' || Array.isArray(rule))
       return [issue]
     const r = rule as ControlRule
-    if (typeof r.field !== 'string' || !r.field)
-      return [`${issue}：field 需要非空字符串`]
-    if (r.operator !== undefined && !CONTROL_OPERATORS.includes(r.operator))
-      return [`${issue}：未知的比较方式 ${String(r.operator)}`]
     if (!Array.isArray(r.effects) || !r.effects.length)
       return [`${issue}：effects 需要非空数组`]
     if (r.effects.some(effect => !CONTROL_EFFECTS.includes(effect)))
       return [`${issue}：effects 含未知项`]
+
+    if (r.conditions !== undefined) {
+      if (!Array.isArray(r.conditions) || !r.conditions.length)
+        return [`${issue}：conditions 需要非空数组`]
+      if (r.field !== undefined || r.operator !== undefined || r.value !== undefined)
+        return [`${issue}：conditions 与顶层单条件不能同时配置`]
+      return r.conditions.flatMap((condition, index) => {
+        if (!condition || typeof condition !== 'object' || Array.isArray(condition))
+          return [`${issue}：conditions.${index} 需要是对象`]
+        if (typeof condition.field !== 'string' || !condition.field)
+          return [`${issue}：conditions.${index}.field 需要非空字符串`]
+        if (condition.operator !== undefined && !CONTROL_OPERATORS.includes(condition.operator))
+          return [`${issue}：conditions.${index}：未知的比较方式 ${String(condition.operator)}`]
+        if (condition.operator === 'in' && !Array.isArray(condition.value))
+          return [`${issue}：conditions.${index}：operator 为 in 时 value 必须是数组`]
+        return []
+      })
+    }
+
+    if (typeof r.field !== 'string' || !r.field)
+      return [`${issue}：field 需要非空字符串`]
+    if (r.operator !== undefined && !CONTROL_OPERATORS.includes(r.operator))
+      return [`${issue}：未知的比较方式 ${String(r.operator)}`]
     if (r.operator === 'in' && !Array.isArray(r.value))
       return [`${issue}：operator 为 in 时 value 必须是数组`]
     return []

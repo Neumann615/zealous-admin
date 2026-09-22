@@ -113,13 +113,27 @@ export type ControlEffect = (typeof CONTROL_EFFECTS)[number]
  * （只影响呈现：字段仍是已注册字段，值既留在表单 store 里、也仍会进提交报文；
  * 与 `required` 同时命中时提交会被拦住但提示不可见，属已知限制，见 docs/form-designer/render-config.md）。
  */
-export interface ControlRule {
+export interface ControlCondition {
   /** 条件依赖的字段（名路径） */
   field: string
   /** 比较方式，默认 eq */
   operator?: ControlOperator
   /** operator 为 in 时为数组 */
   value?: any
+}
+
+export interface ControlRule {
+  /** 旧单条件的字段（名路径）；存在 conditions 时不应配置 */
+  field?: string
+  /** 旧单条件的比较方式，默认 eq */
+  operator?: ControlOperator
+  /** 旧单条件比较值；operator 为 in 时为数组 */
+  value?: any
+  /**
+   * AND 条件组：所有条件同时命中，本组效果才生效。
+   * 存在时优先于顶层 field / operator / value；后者仅用于兼容旧 schema。
+   */
+  conditions?: ControlCondition[]
   /** 条件命中时施加的效果，可多选 */
   effects: ControlEffect[]
 }

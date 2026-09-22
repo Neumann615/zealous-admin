@@ -156,6 +156,41 @@ describe('联动 control 的渲染器行为', () => {
     await waitFor(() => expect(container.querySelector('.ant-form-item-hidden')).not.toBeNull())
   })
 
+  it('conditions 条件组内全部命中才生效', async () => {
+    const { container } = renderForm({
+      version: 2,
+      form: { layout: 'vertical' },
+      children: [
+        { id: 'kind', type: 'input', field: 'kind', label: '类型', props: {} },
+        { id: 'score', type: 'number', field: 'score', label: '分数', props: {} },
+        {
+          id: 'target',
+          type: 'input',
+          field: 'target',
+          label: '目标',
+          props: {},
+          control: [{
+            conditions: [
+              { field: 'kind', operator: 'eq', value: 'vip' },
+              { field: 'score', operator: 'gte', value: 90 },
+            ],
+            effects: ['hidden'],
+          }],
+        },
+      ],
+    })
+
+    const target = () => container.querySelector('input#target') as HTMLInputElement
+    expect(target().closest('.ant-form-item')?.classList.contains('ant-form-item-hidden')).toBe(false)
+
+    fireEvent.change(container.querySelector('input#kind')!, { target: { value: 'vip' } })
+    fireEvent.change(container.querySelector('input#score')!, { target: { value: '89' } })
+    await waitFor(() => expect(target().closest('.ant-form-item')?.classList.contains('ant-form-item-hidden')).toBe(false))
+
+    fireEvent.change(container.querySelector('input#score')!, { target: { value: '90' } })
+    await waitFor(() => expect(target().closest('.ant-form-item')?.classList.contains('ant-form-item-hidden')).toBe(true))
+  })
+
   it('子表单容器禁用后内部字段的 input 也 disabled', async () => {
     const { container } = renderForm({
       version: 2,

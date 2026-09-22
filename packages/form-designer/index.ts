@@ -7,6 +7,7 @@ export type { FormDataApi } from './renderer/dataApis'
 export { FormRenderer } from './renderer/FormRenderer'
 export type { FormRendererProps } from './renderer/FormRenderer'
 export type {
+  ControlCondition,
   ControlEffect,
   ControlOperator,
   ControlRule,

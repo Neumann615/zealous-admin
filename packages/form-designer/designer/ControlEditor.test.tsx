@@ -3,7 +3,7 @@ import type { ControlRule } from '../types/schema'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ControlEditor } from './ControlEditor'
-import { formatControlValue, parseControlValue, withControlOperator } from './controlRule'
+import { formatControlValue, parseControlValue, withConditionOperator, withControlOperator } from './controlRule'
 import '../test/setupDom'
 
 afterEach(cleanup)
@@ -39,6 +39,16 @@ describe('联动规则归一化', () => {
       .toEqual({ field: 'kind', operator: 'eq', effects: [], value: '' })
     expect(withControlOperator({ field: 'kind', operator: 'in', value: ['a'], effects: [] }, 'neq'))
       .toEqual({ field: 'kind', operator: 'neq', effects: [], value: '' })
+  })
+})
+
+describe('条件组归一化', () => {
+  it('切换组内比较方式时不影响 effects', () => {
+    const condition = { field: 'kind', operator: 'eq' as const, value: 'a' }
+    expect(withConditionOperator(condition, 'in'))
+      .toEqual({ field: 'kind', operator: 'in', value: [] })
+    expect(withConditionOperator(condition, 'empty'))
+      .toEqual({ field: 'kind', operator: 'empty' })
   })
 })
 
@@ -107,6 +117,26 @@ describe('联动规则编辑器（ControlEditor）', () => {
 
     fireEvent.click(screen.getByText('添加规则'))
     expect(onChange).toHaveBeenCalledWith([{ field: 'city', effects: [] }])
+  })
+
+  it('旧单条件添加第二个条件时升级为 AND 条件组', () => {
+    const onChange = vi.fn()
+    render(
+      <ControlEditor
+        value={[{ field: 'kind', operator: 'eq', value: 'vip', effects: ['hidden'] }]}
+        fieldNames={['city', 'kind']}
+        onChange={onChange}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('添加条件'))
+    expect(onChange).toHaveBeenCalledWith([{
+      conditions: [
+        { field: 'kind', operator: 'eq', value: 'vip' },
+        { field: 'city', operator: 'eq', value: '' },
+      ],
+      effects: ['hidden'],
+    }])
   })
 
   it('同一字段的规则合并后同时含 hidden 与 required 时提示死局', () => {

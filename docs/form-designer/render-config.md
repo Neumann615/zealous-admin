@@ -214,6 +214,15 @@ interface ControlRule {
   value?: any
   /** 条件命中时施加的效果，可多选 */
   effects: ('hidden' | 'disabled' | 'required')[]
+  /**
+   * AND 条件组。所有条件同时命中，规则才命中。
+   * 存在时优先于顶层 field / operator / value；顶层写法仅用于兼容旧 schema。
+   */
+  conditions?: Array<{
+    field: string
+    operator?: 'eq' | 'neq' | 'in' | 'contains' | 'gt' | 'gte' | 'lt' | 'lte' | 'empty' | 'notEmpty'
+    value?: any
+  }>
 }
 ```
 
@@ -234,7 +243,18 @@ interface ControlRule {
 
 ### 效果语义
 
-同一规则内的效果全生效；**多条规则的效果取「或」**（任一规则命中即生效）；规则不命中时不覆盖任何配置。
+同一规则内的效果全生效；`conditions` 里的多个条件取「且」（AND）；**多条规则的效果取「或」**（任一规则命中即生效）；规则不命中时不覆盖任何配置。
+
+```ts
+// kind 等于 vip 且 score 大于等于 90 时隐藏
+{
+  conditions: [
+    { field: 'kind', operator: 'eq', value: 'vip' },
+    { field: 'score', operator: 'gte', value: 90 },
+  ],
+  effects: ['hidden'],
+}
+```
 
 | 效果 | 落地方式 |
 |------|----------|
@@ -244,7 +264,7 @@ interface ControlRule {
 
 容器的 `disabled` 会**下发给子字段**：`nestObject`（子表单）与 `nestList`（表格子表单）容器命中 `disabled` 时，行内 / 子表单内的输入组件同样被禁用。容器自身不挂 `Form.Item`，因此 `hidden` / `required` 对容器没有作用对象（只有 `disabled` 有意义）。
 
-面板「联动」分组按规则列表编辑：依赖字段下拉列出当前 schema 的字段名，比较方式切换时会清掉新方式用不到的 `value`（`in` 需要数组、`empty` / `notEmpty` 不需要值），效果多选。字段自身已必填而规则里又选了 `required` 时会就地提示冗余。
+面板「联动」分组按规则列表编辑：每条规则默认只有一个条件，点「添加条件」后升级为 AND 条件组，组内条件可增删。依赖字段下拉列出当前 schema 的字段名，比较方式切换时会清掉新方式用不到的 `value`（`in` 需要数组、`empty` / `notEmpty` 不需要值），效果多选。字段自身已必填而规则里又选了 `required` 时会就地提示冗余。
 
 ## 已知限制
 

@@ -1,4 +1,4 @@
-import type { ControlOperator, ControlRule } from '../types/schema'
+import type { ControlCondition, ControlOperator, ControlRule } from '../types/schema'
 
 /** 需要比较值的 operator（empty / notEmpty 只看空与非空） */
 export function needsControlValue(operator: ControlOperator | undefined): boolean {
@@ -37,10 +37,27 @@ export function formatControlValue(value: any): string {
  * 与 3A 的 withRuleType 同一纪律：面板不留「切过类型」的中间态空壳。
  */
 export function withControlOperator(rule: ControlRule, operator: ControlOperator): ControlRule {
-  const next: ControlRule = { field: rule.field, operator, effects: rule.effects ?? [] }
+  const next: ControlRule = { field: rule.field ?? '', operator, effects: rule.effects ?? [] }
   if (operator === 'in')
     next.value = Array.isArray(rule.value) ? rule.value : []
   else if (needsControlValue(operator))
     next.value = Array.isArray(rule.value) ? '' : (rule.value ?? '')
+  return next
+}
+
+/** 读取规则生效的条件；旧 schema 的顶层单条件会被包装成一项条件组 */
+export function getControlConditions(rule: ControlRule): ControlCondition[] {
+  if (rule.conditions?.length)
+    return rule.conditions
+  return [{ field: rule.field ?? '', operator: rule.operator, value: rule.value }]
+}
+
+/** 切换条件组内某个条件的比较方式，归一化口径与旧单条件一致 */
+export function withConditionOperator(condition: ControlCondition, operator: ControlOperator): ControlCondition {
+  const next: ControlCondition = { field: condition.field, operator }
+  if (operator === 'in')
+    next.value = Array.isArray(condition.value) ? condition.value : []
+  else if (needsControlValue(operator))
+    next.value = Array.isArray(condition.value) ? '' : (condition.value ?? '')
   return next
 }

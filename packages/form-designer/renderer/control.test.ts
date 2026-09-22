@@ -1,4 +1,4 @@
-import type { ControlRule } from '../types/schema'
+import type { ControlEffect, ControlRule } from '../types/schema'
 import { describe, expect, it } from 'vitest'
 import { getByPathName } from '../utils/path'
 import { evalControl } from './control'
@@ -57,7 +57,7 @@ describe('evalControl', () => {
 
   it('gt / gte / lt / lte：数字优先，文本回退字典序', () => {
     const value = 10
-    const effects = ['hidden'] as const
+    const effects: ControlEffect[] = ['hidden']
 
     expect(evalControl([{ field: 'count', operator: 'gt', value: 9, effects }], { count: value })).toEqual({ hidden: true })
     expect(evalControl([{ field: 'count', operator: 'gte', value: 10, effects }], { count: value })).toEqual({ hidden: true })
@@ -74,6 +74,43 @@ describe('evalControl', () => {
       .toEqual({ hidden: true })
     // 中间段不存在时取值 undefined，empty 命中
     expect(evalControl([{ field: 'contact.age', operator: 'empty', effects: ['hidden'] }], {})).toEqual({ hidden: true })
+  })
+
+  it('conditions：同一组内条件取且', () => {
+    const rules: ControlRule[] = [{
+      conditions: [
+        { field: 'kind', operator: 'eq', value: 'vip' },
+        { field: 'score', operator: 'gte', value: 90 },
+      ],
+      effects: ['hidden'],
+    }]
+
+    expect(evalControl(rules, { kind: 'vip', score: 90 })).toEqual({ hidden: true })
+    expect(evalControl(rules, { kind: 'vip', score: 89 })).toEqual({})
+    expect(evalControl(rules, { kind: 'normal', score: 90 })).toEqual({})
+  })
+
+  it('多条规则仍取或：任一 AND 条件组命中即生效', () => {
+    const rules: ControlRule[] = [
+      {
+        conditions: [
+          { field: 'kind', value: 'a' },
+          { field: 'count', operator: 'notEmpty' },
+        ],
+        effects: ['disabled'],
+      },
+      {
+        conditions: [
+          { field: 'kind', value: 'b' },
+          { field: 'count', operator: 'gt', value: 2 },
+        ],
+        effects: ['required'],
+      },
+    ]
+
+    expect(evalControl(rules, { kind: 'a', count: 1 })).toEqual({ disabled: true })
+    expect(evalControl(rules, { kind: 'b', count: 3 })).toEqual({ required: true })
+    expect(evalControl(rules, { kind: 'b', count: 1 })).toEqual({})
   })
 
   it('同一规则内的多个效果全生效，多条规则的效果取或', () => {

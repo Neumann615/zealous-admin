@@ -147,7 +147,7 @@ interface FieldSchema {
   col?: FieldCol
   /** 声明式选项来源：加载结果写入 props.options */
   dataSource?: FieldDataSource
-  /** 联动规则：条件命中时控制隐藏 / 禁用 / 必填；多条规则的效果取「或」 */
+  /** 联动规则：条件命中时控制隐藏 / 禁用 / 必填；规则内条件取「且」，多条规则取「或」 */
   control?: ControlRule[]
   /** Form.Item 层面配置 */
   formItem?: {
@@ -289,6 +289,9 @@ interface ValidateRule {
 | | `operator` 在枚举内（不写按 `eq`） | `联动规则格式不正确（<字段>）：未知的比较方式 contains` |
 | | `effects` 为非空数组且每项在枚举内 | `联动规则格式不正确（<字段>）：effects 需要非空数组` / `：effects 含未知项` |
 | | `operator` 为 `in` 时 `value` 必须是数组 | `联动规则格式不正确（<字段>）：operator 为 in 时 value 必须是数组` |
+| | 无顶层单条件时必须有非空 `conditions`；顶层单条件必须有非空 `field` | `联动规则格式不正确（<字段>）：field 需要非空字符串` |
+| | `conditions` 与顶层单条件不能同时配置 | `联动规则格式不正确（<字段>）：conditions 与顶层单条件不能同时配置` |
+| | `conditions` 每项的字段、operator 和 `in` 数组合法 | `联动规则格式不正确（<字段>）：conditions.0.field 需要非空字符串` 等 |
 
 `events` 段有自己的一份形状约束，见 [`events` 段的形状约束](#events-段的形状约束)。
 
@@ -380,12 +383,18 @@ interface ValidateRule {
       "props": {},
       "col": { "span": 12, "md": 8 },
       "dataSource": { "ref": "deptDict" },
-      "control": [{ "field": "enabled", "operator": "eq", "value": false, "effects": ["hidden"] }]
+      "control": [{
+        "conditions": [
+          { "field": "enabled", "operator": "eq", "value": false },
+          { "field": "dept", "operator": "eq", "value": "finance" }
+        ],
+        "effects": ["hidden"]
+      }]
     }
   ]
 }
 ```
 
-这份 schema 里 `username` 占 12 栅格，`dept` 的选项来自命名数据源 `deptDict`（渲染时调宿主注册的 `dict` 接口），并在 `enabled` 为 `false` 时整体隐藏。
+这份 schema 里 `username` 占 12 栅格，`dept` 的选项来自命名数据源 `deptDict`（渲染时调宿主注册的 `dict` 接口），并在 `enabled` 为 `false` 且 `dept` 为 `finance` 时整体隐藏。
 
 > 设计器工具栏的「导出」直接给出当前画布的 schema JSON（含 `events` / `dataSources` / 各字段的 `col` / `dataSource` / `control`），「导入」粘贴回来即可复原，可当作模板复用手段。导入会走 `parseSchema()` 做版本迁移与形状校验，字段名、钩子或字段级配置不过关会报错并保留当前画布。

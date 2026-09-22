@@ -433,6 +433,29 @@ describe('parseSchema 联动规则形状', () => {
       .toThrow('联动规则格式不正确（公司名）：未知的比较方式 between')
   })
 
+  it('conditions 条件组内的每个条件都要合法', () => {
+    expect(parseSchema(withControl([{
+      conditions: [
+        { field: 'a', operator: 'eq', value: 1 },
+        { field: 'b', operator: 'notEmpty' },
+      ],
+      effects: ['hidden'],
+    }]))).toMatchObject({ version: 2 })
+
+    expect(() => parseSchema(withControl([{ conditions: [], effects: ['hidden'] }])))
+      .toThrow('联动规则格式不正确（公司名）：conditions 需要非空数组')
+    expect(() => parseSchema(withControl([{
+      field: 'a',
+      conditions: [{ field: 'b' }],
+      effects: ['hidden'],
+    } as any])))
+      .toThrow('联动规则格式不正确（公司名）：conditions 与顶层单条件不能同时配置')
+    expect(() => parseSchema(withControl([{ conditions: [{ field: '' }], effects: ['hidden'] } as any])))
+      .toThrow('联动规则格式不正确（公司名）：conditions.0.field 需要非空字符串')
+    expect(() => parseSchema(withControl([{ conditions: [{ field: 'a', operator: 'between' }], effects: ['hidden'] }])))
+      .toThrow('联动规则格式不正确（公司名）：conditions.0：未知的比较方式 between')
+  })
+
   it('effects 必须是非空数组且每项在枚举内', () => {
     expect(() => parseSchema(withControl([{ field: 'a', effects: [] }])))
       .toThrow('联动规则格式不正确（公司名）：effects 需要非空数组')
