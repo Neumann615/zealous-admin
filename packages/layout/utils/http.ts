@@ -16,8 +16,7 @@ const http = axios.create({
 http.interceptors.request.use(
   (config) => {
     // 使用getState()获取store状态，避免在非组件环境中调用Hook
-    const userStore = useUserStore.getState()
-    const token = userStore.userInfo.token
+    const token = useUserStore.getState().token
     if (token) {
       config.headers.Authorization = `${token}`
     }

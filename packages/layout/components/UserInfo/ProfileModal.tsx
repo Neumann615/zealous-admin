@@ -164,7 +164,7 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
   const [submitting, setSubmitting] = useState(false)
 
   const userInfo = useUserStore(state => state.userInfo)
-  const { username, nickName, email, avatar, roles, status, loginTime } = userInfo
+  const { username, nickName, email, icon: avatar, roles, status, loginTime } = userInfo ?? {}
   const displayName = nickName || username || t('userInfo.notLoggedIn')
   const avatarSrc = avatar || `https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=${username}`
 

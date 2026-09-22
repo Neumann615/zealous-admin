@@ -4,7 +4,8 @@ import {
   LockOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { useAppMessage, useAppStore, useLogin, useUserStore } from '@zealous-admin/layout/index'
+import { useUserStore } from '@zealous-admin/auth'
+import { useAppMessage, useAppStore, useLogin } from '@zealous-admin/layout/index'
 import { Button, Checkbox, Form, Input, Tooltip, Typography } from 'antd'
 import { createStyles, keyframes } from 'antd-style'
 import { useEffect } from 'react'
@@ -160,7 +161,7 @@ export default function Login() {
   const [form] = Form.useForm()
   const navigate = useNavigate()
   const appStore = useAppStore()
-  const mallUserStore = useUserStore()
+  const { userInfo } = useUserStore()
   const { login, loading } = useLogin()
 
   const validateUsername = (_rule: any, value: string) => {
@@ -229,9 +230,9 @@ export default function Login() {
   }
 
   useEffect(() => {
-    const { username, password } = mallUserStore.userInfo
-    if (username && username !== '') {
-      form.setFieldsValue({ userName: username, password })
+    const username = userInfo?.username || ''
+    if (username) {
+      form.setFieldsValue({ userName: username })
     }
     else {
       form.setFieldsValue({ userName: 'admin' })

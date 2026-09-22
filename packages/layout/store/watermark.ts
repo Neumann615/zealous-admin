@@ -29,8 +29,8 @@ export const useWatermarkStore = create(
 
 // 登录后自动将当前用户名追加到水印文案（用户信息为异步获取，需订阅响应式更新）
 useUserStore.subscribe((state, prevState) => {
-  const userName = state.userInfo.nickName || state.userInfo.username
-  const prevUserName = prevState.userInfo.nickName || prevState.userInfo.username
+  const userName = state.userInfo?.nickName || state.userInfo?.username || ''
+  const prevUserName = prevState.userInfo?.nickName || prevState.userInfo?.username || ''
   if (userName === prevUserName)
     return
   const baseContent = [defaultSetting.app.name]

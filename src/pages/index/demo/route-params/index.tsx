@@ -43,8 +43,8 @@ export default function RouteParamsA() {
 
   const handleJump = () => {
     const params = new URLSearchParams({
-      nickName: userInfo.nickName || userInfo.username,
-      email: userInfo.email,
+      nickName: userInfo?.nickName || userInfo?.username || '',
+      email: userInfo?.email || '',
     })
     openTab({
       key: `/demo/route-params/detail?${params.toString()}`,
@@ -63,10 +63,10 @@ export default function RouteParamsA() {
         <Card title="当前用户信息">
           <Descriptions bordered column={1}>
             <Descriptions.Item label="昵称">
-              {userInfo.nickName || userInfo.username}
+              {userInfo?.nickName || userInfo?.username || 'N/A'}
             </Descriptions.Item>
             <Descriptions.Item label="邮箱">
-              {userInfo.email}
+              {userInfo?.email || 'N/A'}
             </Descriptions.Item>
           </Descriptions>
         </Card>

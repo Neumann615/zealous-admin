@@ -123,8 +123,8 @@ export function UserInfo() {
   const userInfo = useUserStore(state => state.userInfo)
   const displayName = userInfo?.nickName || userInfo?.username || t('userInfo.notLoggedIn')
   const displayEmail = userInfo?.email || ''
-  const avatarSrc = userInfo?.avatar
-    ? userInfo.avatar
+  const avatarSrc = userInfo?.icon
+    ? userInfo.icon
     : `https://api.dicebear.com/9.x/avataaars-neutral/svg?seed=${userInfo?.username}`
 
   const handleLogout = async () => {
