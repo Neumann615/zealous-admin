@@ -8,7 +8,8 @@ import {
   SaveOutlined,
   UndoOutlined,
 } from '@ant-design/icons'
-import { Alert, App, Button, Divider, Input, Modal, Space, Tabs } from 'antd'
+import { Alert, App, Button, Divider, Input, Modal, Segmented, Space, Tabs } from 'antd'
+import { createStyles } from 'antd-style'
 import { useMemo, useState } from 'react'
 import { FormRenderer } from '../renderer/FormRenderer'
 import { validateOptionsImport, validateRuleImport } from '../utils/importValidation'
@@ -19,8 +20,21 @@ interface ToolbarProps {
   onSubmit?: (values: Record<string, any>) => void | Promise<void>
 }
 
+const useStyles = createStyles(({ css, token }) => ({
+  mobileFrame: css`
+    width: min(390px, 100%);
+    min-height: 100%;
+    margin: 0 auto;
+    padding: ${token.paddingSM}px;
+    background: ${token.colorBgContainer};
+    border: 1px solid ${token.colorBorderSecondary};
+    border-radius: ${token.borderRadiusLG}px;
+  `,
+}))
+
 export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
   const { message, modal } = App.useApp()
+  const { styles } = useStyles()
   const canUndo = useDesignerStore(s => s.past.length > 0)
   const canRedo = useDesignerStore(s => s.future.length > 0)
   const { undo, redo, clear, importRule, importOptions, exportRule, exportOptions, exportSchema, schema } = useDesignerStore()
@@ -30,6 +44,7 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [importTab, setImportTab] = useState<'rule' | 'options'>('rule')
+  const [previewDevice, setPreviewDevice] = useState<'pc' | 'mobile'>('pc')
 
   /** 打开导入 / 切换 tab 时，把当前配置预填进编辑框，用户在此基础上修改后点导入 */
   const openImport = () => {
@@ -91,6 +106,15 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
         <Button size="small" danger icon={<ClearOutlined />} onClick={handleClear}>清空</Button>
       </Space>
       <Space>
+        <Segmented
+          size="small"
+          value={previewDevice}
+          onChange={value => setPreviewDevice(value as 'pc' | 'mobile')}
+          options={[
+            { label: 'PC', value: 'pc' },
+            { label: 'Mobile', value: 'mobile' },
+          ]}
+        />
         <Button
           size="small"
           type="primary"
@@ -191,16 +215,27 @@ export function Toolbar({ onSave, onSubmit }: ToolbarProps) {
         title="表单预览"
         open={previewOpen}
         footer={null}
-        width="80%"
+        width={previewDevice === 'mobile' ? 480 : '80%'}
         centered
         onCancel={() => setPreviewOpen(false)}
         destroyOnHidden
         styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
       >
-        <FormRenderer
-          schema={schema}
-          onSubmit={onSubmit}
-        />
+        {previewDevice === 'mobile'
+          ? (
+              <div className={styles.mobileFrame}>
+                <FormRenderer
+                  schema={schema}
+                  onSubmit={onSubmit}
+                />
+              </div>
+            )
+          : (
+              <FormRenderer
+                schema={schema}
+                onSubmit={onSubmit}
+              />
+            )}
       </Modal>
     </Space>
   )

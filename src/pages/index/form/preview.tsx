@@ -1,6 +1,6 @@
 import { FormRenderer } from '@zealous-admin/form-designer/index'
 import { useAppMessage } from '@zealous-admin/layout/index'
-import { Card, Empty, Form, Select } from 'antd'
+import { Card, Empty, Form, Segmented, Select, Space } from 'antd'
 import { createStyles } from 'antd-style'
 import { useEffect, useState } from 'react'
 import { getFormListAPI } from '@/apis/form'
@@ -48,6 +48,13 @@ const useStyles = createStyles(({ css, token }) => ({
     height: 100%;
     min-height: 320px;
   `,
+  controls: css`
+    flex-shrink: 0;
+    justify-content: center;
+  `,
+  mobilePanel: css`
+    max-width: 430px;
+  `,
 }))
 
 export default function FormPreviewPage() {
@@ -57,6 +64,7 @@ export default function FormPreviewPage() {
   const [list, setList] = useState<FormOption[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedId, setSelectedId] = useState<number>()
+  const [device, setDevice] = useState<'pc' | 'mobile'>('pc')
 
   useEffect(() => {
     setLoading(true)
@@ -84,24 +92,37 @@ export default function FormPreviewPage() {
 
   return (
     <div className={styles.root}>
-      <Select<number>
-        className={styles.select}
-        placeholder="请选择要预览的表单"
-        value={selectedId}
-        loading={loading}
-        showSearch
-        optionFilterProp="label"
-        onChange={(value) => {
-          setSelectedId(value)
-          form.resetFields()
-        }}
-        options={list.map(item => ({
-          value: item.id,
-          label: `${item.name}${item.status !== 1 ? '（未发布）' : ''}`,
-        }))}
-      />
+      <Space className={styles.controls}>
+        <Select<number>
+          className={styles.select}
+          placeholder="请选择要预览的表单"
+          value={selectedId}
+          loading={loading}
+          showSearch
+          optionFilterProp="label"
+          onChange={(value) => {
+            setSelectedId(value)
+            form.resetFields()
+          }}
+          options={list.map(item => ({
+            value: item.id,
+            label: `${item.name}${item.status !== 1 ? '（未发布）' : ''}`,
+          }))}
+        />
+        <Segmented
+          value={device}
+          onChange={value => setDevice(value as 'pc' | 'mobile')}
+          options={[
+            { label: 'PC', value: 'pc' },
+            { label: 'Mobile', value: 'mobile' },
+          ]}
+        />
+      </Space>
 
-      <Card className={styles.panel} styles={{ body: { height: '100%', padding: 0 } }}>
+      <Card
+        className={device === 'mobile' ? `${styles.panel} ${styles.mobilePanel}` : styles.panel}
+        styles={{ body: { height: '100%', padding: 0 } }}
+      >
         <div className={selectedId ? styles.panelBody : styles.emptyBody}>
           {selectedId
             ? (
