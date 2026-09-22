@@ -1,5 +1,6 @@
-import type { PageParam, Role } from '@zealous-admin/layout/index'
+import type { PageParam, RoleRecord } from '@zealous-admin/auth'
 import { PlusOutlined } from '@ant-design/icons'
+import { createRole, deleteRole, getRolePage, updateRole } from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
@@ -15,12 +16,6 @@ import {
 import { createStyles } from 'antd-style'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import {
-  getRoleListAPI,
-  roleCreateAPI,
-  roleDeleteByIdAPI,
-  roleUpdateByIdAPI,
-} from '@/apis/role'
 import AllocMenuModal from './allocMenu'
 
 // ============================================================
@@ -69,7 +64,7 @@ export default function SystemRole() {
     pageSize: 10,
     keyword: '',
   })
-  const [list, setList] = useState<Role[]>([])
+  const [list, setList] = useState<RoleRecord[]>([])
   const [listLoading, setListLoading] = useState(true)
   const [total, setTotal] = useState(0)
 
@@ -83,9 +78,9 @@ export default function SystemRole() {
   const getList = async () => {
     setListLoading(true)
     try {
-      const res = await getRoleListAPI(listQuery)
-      setList(res.data.list)
-      setTotal(res.data.total)
+      const res = await getRolePage(listQuery)
+      setList(res.list)
+      setTotal(res.total)
     }
     catch { /* ignore */ }
     finally { setListLoading(false) }
@@ -103,19 +98,19 @@ export default function SystemRole() {
     setDialogOpen(true)
   }
 
-  const handleUpdate = (row: Role) => {
+  const handleUpdate = (row: RoleRecord) => {
     setIsEdit(true)
     setEditId(row.id)
     form.setFieldsValue(row)
     setDialogOpen(true)
   }
 
-  const handleDelete = (row: Role) => {
+  const handleDelete = (row: RoleRecord) => {
     modal.confirm({
       title: '提示',
       content: '是否要删除该角色?',
       onOk: async () => {
-        await roleDeleteByIdAPI(row.id!)
+        await deleteRole(row.id!)
         message.success('删除成功!')
         getList()
       },
@@ -129,11 +124,11 @@ export default function SystemRole() {
       content: '是否要确认?',
       onOk: async () => {
         if (isEdit) {
-          await roleUpdateByIdAPI(editId!, values)
+          await updateRole(editId!, values)
           message.success('修改成功！')
         }
         else {
-          await roleCreateAPI(values)
+          await createRole(values)
           message.success('添加成功！')
         }
         setDialogOpen(false)
@@ -142,7 +137,7 @@ export default function SystemRole() {
     })
   }
 
-  const handleSelectMenu = (row: Role) => {
+  const handleSelectMenu = (row: RoleRecord) => {
     setAllocMenuRoleId(row.id)
     setAllocMenuVisible(true)
   }
@@ -183,7 +178,7 @@ export default function SystemRole() {
       key: 'actions',
       width: 220,
       align: 'center' as const,
-      render: (_: any, row: Role) => (
+      render: (_: any, row: RoleRecord) => (
         <Space size="small">
           <Button type="link" onClick={() => handleSelectMenu(row)}>分配菜单</Button>
           <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>

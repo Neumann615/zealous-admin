@@ -1,7 +1,8 @@
-import type { Menu, MenuNode } from '@zealous-admin/layout/index'
+import type { MenuNode, MenuRecord } from '@zealous-admin/auth'
 import type { TableColumnsType } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { ZaIcon, ZaIconPicker } from '@zealous-admin/components/index'
+import { createMenu, deleteMenu, getMenuDetail, getMenuTree, updateMenu } from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
@@ -18,13 +19,6 @@ import {
 } from 'antd'
 import { createStyles } from 'antd-style'
 import { useEffect, useState } from 'react'
-import {
-  deleteMenuByIdAPI,
-  getMenuByIdAPI,
-  getMenuTreeListAPI,
-  menuCreateAPI,
-  updateMenu,
-} from '@/apis/menu'
 
 // ============================================================
 // 样式
@@ -70,20 +64,20 @@ export default function SystemMenu() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isEdit, setIsEdit] = useState(false)
   const [editMenuId, setEditMenuId] = useState<number>()
-  const [selectMenuList, setSelectMenuList] = useState<Menu[]>([])
+  const [selectMenuList, setSelectMenuList] = useState<MenuRecord[]>([])
 
   const fetchTree = async () => {
     setListLoading(true)
     try {
-      const res = await getMenuTreeListAPI()
-      setTreeData(res.data)
+      const res = await getMenuTree()
+      setTreeData(res)
     }
     catch { /* ignore */ }
     finally { setListLoading(false) }
   }
 
   const getSelectMenuList = async () => {
-    const res = await getMenuTreeListAPI()
+    const res = await getMenuTree()
     const convertToTree = (menus: any[]): any[] => menus.map(menu => ({
       value: menu.id,
       label: menu.title,
@@ -91,7 +85,7 @@ export default function SystemMenu() {
     }))
     setSelectMenuList([
       { value: 0, label: '无上级菜单' } as any,
-      ...convertToTree(res.data),
+      ...convertToTree(res),
     ])
   }
 
@@ -108,28 +102,28 @@ export default function SystemMenu() {
     form.setFieldsValue({ parentId: 0, hidden: 0, sort: 0 })
   }
 
-  const handleUpdate = async (row: Menu) => {
+  const handleUpdate = async (row: MenuRecord) => {
     setDialogOpen(true)
     setIsEdit(true)
     setEditMenuId(row.id)
     await getSelectMenuList()
-    const res = await getMenuByIdAPI(row.id!)
-    form.setFieldsValue(res.data)
+    const res = await getMenuDetail(row.id!)
+    form.setFieldsValue(res)
   }
 
-  const handleDelete = (row: Menu) => {
+  const handleDelete = (row: MenuRecord) => {
     modal.confirm({
       title: '提示',
       content: '是否要删除该菜单?',
       onOk: async () => {
-        await deleteMenuByIdAPI(row.id!)
+        await deleteMenu(row.id!)
         message.success('删除成功')
         fetchTree()
       },
     })
   }
 
-  const handleHiddenChange = async (row: Menu, checked: boolean) => {
+  const handleHiddenChange = async (row: MenuRecord, checked: boolean) => {
     await updateMenu(row.id!, { ...row, hidden: checked ? 0 : 1 })
     message.success('修改成功')
     fetchTree()
@@ -161,7 +155,7 @@ export default function SystemMenu() {
           message.success('修改成功！')
         }
         else {
-          await menuCreateAPI(submitData)
+          await createMenu(submitData)
           message.success('添加成功！')
         }
         setDialogOpen(false)
@@ -225,7 +219,7 @@ export default function SystemMenu() {
       key: 'hidden',
       width: 80,
       align: 'center' as const,
-      render: (hidden: number, row: Menu) => (
+      render: (hidden: number, row: MenuRecord) => (
         <Switch
           size="small"
           checked={hidden === 0}
@@ -238,7 +232,7 @@ export default function SystemMenu() {
       key: 'actions',
       width: 140,
       align: 'center' as const,
-      render: (_: any, row: Menu) => (
+      render: (_: any, row: MenuRecord) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => handleUpdate(row)}>编辑</Button>
           <Button type="link" size="small" danger onClick={() => handleDelete(row)}>删除</Button>

@@ -1,5 +1,15 @@
-import type { Admin, PageParam, Role } from '@zealous-admin/layout/index'
+import type { AdminRecord, PageParam, RoleRecord } from '@zealous-admin/auth'
 import { PlusOutlined } from '@ant-design/icons'
+import {
+  assignUserRoles,
+  createUser,
+  deleteUser,
+  getRoleAll,
+  getUserPage,
+  getUserRoles,
+  updateUser,
+  updateUserStatus,
+} from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
@@ -16,16 +26,6 @@ import {
 import { createStyles } from 'antd-style'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import {
-  adminDeleteByIdAPI,
-  adminRegisterAPI,
-  adminRoleUpdateAPI,
-  adminUpdateByIdAPI,
-  adminUpdateStatusByIdAPI,
-  getAdminListAPI,
-  getRoleByAdminIdAPI,
-} from '@/apis/admin'
-import { getRoleListAllAPI } from '@/apis/role'
 
 // ============================================================
 // 样式
@@ -81,8 +81,8 @@ export default function SystemAdmin() {
     pageSize: 10,
     keyword: '',
   })
-  const [list, setList] = useState<Admin[]>([])
-  const [allRoleList, setAllRoleList] = useState<Role[]>([])
+  const [list, setList] = useState<AdminRecord[]>([])
+  const [allRoleList, setAllRoleList] = useState<RoleRecord[]>([])
   const [listLoading, setListLoading] = useState(true)
   const [total, setTotal] = useState(0)
 
@@ -97,9 +97,9 @@ export default function SystemAdmin() {
   const getList = async () => {
     setListLoading(true)
     try {
-      const res = await getAdminListAPI(listQuery)
-      setList(res.data.list)
-      setTotal(res.data.total)
+      const res = await getUserPage(listQuery)
+      setList(res.list)
+      setTotal(res.total)
     }
     catch { /* ignore */ }
     finally { setListLoading(false) }
@@ -107,8 +107,8 @@ export default function SystemAdmin() {
 
   const getAllRoleList = async () => {
     try {
-      const response = await getRoleListAllAPI()
-      setAllRoleList(response.data)
+      const response = await getRoleAll()
+      setAllRoleList(response)
     }
     catch { /* ignore */ }
   }
@@ -120,19 +120,19 @@ export default function SystemAdmin() {
 
   const getRoleListByAdmin = async (adminId: number) => {
     try {
-      const res = await getRoleByAdminIdAPI(adminId)
-      setAllocRoleIds(res.data.map((item: Role) => item.id!))
+      const res = await getUserRoles(adminId)
+      setAllocRoleIds(res.map((item: RoleRecord) => item.id!))
     }
     catch { /* ignore */ }
   }
 
-  const handleStatusChange = async (row: Admin, checked: boolean) => {
+  const handleStatusChange = async (row: AdminRecord, checked: boolean) => {
     modal.confirm({
       title: '提示',
       content: '是否要修改该状态?',
       onOk: async () => {
         try {
-          await adminUpdateStatusByIdAPI(row.id!, { status: checked ? 1 : 0 })
+          await updateUserStatus(row.id!, checked ? 1 : 0)
           message.success('修改成功!')
           getList()
         }
@@ -142,12 +142,12 @@ export default function SystemAdmin() {
     })
   }
 
-  const handleDelete = (row: Admin) => {
+  const handleDelete = (row: AdminRecord) => {
     modal.confirm({
       title: '提示',
       content: '是否要删除该用户?',
       onOk: async () => {
-        await adminDeleteByIdAPI(row.id!)
+          await deleteUser(row.id!)
         message.success('删除成功!')
         getList()
       },
@@ -162,7 +162,7 @@ export default function SystemAdmin() {
     setDialogOpen(true)
   }
 
-  const handleUpdate = (row: Admin) => {
+  const handleUpdate = (row: AdminRecord) => {
     setIsEdit(true)
     setEditId(row.id)
     form.setFieldsValue(row)
@@ -176,11 +176,11 @@ export default function SystemAdmin() {
       content: '是否要确认?',
       onOk: async () => {
         if (isEdit) {
-          await adminUpdateByIdAPI(editId!, values)
+          await updateUser(editId!, values)
           message.success('修改成功！')
         }
         else {
-          await adminRegisterAPI(values)
+          await createUser(values)
           message.success('添加成功！')
         }
         setDialogOpen(false)
@@ -189,7 +189,7 @@ export default function SystemAdmin() {
     })
   }
 
-  const handleSelectRole = (row: Admin) => {
+  const handleSelectRole = (row: AdminRecord) => {
     setAllocAdminId(row.id!)
     setAllocDialogVisible(true)
     getRoleListByAdmin(row.id!)
@@ -200,7 +200,7 @@ export default function SystemAdmin() {
       title: '提示',
       content: '是否要确认?',
       onOk: async () => {
-        await adminRoleUpdateAPI({ adminId: allocAdminId!, roleIds: allocRoleIds.join(',') })
+        await assignUserRoles({ adminId: allocAdminId!, roleIds: allocRoleIds.join(',') })
         message.success('分配成功！')
         setAllocDialogVisible(false)
       },
@@ -242,7 +242,7 @@ export default function SystemAdmin() {
       key: 'status',
       width: 100,
       align: 'center' as const,
-      render: (status: number, row: Admin) => (
+      render: (status: number, row: AdminRecord) => (
         <Switch checked={status === 1} onChange={checked => handleStatusChange(row, checked)} />
       ),
     },
@@ -251,7 +251,7 @@ export default function SystemAdmin() {
       key: 'actions',
       width: 240,
       align: 'center' as const,
-      render: (_: any, row: Admin) => (
+      render: (_: any, row: AdminRecord) => (
         <Space size="small">
           <Button type="link" onClick={() => handleSelectRole(row)}>分配角色</Button>
           <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>

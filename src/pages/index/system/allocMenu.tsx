@@ -1,10 +1,9 @@
 import type { MenuNode } from '@zealous-admin/layout/index'
 import type { DataNode } from 'antd/es/tree'
+import { assignRoleMenus, getMenuTree, getRoleMenus } from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import { Modal, Tree } from 'antd'
 import { useEffect, useState } from 'react'
-import { getMenuTreeListAPI } from '@/apis/menu'
-import { roleAllocMenuAPI, roleListMenuByRoleIdAPI } from '@/apis/role'
 
 interface AllocMenuModalProps {
   visible: boolean
@@ -19,15 +18,15 @@ export default function AllocMenuModal({ visible, roleId, onClose }: AllocMenuMo
   const [loading, setLoading] = useState(false)
 
   const fetchTreeList = async () => {
-    const res = await getMenuTreeListAPI()
-    setMenuTreeList(res.data)
+    const res = await getMenuTree()
+    setMenuTreeList(res)
   }
 
   const fetchRoleMenu = async () => {
     if (!roleId)
       return
-    const res = await roleListMenuByRoleIdAPI(roleId)
-    const menuList = res.data
+    const res = await getRoleMenus(roleId)
+    const menuList = res
     const checkedMenuIds = menuList.filter(item => item.parentId !== 0).map(item => item.id!)
     setCheckedKeys(checkedMenuIds)
   }
@@ -103,7 +102,7 @@ export default function AllocMenuModal({ visible, roleId, onClose }: AllocMenuMo
 
     setLoading(true)
     try {
-      await roleAllocMenuAPI({ roleId: roleId!, menuIds: Array.from(checkedMenuIds).join(',') })
+      await assignRoleMenus({ roleId: roleId!, menuIds: Array.from(checkedMenuIds).join(',') })
       message.success('分配成功')
       onClose()
     }
