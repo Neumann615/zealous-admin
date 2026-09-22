@@ -149,6 +149,8 @@ interface FieldSchema {
   dataSource?: FieldDataSource
   /** 联动规则：条件命中时控制隐藏 / 禁用 / 必填；规则内条件取「且」，多条规则取「或」 */
   control?: ControlRule[]
+  /** 计算字段公式；配置后字段值由渲染器计算并保持只读 */
+  computed?: FieldComputed
   /** Form.Item 层面配置 */
   formItem?: {
     rules?: ValidateRule[]
@@ -172,6 +174,7 @@ interface FieldSchema {
 | `col` | 渲染器 | 字段级栅格，有值时渲染器在最外层包一层 `Col`；画布外壳只镜像 `span` |
 | `dataSource` | 渲染器 | 声明式数据来源，取数结果覆盖 `props.options` |
 | `control` | 渲染器 | 联动规则，按当前值算出隐藏 / 禁用 / 必填 |
+| `computed` | 渲染器 | 计算字段的安全算术公式；有值时输出字段只读并进入提交报文 |
 | `formItem` | 渲染器 | 校验规则与 `Form.Item` 的 tooltip / extra / hidden |
 | `children` | 双方 | 仅容器类使用 |
 
@@ -292,6 +295,10 @@ interface ValidateRule {
 | | 无顶层单条件时必须有非空 `conditions`；顶层单条件必须有非空 `field` | `联动规则格式不正确（<字段>）：field 需要非空字符串` |
 | | `conditions` 与顶层单条件不能同时配置 | `联动规则格式不正确（<字段>）：conditions 与顶层单条件不能同时配置` |
 | | `conditions` 每项的字段、operator 和 `in` 数组合法 | `联动规则格式不正确（<字段>）：conditions.0.field 需要非空字符串` 等 |
+| `computed` | 必须是非数组对象，`expression` 为非空字符串 | `计算公式格式不正确（<字段>）` |
+| | 表达式必须是安全算术 DSL；支持 `+ - * / %`、括号、`PI` / `E`、`ABS` / `CEIL` / `FLOOR` / `ROUND` / `MIN` / `MAX` / `POW` / `SQRT` | `计算公式格式不正确（<字段>）：…` |
+
+字段引用写作 `{price}`、`{contact.name}`、`{items.0.qty}`。公式可引用其他公式字段，渲染器会按依赖顺序计算；不支持任意 JavaScript。公式结果不是有效数字时会清空结果并在控制台警告。
 
 `events` 段有自己的一份形状约束，见 [`events` 段的形状约束](#events-段的形状约束)。
 

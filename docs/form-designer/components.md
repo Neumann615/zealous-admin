@@ -1,6 +1,6 @@
 # 组件清单
 
-内置 37 个组件，按左侧面板分为 5 组。所有组件都通过 `registerComponent(def)` 声明式注册，设计器画布与运行时渲染读的是同一份声明——新增一个组件只需写一个 `ComponentDef`，面板分组、拖拽、配置面板、渲染全部自动跟上。
+内置 38 个组件，按左侧面板分为 5 组。所有组件都通过 `registerComponent(def)` 声明式注册，设计器画布与运行时渲染读的是同一份声明——新增一个组件只需写一个 `ComponentDef`，面板分组、拖拽、配置面板、渲染全部自动跟上。
 
 「值绑定」列的含义：
 
@@ -60,19 +60,21 @@
 
 `descriptions` 的子节点由父级渲染 item label，因此子字段的 `Form.Item` 不再重复输出 label。
 
-## 高级组件（advanced，3 个）
+## 高级组件（advanced，4 个）
 
 | type | 名称 | 值绑定 | 提交值 | 常用配置 |
 |------|------|--------|--------|----------|
 | `upload` | 上传 | 字段 | antd `fileList` | 按钮文案、展示形态、多选、最大数量、文件类型 |
 | `money` | 金额输入 | 字段 | `number` | 币种符号、小数位、千分位、最小/最大值 |
 | `icon` | 图标选择器 | 字段 | 图标名字符串 | 占位提示、可清空 |
+| `formula` | 计算字段 | 字段 | 只读数字 | 计算公式 |
 
 实现要点：
 
 - `upload` 通过 `formItemProps: { valuePropName: 'fileList', getValueFromEvent }` 让 `Upload` 受控；`beforeUpload` 返回 `false`，**本期只做前端收集，不落服务端**，上传地址与鉴权待后续扩展。`buttonText` 是自定义键，其余 props 透传给 antd `Upload`。
 - `money` 基于 `InputNumber`，自定义键 `thousands` 换算成 `formatter` / `parser` 实现千分位。
 - `icon` 直接复用 `@zealous-admin/components` 的 `ZaIconPicker`（value/onChange 受控，`Form.Item` 注入即可用）。
+- `formula` 使用安全算术 DSL，不支持任意 JavaScript；表达式和运行结果见 [FieldSchema · `computed`](/form-designer/schema#fieldschema)。
 
 ## 子表单（subform，3 个）
 

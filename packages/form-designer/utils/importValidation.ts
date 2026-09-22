@@ -1,6 +1,7 @@
 import type { FieldSchema, FormSchema } from '../types/schema'
 import { validateEvents } from '../events/validateEvents'
 import { getComponent } from '../registry/registry'
+import { getFormulaIssue } from '../renderer/formula'
 import { validateSchemaFieldNames } from './fieldName'
 import { validateFieldRules } from './parseSchema'
 
@@ -38,6 +39,16 @@ export function validateRuleImport(value: unknown): string[] {
         issues.push(`第 ${nodePath} 项 field 应为字符串`)
       if (node.props !== undefined && (!node.props || typeof node.props !== 'object' || Array.isArray(node.props)))
         issues.push(`字段「${node.label || node.type || node.id}」的 props 应为对象`)
+      if (node.computed !== undefined) {
+        if (!node.computed || typeof node.computed !== 'object' || Array.isArray(node.computed)) {
+          issues.push(`字段「${node.label || node.type || node.id}」的 computed 应为对象`)
+        }
+        else {
+          const formulaIssue = getFormulaIssue(node.computed.expression)
+          if (formulaIssue)
+            issues.push(`字段「${node.label || node.type || node.id}」的公式：${formulaIssue}`)
+        }
+      }
       if (node.children !== undefined)
         walk(node.children, nodePath)
     })

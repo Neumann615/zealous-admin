@@ -160,6 +160,12 @@ export interface FieldDataSource {
   debounce?: number
 }
 
+/** 计算字段配置；表达式是安全算术 DSL，不是任意 JavaScript */
+export interface FieldComputed {
+  /** 例：`ROUND({price} * {count}, 2)`，`{路径}` 支持 contact.name / items.0.qty */
+  expression: string
+}
+
 export interface FieldSchema {
   /** 唯一 id，拖拽/选中主键 */
   id: string
@@ -176,6 +182,8 @@ export interface FieldSchema {
   dataSource?: FieldDataSource
   /** 联动规则：条件命中时控制隐藏 / 禁用 / 必填；多条规则的效果取「或」 */
   control?: ControlRule[]
+  /** 计算字段公式；配置后字段值由渲染器计算并保持只读 */
+  computed?: FieldComputed
   /** Form.Item 层面配置 */
   formItem?: {
     rules?: ValidateRule[]

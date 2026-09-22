@@ -7,11 +7,13 @@ import { Alert, App, Button, Flex, Form, Spin, message as staticMessage } from '
 import { createStyles } from 'antd-style'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { emitHook, filterRefsForField, runHooks } from '../events/runHooks'
+import { nodeBindsField, opensNameScope } from '../utils/fieldName'
 import { parseSchema } from '../utils/parseSchema'
 import { findNodeByField } from '../utils/schemaTree'
 import { evalControl } from './control'
 import { getFormDataApi } from './dataApis'
 import { buildFormProps } from './formProps'
+import { evalFormula, getFormulaReferences } from './formula'
 import { FormHooksProvider } from './hooksContext'
 import { renderField } from './renderField'
 
@@ -34,8 +36,61 @@ const useStyles = createStyles(({ css, token }) => ({
  */
 function consumesValues(children: FieldSchema[]): boolean {
   return children.some(node =>
-    !!node.dataSource?.watch?.length || !!node.control?.length || consumesValues(node.children ?? []),
+    !!node.dataSource?.watch?.length || !!node.control?.length || !!node.computed?.expression || consumesValues(node.children ?? []),
   )
+}
+
+interface ComputedField {
+  expression: string
+  namePath: string[]
+}
+
+function collectComputedFields(
+  children: FieldSchema[],
+  prefix: string[][] = [[]],
+  out: ComputedField[] = [],
+): ComputedField[] {
+  for (const node of children) {
+    const paths = prefix.map(item => node.field ? [...item, node.field] : item)
+    if (node.computed?.expression && nodeBindsField(node)) {
+      const namePath = paths[0]
+      if (namePath?.length)
+        out.push({ expression: node.computed.expression, namePath })
+    }
+    if (node.children?.length)
+      collectComputedFields(node.children, opensNameScope(node) ? paths : prefix, out)
+  }
+  return out
+}
+
+/**
+ * 公式可以引用公式字段。按引用关系排序后，同一轮就能得到确定的链式结果；
+ * 循环引用保留原有顺序，执行时引用缺失会走统一的运行时降级。
+ */
+function orderComputedFields(fields: ComputedField[]): ComputedField[] {
+  const byName = new Map(fields.map(item => [item.namePath.join('.'), item]))
+  const visited = new Set<ComputedField>()
+  const visiting = new Set<ComputedField>()
+  const ordered: ComputedField[] = []
+
+  const visit = (item: ComputedField) => {
+    if (visited.has(item))
+      return
+    if (visiting.has(item))
+      return
+    visiting.add(item)
+    for (const reference of getFormulaReferences(item.expression)) {
+      const target = byName.get(reference)
+      if (target)
+        visit(target)
+    }
+    visiting.delete(item)
+    visited.add(item)
+    ordered.push(item)
+  }
+
+  fields.forEach(visit)
+  return ordered
 }
 
 /**
@@ -228,6 +283,7 @@ function FormRendererInner({
   const [valuesVersion, setValuesVersion] = useState(0)
   const hasControls = useMemo(() => schema.children.some(node => !!node.control?.length), [schema.children])
   const watchesValues = useMemo(() => consumesValues(schema.children), [schema.children])
+  const computedFields = useMemo(() => orderComputedFields(collectComputedFields(schema.children)), [schema.children])
   /** 数据源重取句柄：ctx.reload 的目标集合（Form.List 行内字段会登记多个实例） */
   const reloadHandlesRef = useRef(new Map<number, DataSourceReloadHandle>())
   const reloadSeqRef = useRef(0)
@@ -265,10 +321,44 @@ function FormRendererInner({
   useEffect(() => {
     // 首次渲染时 initialValues 可能还没进 store（antd 在自己的 effect 里装载），
     // 这里挂载后强制重算一次联动有效态；只在真的声明了 control 时触发这一次重渲染。
-    if (hasControls)
+    if (hasControls || computedFields.length)
       // eslint-disable-next-line react/set-state-in-effect -- 见上：刻意的挂载后重算，只在有联动规则时触发一次
       setValuesVersion(v => v + 1)
-  }, [hasControls])
+  }, [hasControls, computedFields.length])
+
+  useEffect(() => {
+    if (!computedFields.length)
+      return
+    const values = form.getFieldsValue(true)
+    const patch: Record<string, any> = {}
+    for (const item of computedFields) {
+      const name = item.namePath.join('.')
+      try {
+        patch[name] = evalFormula(item.expression, values)
+      }
+      catch (error) {
+        if (form.getFieldValue(item.namePath) !== undefined) {
+          patch[name] = undefined
+          console.warn('[form-designer] 计算字段执行失败', name, error)
+        }
+      }
+    }
+    if (Object.keys(patch).length) {
+      const next: Record<string, any> = {}
+      for (const [name, value] of Object.entries(patch)) {
+        const keys = name.split('.')
+        keys.reduce((current: Record<string, any>, key, index) => {
+          if (index === keys.length - 1) {
+            current[key] = value
+            return current
+          }
+          current[key] = current[key] && typeof current[key] === 'object' ? current[key] : {}
+          return current[key]
+        }, next)
+      }
+      form.setFieldsValue(next)
+    }
+  }, [computedFields, form, valuesVersion])
 
   const buildCtx = useCallback((over?: Partial<FormHookContext>): FormHookContext => {
     const current = schemaRef.current.events

@@ -2,6 +2,7 @@ import type { FormEventConfig } from '../events/types'
 import type { ControlRule, DataSourceDef, FieldDataSource, FieldOption, FieldPermission, FieldSchema, FormSchema, ValidateRule } from '../types/schema'
 import { isFnSource } from '../events/fnSource'
 import { validateEvents, validateHookFn } from '../events/validateEvents'
+import { getFormulaIssue } from '../renderer/formula'
 import { CONTROL_EFFECTS, CONTROL_OPERATORS, createEmptySchema, DATA_SOURCE_TYPES, SCHEMA_VERSION, THRESHOLD_RULE_TYPES, VALIDATE_RULE_TYPES, VALIDATE_TRIGGERS } from '../types/schema'
 
 /**
@@ -237,6 +238,20 @@ function validateFieldControl(node: FieldSchema, where: string): string[] {
   })
 }
 
+function validateFieldComputed(node: FieldSchema, where: string): string[] {
+  const raw = (node as { computed?: unknown }).computed
+  if (raw === undefined)
+    return []
+  const issue = `计算公式格式不正确（${where}）`
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+    return [issue]
+  const computed = raw as { expression?: unknown }
+  if (typeof computed.expression !== 'string')
+    return [`${issue}：expression 需要非空字符串`]
+  const formulaIssue = getFormulaIssue(computed.expression)
+  return formulaIssue ? [`${issue}：${formulaIssue}`] : []
+}
+
 /**
  * children 树上所有字段的形状校验：校验规则（formItem.rules）与字段级栅格（col），含嵌套子表单。
  * 与 events 校验并列：保存拦截与解析侧共用同一份口径，避免「保存放行、回读拒绝」。
@@ -254,6 +269,7 @@ export function validateFieldRules(children: unknown, dataSources?: unknown): st
       issues.push(...validateCol(node, where))
       issues.push(...validateFieldDataSource(node, where))
       issues.push(...validateFieldControl(node, where))
+      issues.push(...validateFieldComputed(node, where))
       const rules = (node.formItem as { rules?: unknown } | undefined)?.rules
       if (rules !== undefined) {
         if (!Array.isArray(rules))

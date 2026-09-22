@@ -8,6 +8,7 @@ import { ConfigFormRenderer } from './ConfigFormRenderer'
 import { ControlEditor } from './ControlEditor'
 import { DataSourceEditor } from './DataSourceEditor'
 import { FormEventsPanel } from './FormEventsPanel'
+import { FormulaEditor } from './FormulaEditor'
 import { PermissionEditor } from './PermissionEditor'
 import { useDesignerStore } from './store'
 import { ValidateEditor } from './ValidateEditor'
@@ -47,8 +48,8 @@ function FieldConfig() {
   const hasCol = !def.noFormItem
   const commonMetas = getCommonMetas(hasField)
   const nameIssue = getFieldNameIssue(schema, node.id)
-  const fieldNames = collectFieldNamePaths(schema.children)
   const permissionKey = hasField ? getFieldPermissionKey(schema.children, node.id) : null
+  const fieldNames = collectFieldNamePaths(schema.children).filter(name => name !== permissionKey)
   const dataSourceNames = Object.keys(schema.dataSources ?? {})
   const pathIssueOf = (path: string) => getFieldPathIssue(schema.children, path)
 
@@ -77,6 +78,17 @@ function FieldConfig() {
             value={node.formItem?.rules}
             onChange={rules => updateField(node.id, 'formItem.rules', rules, true)}
             custom={schema.events?.custom}
+          />
+        </>
+      )}
+      {node.type === 'formula' && (
+        <>
+          <Divider titlePlacement="start" plain style={{ margin: '16px 0 12px' }}>计算公式</Divider>
+          <FormulaEditor
+            value={node.computed}
+            onChange={computed => updateField(node.id, 'computed', computed, true)}
+            fieldNames={fieldNames}
+            pathIssueOf={pathIssueOf}
           />
         </>
       )}

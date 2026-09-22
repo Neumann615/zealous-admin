@@ -1,6 +1,6 @@
-import { MoneyCollectOutlined, SmileOutlined, UploadOutlined } from '@ant-design/icons'
+import { CalculatorOutlined, MoneyCollectOutlined, SmileOutlined, UploadOutlined } from '@ant-design/icons'
 import { ZaIconPicker } from '@zealous-admin/components/index'
-import { Button, InputNumber, Upload } from 'antd'
+import { Button, Input, InputNumber, Upload } from 'antd'
 import { registerComponent } from '../registry'
 import { fieldSchema } from './helpers'
 
@@ -84,5 +84,17 @@ registerComponent({
   configForm: [
     { field: 'props.placeholder', label: '占位提示', type: 'input' },
     { field: 'props.clearable', label: '可清空', type: 'switch' },
+  ],
+})
+
+registerComponent({
+  type: 'formula',
+  title: '计算字段',
+  menu: 'advanced',
+  icon: <CalculatorOutlined />,
+  defaultSchema: () => fieldSchema('formula', '计算字段'),
+  render: schema => <Input readOnly {...schema.props} />,
+  configForm: [
+    { field: 'props.placeholder', label: '占位提示', type: 'input' },
   ],
 })

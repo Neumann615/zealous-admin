@@ -14,6 +14,7 @@ export type {
   DataSourceDef,
   DataSourceType,
   FieldCol,
+  FieldComputed,
   FieldDataSource,
   FieldOption,
   FieldPermission,

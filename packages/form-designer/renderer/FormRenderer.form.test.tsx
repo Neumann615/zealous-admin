@@ -77,7 +77,7 @@ describe('渲染器外部表单实例（FormRenderer）', () => {
     const { schema, field } = schemaOf()
     const onSubmit = vi.fn()
 
-    const { container } = render(<FormRenderer schema={schema} onSubmit={onSubmit} />)
+    const { container } = render(<FormRenderer schema={schema} initialValues={{ count: 2 }} onSubmit={onSubmit} />)
     fill(container, '李四')
     submit(container)
 
@@ -205,6 +205,36 @@ describe('渲染器全局配置（FormRenderer）', () => {
     )
     expect(control.container.querySelector('.ant-form-item-required')).not.toBeNull()
     expect(control.container.querySelector('.ant-form-item-required-mark-hidden')).toBeNull()
+  })
+})
+
+describe('渲染器计算字段（FormRenderer）', () => {
+  it('公式随依赖变化更新，值只读且进入提交报文', async () => {
+    const price = pick('input').defaultSchema()
+    price.field = 'price'
+    const count = pick('input').defaultSchema()
+    count.field = 'count'
+    const total = pick('formula').defaultSchema()
+    total.field = 'total'
+    total.computed = { expression: 'ROUND({price} * {count}, 2)' }
+    const schema: FormSchema = {
+      version: 2,
+      form: { layout: 'vertical' },
+      children: [price, count, total],
+    }
+    const onSubmit = vi.fn()
+    const { container } = render(<FormRenderer schema={schema} onSubmit={onSubmit} />)
+
+    const totalInput = () => container.querySelector('input#total') as HTMLInputElement
+    fireEvent.change(container.querySelector('input#price')!, { target: { value: '20' } })
+    fireEvent.change(container.querySelector('input#count')!, { target: { value: '2' } })
+    await waitFor(() => expect(totalInput().value).toBe('40'))
+    fireEvent.change(container.querySelector('input#count')!, { target: { value: '3' } })
+    await waitFor(() => expect(totalInput().value).toBe('60'))
+    expect(totalInput().readOnly).toBe(true)
+
+    fireEvent.click(container.querySelector('button[type="submit"]')!)
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ price: '20', count: '3', total: 60 }))
   })
 })
 

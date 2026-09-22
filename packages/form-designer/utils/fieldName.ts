@@ -32,7 +32,7 @@ export function nodeBindsField(node: FieldSchema): boolean {
  * 无 field 的值绑定容器不会下发前缀（nestList 无 field 时子节点甚至不渲染），
  * 此时按同作用域继续下探——该状态本身已被「字段名不能为空」拦下。
  */
-function opensNameScope(node: FieldSchema): boolean {
+export function opensNameScope(node: FieldSchema): boolean {
   const def = getComponent(node.type)
   if (!def?.isContainer || (!def.nestObject && !def.nestList))
     return false
