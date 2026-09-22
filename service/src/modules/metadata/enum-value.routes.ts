@@ -5,8 +5,8 @@ import {
   METADATA_BIZ_BASE_PATH,
   METADATA_INNER_BASE_PATH,
   proxyMetadataJson,
-} from '../shared/upstream'
-import { parseEnabledParam, parseIdBody, parseIdParam } from '../shared/validation'
+} from './upstream'
+import { parseEnabledParam, parseIdBody, parseIdParam } from './validation'
 
 const router = Router()
 

@@ -270,7 +270,6 @@ const menuMessages = {
   '/system/admin': '用户管理',
   '/system/role': '角色管理',
   '/system/menu': '导航管理',
-  '/system/dict': '字典管理',
   '/ui': 'UI',
 }
 

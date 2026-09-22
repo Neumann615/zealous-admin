@@ -1,10 +1,10 @@
 import { Router } from 'express'
 import { authMiddleware } from '../../middleware/auth'
-import enumValueRoutes from './enum-value/enum-value.routes'
-import fieldStandardRoutes from './field-standard/field-standard.routes'
-import qualityRuleRoutes from './quality-rule/quality-rule.routes'
-import tableMetadataRoutes from './table-metadata/table-metadata.routes'
-import wordRootRoutes from './word-root/word-root.routes'
+import enumValueRoutes from './enum-value.routes'
+import fieldStandardRoutes from './field-standard.routes'
+import qualityRuleRoutes from './quality-rule.routes'
+import tableMetadataRoutes from './table-metadata.routes'
+import wordRootRoutes from './word-root.routes'
 
 const router = Router()
 

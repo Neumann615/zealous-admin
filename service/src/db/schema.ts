@@ -35,28 +35,6 @@ export interface Menu {
   component: string | null
 }
 
-export interface DictType {
-  id: number
-  name: string
-  dictType: string
-  status: number
-  createTime: string | null
-  remark: string | null
-}
-
-export interface DictData {
-  id: number
-  dictType: string
-  dictLabel: string
-  dictValue: string
-  dictSort: number
-  status: number
-  createTime: string | null
-  remark: string | null
-  cssClass: string | null
-  listClass: string | null
-}
-
 export interface AdminRoleRelation {
   id: number
   adminId: number

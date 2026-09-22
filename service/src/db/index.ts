@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs'
+import process from 'node:process'
 import { DatabaseSync } from 'node:sqlite'
 import bcrypt from 'bcryptjs'
 import { now } from '../lib/date.js'
@@ -50,32 +51,6 @@ export function initDb() {
       path TEXT,
       component TEXT,
       active_icon TEXT
-    )
-  `)
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS za_dict_type (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      dict_type TEXT NOT NULL UNIQUE,
-      status INTEGER DEFAULT 1,
-      create_time TEXT,
-      remark TEXT
-    )
-  `)
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS za_dict_data (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dict_type TEXT NOT NULL,
-      dict_label TEXT NOT NULL,
-      dict_value TEXT NOT NULL,
-      dict_sort INTEGER DEFAULT 0,
-      status INTEGER DEFAULT 1,
-      create_time TEXT,
-      remark TEXT,
-      css_class TEXT,
-      list_class TEXT
     )
   `)
 
@@ -274,7 +249,6 @@ export function initDb() {
           { title: '用户管理', name: 'admin', icon: 'ai:AiOutlineUser' },
           { title: '角色管理', name: 'role', icon: 'ai:AiOutlineTeam' },
           { title: '导航管理', name: 'menu', icon: 'ai:AiOutlineMenu' },
-          { title: '字典管理', name: 'dict', icon: 'ai:AiOutlineBook' },
         ],
       },
       {

@@ -1,6 +1,6 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 import process from 'node:process'
-import { failed } from '../../../lib/response'
+import { failed } from '../../lib/response'
 
 const METADATA_API_BASE_URL = process.env.METADATA_API_BASE_URL
 const METADATA_API_TOKEN = process.env.METADATA_API_TOKEN

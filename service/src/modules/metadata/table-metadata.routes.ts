@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { asyncMetadataHandler, METADATA_BIZ_BASE_PATH, proxyMetadataJson } from '../shared/upstream'
-import { parseIdBody, parseIdParam } from '../shared/validation'
+import { asyncMetadataHandler, METADATA_BIZ_BASE_PATH, proxyMetadataJson } from './upstream'
+import { parseIdBody, parseIdParam } from './validation'
 
 const router = Router()
 const resource = `${METADATA_BIZ_BASE_PATH}/table-metadata`
