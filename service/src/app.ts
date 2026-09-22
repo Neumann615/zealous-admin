@@ -2,13 +2,13 @@ import cors from 'cors'
 import express from 'express'
 import { errorHandler } from './middleware/error'
 import authRoutes from './modules/auth/auth.routes'
+import userRoutes from './modules/auth/user.routes'
+import roleRoutes from './modules/auth/role.routes'
+import menuRoutes from './modules/auth/menu.routes'
 import formRoutes from './modules/form/form.routes'
-import formDataRoutes from './modules/formData/formData.routes'
+import formDataRoutes from './modules/form/formData.routes'
 import mcpRoutes from './modules/mcp/mcp.routes'
-import menuRoutes from './modules/menu/menu.routes'
 import metadataRoutes from './modules/metadata'
-import roleRoutes from './modules/role/role.routes'
-import userRoutes from './modules/user/user.routes'
 
 const app = express()
 
