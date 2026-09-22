@@ -100,11 +100,12 @@ export interface RenderContract {
 }
 
 /** 运行时统一渲染：传 formId，服务端合并 schema + 回显数据 + 权限后返回契约 */
-export function renderFormAPI(data: Record<string, any>) {
+export function renderFormAPI(data: Record<string, any>, signal?: AbortSignal) {
   return http<{ name: string, renderContract: RenderContract }>({
     url: '/form/render',
     method: 'post',
     data,
+    signal,
   })
 }
 

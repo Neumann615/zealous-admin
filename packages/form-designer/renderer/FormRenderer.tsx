@@ -1,17 +1,17 @@
 import type { FormInstance } from 'antd'
-import type { FieldPermission, FieldSchema, FormSchema } from '../types/schema'
+import type { FieldSchema, FormSchema, RenderContract } from '../types/schema'
 import { Alert, App, Button, Flex, Form, Spin, message as staticMessage } from 'antd'
 import { createStyles } from 'antd-style'
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { filterRefsForField, runHooks } from '../events/runHooks'
 import { getComponent } from '../registry/registry'
 import { nodeBindsField, opensNameScope } from '../utils/fieldName'
-import { parseSchema } from '../utils/parseSchema'
 import { getByPathName } from '../utils/path'
 import { getFormDataApi } from './dataApis'
 import { buildFormProps } from './formProps'
 import { createFormulaRowScope, evalFormula, getFormulaReferences } from './formula'
 import { FormHooksProvider } from './hooksContext'
+import { resolveRenderContract, resolveSchemaContract, resolveSchemaJsonContract } from './renderContractLoader'
 import { renderField } from './renderField'
 import { useFormRuntime } from './useFormRuntime'
 
@@ -145,13 +145,16 @@ function orderComputedFields(fields: ComputedField[]): ComputedField[] {
 }
 
 export interface FormRendererProps {
-  /** 通道①：调用方已有 FormSchema，直接传入（零网络请求） */
+  /** 通道①：完整契约直传（schema + 回显 + 权限），外部已调 render 接口时可避免重复请求 */
+  renderContract?: RenderContract
+
+  /** 通道②：调用方已有 FormSchema，直接传入（零网络请求） */
   schema?: FormSchema
 
-  /** 通道②：传表单 ID，渲染器通过宿主注册的 `__render` API 自动加载 */
+  /** 通道③：传表单 ID，渲染器通过宿主注册的 `__render` API 自动加载 */
   formId?: number
 
-  /** 通道③：FormSchema JSON 字符串直传（调试 / 降级路径） */
+  /** 通道④：FormSchema JSON 字符串直传（调试 / 降级路径） */
   schemaJson?: string
 
   initialValues?: Record<string, any>
@@ -171,106 +174,105 @@ interface ResolvedSchema {
 }
 
 /**
- * 把后端 permissions 就地应用到 schema 树（调用方已 deep clone）：
- * visible:false → hidden；editable:false → disabled；required:true → required
- */
-function applyPermissions(
-  children: FieldSchema[],
-  permissions: Record<string, FieldPermission> | undefined,
-  prefixes: string[][] = [[]],
-): void {
-  if (!permissions)
-    return
-  for (const node of children) {
-    const paths = prefixes.map(prefix => node.field ? [...prefix, node.field] : prefix)
-    const keys = [...new Set(paths.map(path => path.join('.')))]
-    const perm = keys.length ? keys.map(key => permissions[key]).find(Boolean) : undefined
-    if (perm?.visible === false)
-      node.formItem = { ...node.formItem, hidden: true }
-    if (perm?.editable === false)
-      node.props = { ...node.props, disabled: true }
-    if (perm?.required === true)
-      node.formItem = { ...node.formItem, required: true }
-    if (node.children?.length) {
-      applyPermissions(
-        node.children,
-        permissions,
-        paths.flatMap((path) => {
-          if (!path.length)
-            return [path]
-          return [path, [...path, '*']]
-        }),
-      )
-    }
-  }
-}
-
-/**
- * 三通道收敛 hook：schema 直传 > formId API > schemaJson 降级。
+ * 渲染输入收敛 hook：完整契约 > schema 直传 > formId API > schemaJson 降级。
  * formId 模式走宿主注册的 `__render` API（与数据源 api 共用注册机制），
  * 后端合并 schema + 回显数据 + 权限后返回 RenderContract。
  */
 function useFormRendererLoader(
   props: FormRendererProps,
 ): { resolved: ResolvedSchema | null, loading: boolean, error: string } {
-  const { schema, formId, schemaJson, initialValues } = props
+  const { schema, formId, schemaJson, initialValues, renderContract } = props
   const [resolved, setResolved] = useState<ResolvedSchema | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const latestPropsRef = useRef(props)
+  latestPropsRef.current = props
+
   // 序列化 key 避免调用方每次渲染传新引用导致重复加载
+  const contractKey = renderContract ? JSON.stringify(renderContract) : ''
   const schemaKey = schema ? JSON.stringify(schema) : ''
   const schemaJsonKey = schemaJson || ''
   const initialDataKey = initialValues ? JSON.stringify(initialValues) : ''
 
   useEffect(() => {
-    if (schema) {
-      const clone: FormSchema = JSON.parse(JSON.stringify(schema))
-      applyPermissions(clone.children, clone.permissions)
-      setResolved({ schema: clone, data: initialValues })
-      setError('')
-      return
+    let active = true
+    const controller = new AbortController()
+    const current = latestPropsRef.current
+    const finish = (result: ResolvedSchema | null, errorMessage = '') => {
+      if (!active)
+        return
+      setResolved(result)
+      setError(errorMessage)
     }
-    if (schemaJson) {
-      try {
-        const parsed = parseSchema(schemaJson)
-        setResolved({ schema: parsed, data: initialValues })
-        setError('')
-      }
-      catch (e: any) {
-        setError(e?.message || 'Schema 解析失败')
-        setResolved(null)
-      }
-      return
-    }
-    if (formId) {
-      const renderApi = getFormDataApi('__render')
-      if (!renderApi) {
-        setError('formId 模式需要在宿主注册 __render 数据接口（registerFormDataApis）')
-        setResolved(null)
+
+    const run = async (): Promise<void> => {
+      if (current.renderContract) {
+        try {
+          finish(resolveRenderContract(current.renderContract, current.initialValues))
+        }
+        catch (e: any) {
+          finish(null, e?.message || '渲染契约解析失败')
+        }
         return
       }
-      setLoading(true)
-      setError('')
-      renderApi({ formId, data: initialValues })
-        .then((contract: any) => {
-          if (!contract?.schema)
-            throw new Error('render 接口返回缺少 schema')
-          const parsed = typeof contract.schema === 'string' ? parseSchema(contract.schema) : contract.schema as FormSchema
-          const clone: FormSchema = JSON.parse(JSON.stringify(parsed))
-          applyPermissions(clone.children, {
-            ...parsed.permissions,
-            ...contract.permissions,
-          })
-          setResolved({ schema: clone, data: contract.data ?? initialValues })
-        })
-        .catch((e: any) => {
-          setError(e?.message || '表单加载失败')
-          setResolved(null)
-        })
-        .finally(() => setLoading(false))
+
+      if (current.schema) {
+        try {
+          finish(resolveSchemaContract(current.schema, current.initialValues))
+        }
+        catch (e: any) {
+          finish(null, e?.message || 'Schema 解析失败')
+        }
+        return
+      }
+
+      if (current.schemaJson) {
+        try {
+          finish(resolveSchemaJsonContract(current.schemaJson, current.initialValues))
+        }
+        catch (e: any) {
+          finish(null, e?.message || 'Schema 解析失败')
+        }
+        return
+      }
+
+      if (typeof current.formId === 'number') {
+        const renderApi = getFormDataApi('__render')
+        if (!renderApi) {
+          finish(null, 'formId 模式需要在宿主注册 __render 数据接口（registerFormDataApis）')
+          return
+        }
+
+        setLoading(true)
+        setError('')
+        try {
+          const contract = await renderApi(
+            { formId: current.formId, data: current.initialValues },
+            controller.signal,
+          )
+          finish(resolveRenderContract(contract, current.initialValues))
+        }
+        catch (e: any) {
+          finish(null, e?.message || '表单加载失败')
+        }
+        finally {
+          if (active)
+            setLoading(false)
+        }
+      }
+      else {
+        finish(null)
+        setLoading(false)
+      }
     }
-  }, [formId, schemaKey, schemaJsonKey, initialDataKey])
+
+    void run()
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [contractKey, formId, schemaKey, schemaJsonKey, initialDataKey])
 
   return { resolved, loading, error }
 }

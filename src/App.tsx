@@ -1,17 +1,15 @@
+import { registerFormDataApis } from '@zealous-admin/form-designer/index'
 import { LayoutProvider, useUserStore } from '@zealous-admin/layout/index'
 import { groupBy, sortBy } from '@zealous-admin/utils/index'
 import { useEffect, useMemo } from 'react'
 import { Navigate, useRoutes } from 'react-router'
 import routes from '~react-pages'
 import './App.css'
-
-// formId 模式渲染器的取数接口：渲染器通过 __render key 调用
-import { registerFormDataApis } from '@zealous-admin/form-designer/index'
 import { renderFormAPI } from './apis/form'
 
 registerFormDataApis({
-  __render: async (params) => {
-    const res = await renderFormAPI(params)
+  __render: async (params, signal) => {
+    const res = await renderFormAPI(params, signal)
     return res.data.renderContract
   },
 })
