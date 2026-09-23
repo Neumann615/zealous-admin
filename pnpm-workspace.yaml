@@ -62,6 +62,7 @@ catalog:
   vitest: ^5.0.0
   jsdom: ^30.0.1
   '@testing-library/react': ^16.3.3
+  '@playwright/test': ^1.63.0
 allowBuilds:
   '@swc/core': true
   esbuild: true

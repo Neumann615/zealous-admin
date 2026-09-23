@@ -1,0 +1,21 @@
+{
+  "name": "@zealous-admin/monitor",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "前端监控模块：实时日志、数据分析看板、应用与队列管理、预警配置与记录",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts"
+    }
+  },
+  "peerDependencies": {
+    "@ant-design/icons": "catalog:",
+    "antd": "catalog:",
+    "antd-style": "catalog:",
+    "dayjs": "*",
+    "echarts": "catalog:",
+    "react": "catalog:"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@zealous-admin/monitor-sdk",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "浏览器前端监控采集 SDK：零依赖、框架无关，产出与 @zealous-admin/monitor 契约一致的埋点日志",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts"
+    }
+  }
+}

@@ -13,6 +13,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "preview": "vite build && vite preview",
     "build:lib": "npm run build:lib:locales && npm run build:lib:components && npm run build:lib:layout && npm run build:lib:metadata && npm run build:lib:theme && npm run build:lib:utils",
     "build:lib:locales": "vite build --config packages/locales/vite.config.ts && tsc -p ./packages/locales/tsconfig.lib.json",
@@ -61,6 +62,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^9.1.0",
     "@eslint-react/eslint-plugin": "^5.10.0",
+    "@playwright/test": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

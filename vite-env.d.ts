@@ -11,6 +11,10 @@ interface ImportMetaEnv {
   readonly VITE_OSS_UPLOAD_URL: string
   /** Minio上传相对路径 */
   readonly VITE_MINIO_UPLOAD_URL: string
+  /** 监控采集 SDK 的应用标识 */
+  readonly VITE_MONITOR_APP_ID?: string
+  /** 监控采集入口，缺省时取 VITE_BASE_SERVER_URL + /monitor/collect */
+  readonly VITE_MONITOR_REPORT_URL?: string
 }
 /** 扩展import.meta对象类型 */
 interface ImportMeta {
