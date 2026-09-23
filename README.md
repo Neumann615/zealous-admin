@@ -51,12 +51,16 @@ pnpm docs:dev       # VitePress 文档站
 zealous-admin/
 ├── src/                          # 主应用
 │   ├── main.tsx                  # 应用启动入口
-│   ├── App.tsx                   # 路由守卫 + LayoutProvider + 全局消息注入
+│   ├── App.tsx                   # 会话门禁 + 路由装配 + LayoutProvider
+│   ├── registry/                 # 路由装配层（路由表由后端菜单配置驱动）
+│   │   ├── pages.tsx             #   component key → 页面懒加载器；未配置时按 path 回落 src/pages/index
+│   │   └── routes.tsx            #   buildRoutes(menus)：菜单行决定路由，登录页与 404 固定挂载
 │   ├── apis/                     # API 请求层（admin / dict / menu / role）
-│   └── pages/                    # 页面（vite-plugin-pages 文件路由）
+│   └── pages/                    # 页面组件（能否被访问取决于 za_menu 是否有对应行）
 │       ├── login.tsx             # 登录页
-│       ├── index.tsx             # 主路由入口（动态菜单路由）
+│       ├── [...all].tsx          # 404 页
 │       └── index/
+│           ├── index.tsx         # 首页
 │           ├── demo/             # 演示页面
 │           │   ├── dashboard/    #   大屏演示（ECharts / Three.js / G6）
 │           │   ├── components/   #   组件演示页
@@ -68,16 +72,18 @@ zealous-admin/
 │           │   ├── menu-active/  #   菜单图标激活态示例
 │           │   ├── route-params/ #   路由传参示例
 │           │   ├── keepalive.tsx #   页面保活演示
-│           │   ├── style.tsx     #   风格实验室
-│           │   └── theme-preview.tsx # 主题预览
-│           ├── system/           # 系统管理页
-│           │   ├── admin.tsx     #   用户管理
-│           │   ├── role.tsx      #   角色管理
-│           │   ├── menu.tsx      #   菜单管理
-│           │   ├── dict.tsx      #   字典管理
-│           │   └── allocMenu.tsx #   角色菜单分配
+│           │   └── style.tsx     #   风格实验室
+│           ├── form/             # 表单设计器示例（列表 / 设计 / 渲染 / 数据 / 预览）
 │           └── ui/               # UI 展示页
 ├── packages/
+│   ├── auth/                     # 权限包 @zealous-admin/auth
+│   │   ├── api/                  #   auth / user / role / menu 接口
+│   │   ├── guards/               #   AuthGuard（路由级）+ PermissionGuard（按钮级）
+│   │   ├── hooks/                #   useAuth / useUser / usePermission
+│   │   ├── pages/                #   用户管理 / 角色管理 / 菜单管理 / 分配菜单弹窗
+│   │   ├── runtime/client.ts     #   HTTP 适配注入（由主应用配置）
+│   │   ├── store/user.ts         #   token + userInfo + 菜单树转换
+│   │   └── types/                #   类型定义
 │   ├── layout/                   # 布局核心包 @zealous-admin/layout
 │   │   ├── components/           #   19 个布局组件
 │   │   │   ├── Breadcrumb/       #     面包屑导航

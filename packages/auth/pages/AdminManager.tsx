@@ -1,6 +1,15 @@
-import type { PageParam, RoleRecord } from '@zealous-admin/auth'
+import type { AdminRecord, PageParam, RoleRecord } from '@zealous-admin/auth'
 import { PlusOutlined } from '@ant-design/icons'
-import { createRole, deleteRole, getRolePage, updateRole } from '@zealous-admin/auth'
+import {
+  assignUserRoles,
+  createUser,
+  deleteUser,
+  getRoleAll,
+  getUserPage,
+  getUserRoles,
+  updateUser,
+  updateUserStatus,
+} from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
@@ -9,6 +18,7 @@ import {
   Input,
   Modal,
   Radio,
+  Select,
   Space,
   Switch,
   Table,
@@ -16,7 +26,6 @@ import {
 import { createStyles } from 'antd-style'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import AllocMenuModal from './allocMenu'
 
 // ============================================================
 // 样式
@@ -42,19 +51,27 @@ const useStyles = createStyles(({ token, css }) => ({
 // 表单校验规则
 // ============================================================
 const FORM_RULES = {
-  name: [
-    { required: true, message: '请输入角色名称' },
-    { min: 2, max: 50, message: '角色名称长度为 2-50 个字符' },
+  username: [
+    { required: true, message: '请输入帐号' },
+    { min: 2, max: 50, message: '帐号长度为 2-50 个字符' },
   ],
-  description: [
-    { max: 200, message: '描述不能超过 200 个字符' },
+  nickName: [
+    { required: true, message: '请输入姓名' },
+    { max: 50, message: '姓名不能超过 50 个字符' },
+  ],
+  email: [
+    { type: 'email' as const, message: '请输入有效的邮箱地址' },
+  ],
+  password: [
+    { required: true, message: '请输入密码' },
+    { min: 6, max: 50, message: '密码长度为 6-50 个字符' },
   ],
 }
 
 // ============================================================
 // 组件
 // ============================================================
-export default function SystemRole() {
+export default function SystemAdmin() {
   const { message, modal } = useAppMessage()
   const { styles } = useStyles()
   const [form] = Form.useForm()
@@ -64,7 +81,8 @@ export default function SystemRole() {
     pageSize: 10,
     keyword: '',
   })
-  const [list, setList] = useState<RoleRecord[]>([])
+  const [list, setList] = useState<AdminRecord[]>([])
+  const [allRoleList, setAllRoleList] = useState<RoleRecord[]>([])
   const [listLoading, setListLoading] = useState(true)
   const [total, setTotal] = useState(0)
 
@@ -72,13 +90,14 @@ export default function SystemRole() {
   const [isEdit, setIsEdit] = useState(false)
   const [editId, setEditId] = useState<number>()
 
-  const [allocMenuVisible, setAllocMenuVisible] = useState(false)
-  const [allocMenuRoleId, setAllocMenuRoleId] = useState<number>()
+  const [allocDialogVisible, setAllocDialogVisible] = useState(false)
+  const [allocAdminId, setAllocAdminId] = useState<number>()
+  const [allocRoleIds, setAllocRoleIds] = useState<number[]>([])
 
   const getList = async () => {
     setListLoading(true)
     try {
-      const res = await getRolePage(listQuery)
+      const res = await getUserPage(listQuery)
       setList(res.list)
       setTotal(res.total)
     }
@@ -86,9 +105,54 @@ export default function SystemRole() {
     finally { setListLoading(false) }
   }
 
+  const getAllRoleList = async () => {
+    try {
+      const response = await getRoleAll()
+      setAllRoleList(response)
+    }
+    catch { /* ignore */ }
+  }
+
   useEffect(() => {
     getList()
+    getAllRoleList()
   }, [listQuery])
+
+  const getRoleListByAdmin = async (adminId: number) => {
+    try {
+      const res = await getUserRoles(adminId)
+      setAllocRoleIds(res.map((item: RoleRecord) => item.id!))
+    }
+    catch { /* ignore */ }
+  }
+
+  const handleStatusChange = async (row: AdminRecord, checked: boolean) => {
+    modal.confirm({
+      title: '提示',
+      content: '是否要修改该状态?',
+      onOk: async () => {
+        try {
+          await updateUserStatus(row.id!, checked ? 1 : 0)
+          message.success('修改成功!')
+          getList()
+        }
+        catch { getList() }
+      },
+      onCancel: () => getList(),
+    })
+  }
+
+  const handleDelete = (row: AdminRecord) => {
+    modal.confirm({
+      title: '提示',
+      content: '是否要删除该用户?',
+      onOk: async () => {
+        await deleteUser(row.id!)
+        message.success('删除成功!')
+        getList()
+      },
+    })
+  }
 
   const handleAdd = () => {
     setIsEdit(false)
@@ -98,23 +162,11 @@ export default function SystemRole() {
     setDialogOpen(true)
   }
 
-  const handleUpdate = (row: RoleRecord) => {
+  const handleUpdate = (row: AdminRecord) => {
     setIsEdit(true)
     setEditId(row.id)
     form.setFieldsValue(row)
     setDialogOpen(true)
-  }
-
-  const handleDelete = (row: RoleRecord) => {
-    modal.confirm({
-      title: '提示',
-      content: '是否要删除该角色?',
-      onOk: async () => {
-        await deleteRole(row.id!)
-        message.success('删除成功!')
-        getList()
-      },
-    })
   }
 
   const handleDialogConfirm = async () => {
@@ -124,11 +176,11 @@ export default function SystemRole() {
       content: '是否要确认?',
       onOk: async () => {
         if (isEdit) {
-          await updateRole(editId!, values)
+          await updateUser(editId!, values)
           message.success('修改成功！')
         }
         else {
-          await createRole(values)
+          await createUser(values)
           message.success('添加成功！')
         }
         setDialogOpen(false)
@@ -137,9 +189,22 @@ export default function SystemRole() {
     })
   }
 
-  const handleSelectMenu = (row: RoleRecord) => {
-    setAllocMenuRoleId(row.id)
-    setAllocMenuVisible(true)
+  const handleSelectRole = (row: AdminRecord) => {
+    setAllocAdminId(row.id!)
+    setAllocDialogVisible(true)
+    getRoleListByAdmin(row.id!)
+  }
+
+  const handleAllocDialogConfirm = async () => {
+    modal.confirm({
+      title: '提示',
+      content: '是否要确认?',
+      onOk: async () => {
+        await assignUserRoles({ adminId: allocAdminId!, roleIds: allocRoleIds.join(',') })
+        message.success('分配成功！')
+        setAllocDialogVisible(false)
+      },
+    })
   }
 
   const handleSearch = () => {
@@ -152,13 +217,21 @@ export default function SystemRole() {
 
   const columns = [
     { title: '编号', dataIndex: 'id', key: 'id', width: 80, align: 'center' as const },
-    { title: '角色名称', dataIndex: 'name', key: 'name', align: 'center' as const },
-    { title: '描述', dataIndex: 'description', key: 'description', align: 'center' as const },
-    { title: '用户数', dataIndex: 'adminCount', key: 'adminCount', width: 80, align: 'center' as const },
+    { title: '帐号', dataIndex: 'username', key: 'username', align: 'center' as const },
+    { title: '姓名', dataIndex: 'nickName', key: 'nickName', align: 'center' as const },
+    { title: '邮箱', dataIndex: 'email', key: 'email', align: 'center' as const },
     {
       title: '添加时间',
       dataIndex: 'createTime',
       key: 'createTime',
+      width: 160,
+      align: 'center' as const,
+      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : 'N/A',
+    },
+    {
+      title: '最后登录',
+      dataIndex: 'loginTime',
+      key: 'loginTime',
       width: 160,
       align: 'center' as const,
       render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : 'N/A',
@@ -169,18 +242,18 @@ export default function SystemRole() {
       key: 'status',
       width: 100,
       align: 'center' as const,
-      render: (status: number) => (
-        <Switch checked={status === 1} disabled />
+      render: (status: number, row: AdminRecord) => (
+        <Switch checked={status === 1} onChange={checked => handleStatusChange(row, checked)} />
       ),
     },
     {
       title: '操作',
       key: 'actions',
-      width: 220,
+      width: 240,
       align: 'center' as const,
-      render: (_: any, row: RoleRecord) => (
+      render: (_: any, row: AdminRecord) => (
         <Space size="small">
-          <Button type="link" onClick={() => handleSelectMenu(row)}>分配菜单</Button>
+          <Button type="link" onClick={() => handleSelectRole(row)}>分配角色</Button>
           <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>
           <Button type="link" danger onClick={() => handleDelete(row)}>删除</Button>
         </Space>
@@ -197,7 +270,7 @@ export default function SystemRole() {
               value={listQuery.keyword}
               onChange={e => setListQuery({ ...listQuery, keyword: e.target.value })}
               onPressEnter={handleSearch}
-              placeholder="角色名称"
+              placeholder="帐号/姓名"
               style={{ width: 220 }}
               allowClear
               onClear={() => setListQuery({ ...listQuery, keyword: '', pageNum: 1 })}
@@ -228,7 +301,7 @@ export default function SystemRole() {
       </Card>
 
       <Modal
-        title={isEdit ? '编辑角色' : '添加角色'}
+        title={isEdit ? '编辑用户' : '添加用户'}
         open={dialogOpen}
         onCancel={() => setDialogOpen(false)}
         onOk={handleDialogConfirm}
@@ -241,10 +314,21 @@ export default function SystemRole() {
           wrapperCol={{ span: 16 }}
           preserve={false}
         >
-          <Form.Item label="角色名称" name="name" rules={FORM_RULES.name}>
+          <Form.Item label="帐号" name="username" rules={FORM_RULES.username}>
             <Input allowClear />
           </Form.Item>
-          <Form.Item label="描述" name="description" rules={FORM_RULES.description}>
+          <Form.Item label="姓名" name="nickName" rules={FORM_RULES.nickName}>
+            <Input allowClear />
+          </Form.Item>
+          <Form.Item label="邮箱" name="email" rules={FORM_RULES.email}>
+            <Input allowClear />
+          </Form.Item>
+          {!isEdit && (
+            <Form.Item label="密码" name="password" rules={FORM_RULES.password}>
+              <Input.Password allowClear />
+            </Form.Item>
+          )}
+          <Form.Item label="备注" name="note">
             <Input.TextArea rows={4} />
           </Form.Item>
           <Form.Item label="是否启用" name="status">
@@ -256,14 +340,25 @@ export default function SystemRole() {
         </Form>
       </Modal>
 
-      <AllocMenuModal
-        visible={allocMenuVisible}
-        roleId={allocMenuRoleId}
-        onClose={() => {
-          setAllocMenuVisible(false)
-          getList()
-        }}
-      />
+      <Modal
+        title="分配角色"
+        open={allocDialogVisible}
+        onCancel={() => setAllocDialogVisible(false)}
+        onOk={handleAllocDialogConfirm}
+        width={400}
+      >
+        <Select
+          mode="multiple"
+          value={allocRoleIds}
+          onChange={values => setAllocRoleIds(values)}
+          placeholder="请选择角色"
+          style={{ width: '100%' }}
+        >
+          {allRoleList.map(item => (
+            <Select.Option key={item.id} value={item.id!}>{item.name}</Select.Option>
+          ))}
+        </Select>
+      </Modal>
     </div>
   )
 }

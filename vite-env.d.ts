@@ -1,5 +1,4 @@
 // vite-env.d.ts
-/// <reference types="vite-plugin-pages/client-react" />
 
 interface ImportMetaEnv {
   DEV: any
@@ -19,4 +18,6 @@ interface ImportMetaEnv {
 /** 扩展import.meta对象类型 */
 interface ImportMeta {
   readonly env: ImportMetaEnv
+  /** vite 的模块批量导入，用于按菜单 path 回落查找约定式页面 */
+  glob: (pattern: string | string[]) => Record<string, () => Promise<{ default: any }>>
 }

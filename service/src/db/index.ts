@@ -343,6 +343,60 @@ export function initDb() {
     )
   `)
 
+  // 已有数据库迁移：菜单绑定页面组件 key（路由表由菜单配置驱动）
+  const menuComponentSeeds: Array<[string, string]> = [
+    ['/system/admin', 'auth/admin'],
+    ['/system/role', 'auth/role'],
+    ['/system/menu', 'auth/menu'],
+    ['/metadata', 'metadata/manager'],
+    ['/monitor/workbench', 'monitor/workbench'],
+    ['/monitor/log', 'monitor/log'],
+    ['/monitor/app', 'monitor/app'],
+    ['/monitor/analysis/perf', 'monitor/perf'],
+    ['/monitor/analysis/api', 'monitor/api'],
+    ['/monitor/analysis/behavior', 'monitor/behavior'],
+    ['/monitor/analysis/js-error', 'monitor/js-error'],
+    ['/monitor/analysis/biz-error', 'monitor/biz-error'],
+    ['/monitor/analysis/alert-history', 'monitor/alert-history'],
+  ]
+  const bindMenuComponent = db.prepare(`UPDATE za_menu SET component = ? WHERE path = ? AND (component IS NULL OR component = '')`)
+  for (const [menuPath, component] of menuComponentSeeds)
+    bindMenuComponent.run(component, menuPath)
+
+  // 字典管理菜单悬空（无对应页面），字典能力已由元数据模块承接
+  const dictMenu = db.prepare('SELECT id FROM za_menu WHERE path = ?').get('/system/dict') as { id: number } | undefined
+  if (dictMenu) {
+    db.prepare('DELETE FROM za_role_menu_relation WHERE menu_id = ?').run(dictMenu.id)
+    db.prepare('DELETE FROM za_menu WHERE id = ?').run(dictMenu.id)
+  }
+
+  // 已有数据库迁移：详情页不进导航，但路由表由菜单配置驱动，需要补隐藏菜单行并继承父级授权
+  const hiddenMenuSeeds: Array<[string, string, string, string]> = [
+    // [自身 path, 父菜单 path, 标题, 路由名]
+    ['/demo/breadcrumb/detail', '/demo/breadcrumb', '面包屑详情', 'breadcrumbDetail'],
+    ['/demo/breadcrumb/nested/detail', '/demo/breadcrumb/nested', '层级面包屑详情', 'nestedBreadcrumbDetail'],
+    ['/demo/route-params/detail', '/demo/route-params', '路由参数详情', 'routeParamsDetail'],
+    ['/form/design', '/form', '表单设计器', 'design'],
+    ['/form/render', '/form', '表单渲染', 'render'],
+    ['/form/data', '/form', '表单数据', 'data'],
+  ]
+  const findMenuByPath = db.prepare('SELECT id, level FROM za_menu WHERE path = ?')
+  const insertHiddenMenu = db.prepare(
+    'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+  const parentRoleRows = db.prepare('SELECT role_id FROM za_role_menu_relation WHERE menu_id = ?')
+  const insertRoleMenu = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
+  for (const [hiddenPath, parentPath, title, name] of hiddenMenuSeeds) {
+    if (findMenuByPath.get(hiddenPath))
+      continue
+    const parent = findMenuByPath.get(parentPath) as { id: number, level: number } | undefined
+    if (!parent)
+      continue
+    const inserted = insertHiddenMenu.run(parent.id, title, parent.level + 1, 99, name, null, 1, now(), hiddenPath, null)
+    for (const rel of parentRoleRows.all(parent.id) as { role_id: number }[])
+      insertRoleMenu.run(rel.role_id, Number(inserted.lastInsertRowid))
+  }
+
   const metadataMenu = db.prepare('SELECT id, parent_id FROM za_menu WHERE path = ?').get('/metadata') as any
   const formMenu = db.prepare('SELECT id, sort FROM za_menu WHERE path = ? AND parent_id = 0').get('/form') as any
   const metadataSort = formMenu ? formMenu.sort - 1 : 80

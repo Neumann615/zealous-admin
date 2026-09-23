@@ -76,6 +76,7 @@ export function getUserInfo(username: string) {
         icon: m.icon,
         hidden: m.hidden,
         path: m.path,
+        component: m.component,
         createTime: m.create_time,
         activeIcon: m.active_icon || null,
       }))

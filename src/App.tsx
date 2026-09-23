@@ -1,17 +1,24 @@
-import { AuthGuard, configureAuthClient, convertMenus, useUserStore } from '@zealous-admin/auth'
+import { configureAuthClient, convertMenus, useUserStore } from '@zealous-admin/auth'
 import { registerFormDataApis } from '@zealous-admin/form-designer/index'
 import { http, LayoutProvider } from '@zealous-admin/layout/index'
 import { configureMetadataClient, getOptionSetByCodeAPI, normalizeOptionSet } from '@zealous-admin/metadata/index'
 import { monitor } from '@zealous-admin/monitor-sdk/index'
 import { configureMonitorClient } from '@zealous-admin/monitor/index'
-import { useEffect, useMemo } from 'react'
+import { Spin } from 'antd'
+import { useEffect, useMemo, useState } from 'react'
 import { useRoutes } from 'react-router'
-import routes from '~react-pages'
 import { renderFormAPI } from './apis/form'
+import { buildRoutes } from './registry/routes'
 import './App.css'
 
 /** 访问令牌默认 2h 有效，页面开着时每 25 分钟静默续期一次 */
 const SESSION_REFRESH_INTERVAL_MS = 25 * 60 * 1000
+
+/** 路由表来自菜单接口，已有令牌且不在登录页时需要先把会话拉回来才能渲染路由 */
+function needSessionBootstrap() {
+  const { token } = useUserStore.getState()
+  return Boolean(token) && window.location.pathname !== '/login'
+}
 
 configureAuthClient(async config => http({
   url: config.url,
@@ -57,33 +64,20 @@ registerFormDataApis({
   },
 })
 
-// 路由守卫
-// 为需要权限的路由添加守卫
-for (let i = 0; i < routes.length; i++) {
-  if ((routes[i] as any).meta?.auth) {
-    routes[i].element = <AuthGuard>{routes[i].element}</AuthGuard>
-  }
-}
-
 export default function App() {
-  // 页面初始化时同步用户数据（刷新页面/已有 token 时）
+  const userInfo = useUserStore(state => state.userInfo)
+  const [booted, setBooted] = useState(() => !needSessionBootstrap())
+
   useEffect(() => {
-    if (window.location.pathname === '/login') {
+    if (!needSessionBootstrap())
       return
-    }
-    if (!useUserStore.getState().token) {
-      return
-    }
-    // 启动即续期并拉取最新用户信息：令牌过期或账号被禁用时由 http 拦截器统一走重新登录
-    useUserStore.getState().refreshSession().catch(() => {})
+    // 令牌过期/账号被禁用由 http 拦截器统一走重新登录
+    useUserStore.getState().refreshSession().catch(() => {}).finally(() => setBooted(true))
     const timer = window.setInterval(() => {
       useUserStore.getState().refreshSession().catch(() => {})
     }, SESSION_REFRESH_INTERVAL_MS)
     return () => window.clearInterval(timer)
   }, [])
-
-  // 响应式订阅 menus，登录后 menus 变化时自动重新生成菜单
-  const userInfo = useUserStore(state => state.userInfo)
 
   // 登录态同步到监控 SDK：日志与统计按 nickname/uid 归因
   useEffect(() => {
@@ -92,6 +86,7 @@ export default function App() {
     }
     monitor.setUser({ nickname: userInfo.nickName || userInfo.username, uid: String(userInfo.id) })
   }, [userInfo])
+
   const menuData = useMemo(() => {
     const menus = userInfo?.menus ?? []
     if (menus.length === 0)
@@ -99,14 +94,23 @@ export default function App() {
     return convertMenus(menus as any[])
   }, [userInfo])
 
+  const routes = useMemo(() => buildRoutes((userInfo?.menus ?? []) as any), [userInfo])
+  const element = useRoutes(routes)
+
+  if (!booted) {
+    return (
+      <div className="flex-center" style={{ minHeight: '100vh' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+
   return (
     <LayoutProvider
       menuData={menuData}
       cachedPages={['/demo/keepalive']}
     >
-      {useRoutes(routes)}
+      {element}
     </LayoutProvider>
   )
 }
-
-// 将后端菜单转换为前端菜单格式（根据 parentId 和 sort 生成树结构）

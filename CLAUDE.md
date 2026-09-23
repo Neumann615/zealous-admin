@@ -22,11 +22,13 @@ Monorepo (pnpm workspace) with React 19 frontend + Express backend + shared pack
 
 ```
 src/                    # App shell (thin: routes + api wrappers only)
-  App.tsx               # Route guard + LayoutProvider + menu conversion
-  pages/                # File-based routes (vite-plugin-pages)
+  App.tsx               # Session bootstrap gate + route assembly + LayoutProvider + menu conversion
+  registry/             # Route assembly: pages.tsx (component key → lazy loader) + routes.tsx (buildRoutes)
+  pages/                # Page components; reachable only when za_menu has a matching row
   apis/                 # API functions per domain (http instance lives in packages/layout)
 
 packages/
+  auth/                 # Auth package: api + guards (AuthGuard / PermissionGuard) + store + system pages (admin / role / menu)
   layout/               # Layout framework (5 modes: side/only-side/head/only-head/simple)
     store/              # Zustand stores (user, menu, topBar, app, theme, page) — persist to localStorage
     hooks/              # useControlTab (open/close/swap tabs, breadcrumb, navigation), useAppMessage
@@ -47,9 +49,9 @@ docs/                   # VitePress documentation site
 
 ### Key patterns
 
-**Routing**: File-based via `vite-plugin-pages`. All routes except `/login` and `*` get `meta.auth = true`. Auth guard in `App.tsx` checks for token in zustand store.
+**Routing**: Pure DB-driven — the `za_menu` table *is* the route table. `buildRoutes(userInfo.menus)` (`src/registry/routes.tsx`) emits `/login`, one `AuthGuard`-wrapped `Layout` route whose children come from menu rows, and `*`. A menu's `component` column is a key into the page registry (`src/registry/pages.tsx`); when it is empty the loader falls back to `src/pages/index{path}.tsx` (then `{path}/index.tsx`). `App.tsx` gates first render on `refreshSession()` so routes exist before `useRoutes` runs. Pages that must stay out of the nav (detail pages such as `/form/design`) are hidden menu rows (`hidden = 1`): they still produce routes but `convertMenus` drops them from the tree.
 
-**Menu system**: Backend `/admin/info` returns `{ menus, roles, ...userFields }`. `App.tsx` calls `convertMenus()` to build tree from flat list (parentId-based). Result passed to `<LayoutProvider menuData={...}>`. MainNav renders top-level, Menu renders sub-navigation. In `simple` mode, Menu renders `mainNavData` directly instead of sub-menu.
+**Menu system**: Backend `/admin/info` returns `{ menus, roles, ...userFields }`. `App.tsx` calls `convertMenus()` to build tree from flat list (parentId-based). Result passed to `<LayoutProvider menuData={...}>` and also feeds `buildRoutes`, so every navigable path needs a menu row. MainNav renders top-level, Menu renders sub-navigation. In `simple` mode, Menu renders `mainNavData` directly instead of sub-menu.
 
 **Tab/Breadcrumb navigation**: Use `useControlTab().openTab({key, label})` to programmatically navigate. Never use `navigate()` directly — it won't sync tab/breadcrumb state. Popstate listener in `Layout.tsx` auto-syncs on browser back/forward.
 

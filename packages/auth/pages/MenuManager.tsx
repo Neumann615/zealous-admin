@@ -1,8 +1,8 @@
 import type { MenuNode, MenuRecord } from '@zealous-admin/auth'
 import type { TableColumnsType } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
-import { ZaIcon, ZaIconPicker } from '@zealous-admin/components/index'
 import { createMenu, deleteMenu, getMenuDetail, getMenuTree, updateMenu, updateMenuStatus } from '@zealous-admin/auth'
+import { ZaIcon, ZaIconPicker } from '@zealous-admin/components/index'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,

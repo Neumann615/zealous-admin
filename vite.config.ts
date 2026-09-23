@@ -1,7 +1,6 @@
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
-import Pages from 'vite-plugin-pages'
 import svgr from 'vite-plugin-svgr'
 import { defineConfig } from 'vitest/config'
 
@@ -17,21 +16,6 @@ export default defineConfig({
         titleProp: true,
       },
       include: '**/*.svg',
-    }),
-    Pages({
-      importMode: 'sync',
-      exclude: ['**/shared/**'],
-      extendRoute(route) {
-        if (route.path === 'login' || route.path === '*') {
-          // Index is unauthenticated.
-          return route
-        }
-        // Augment the route with meta that indicates that the route requires authentication.
-        return {
-          ...route,
-          meta: { auth: true },
-        }
-      },
     }),
     visualizer(),
   ],
