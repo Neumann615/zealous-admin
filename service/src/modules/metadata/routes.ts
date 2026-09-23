@@ -1,3 +1,4 @@
+import type { Request } from 'express'
 import { Router } from 'express'
 import { success } from '../../lib/response'
 import { authMiddleware } from '../../middleware/auth'
@@ -18,6 +19,7 @@ import {
   updateMetadataSet,
 } from './service'
 import {
+  metadataIdParamSchema,
   metadataItemBatchSchema,
   metadataItemCreateSchema,
   metadataItemStatusSchema,
@@ -26,20 +28,15 @@ import {
   metadataSetPageSchema,
   metadataSetStatusSchema,
   metadataSetUpdateSchema,
-  positiveIdSchema,
 } from './validation'
 
 const router = Router()
 
 router.use(authMiddleware)
 
-function getPositiveId(req: any, res: any): number | undefined {
-  const result = positiveIdSchema.safeParse(req.params.id)
-  if (!result.success) {
-    res.status(400).json({ code: 400, message: 'id 必须是正整数', data: null })
-    return undefined
-  }
-  return result.data
+/** params 已由 validate 中间件 coerce 成正整数 */
+function idOf(req: Request): number {
+  return (req.params as unknown as { id: number }).id
 }
 
 router.get('/sets/page', validate(metadataSetPageSchema, 'query'), asyncHandler(async (req, res) => {
@@ -56,42 +53,26 @@ router.get('/sets/code/:setCode/items', asyncHandler(async (req, res) => {
   res.json(success(result))
 }))
 
-router.get('/sets/:id', asyncHandler(async (req, res) => {
-  const id = getPositiveId(req, res)
-  if (id === undefined)
-    return
-
-  res.json(success(getMetadataSet(id)))
+router.get('/sets/:id', validate(metadataIdParamSchema, 'params'), asyncHandler(async (req, res) => {
+  res.json(success(getMetadataSet(idOf(req))))
 }))
 
 router.post('/sets/add', validate(metadataSetCreateSchema), asyncHandler(async (req, res) => {
   res.json(success(createMetadataSet(req.body), '创建成功'))
 }))
 
-router.post('/sets/:id/update', validate(metadataSetUpdateSchema), asyncHandler(async (req, res) => {
-  const id = getPositiveId(req, res)
-  if (id === undefined)
-    return
-
-  updateMetadataSet(id, req.body)
+router.post('/sets/:id/update', validate(metadataSetUpdateSchema), validate(metadataIdParamSchema, 'params'), asyncHandler(async (req, res) => {
+  updateMetadataSet(idOf(req), req.body)
   res.json(success(null, '更新成功'))
 }))
 
-router.post('/sets/:id/status', validate(metadataSetStatusSchema), asyncHandler(async (req, res) => {
-  const id = getPositiveId(req, res)
-  if (id === undefined)
-    return
-
-  changeMetadataSetStatus(id, req.body.status)
+router.post('/sets/:id/status', validate(metadataSetStatusSchema), validate(metadataIdParamSchema, 'params'), asyncHandler(async (req, res) => {
+  changeMetadataSetStatus(idOf(req), req.body.status)
   res.json(success(null, '状态更新成功'))
 }))
 
-router.post('/sets/:id/delete', asyncHandler(async (req, res) => {
-  const id = getPositiveId(req, res)
-  if (id === undefined)
-    return
-
-  deleteMetadataSet(id)
+router.post('/sets/:id/delete', validate(metadataIdParamSchema, 'params'), asyncHandler(async (req, res) => {
+  deleteMetadataSet(idOf(req))
   res.json(success(null, '删除成功'))
 }))
 
@@ -104,30 +85,18 @@ router.post('/items/batch', validate(metadataItemBatchSchema), asyncHandler(asyn
   res.json(success({ ids }, '批量创建成功'))
 }))
 
-router.post('/items/:id/update', validate(metadataItemUpdateSchema), asyncHandler(async (req, res) => {
-  const id = getPositiveId(req, res)
-  if (id === undefined)
-    return
-
-  updateMetadataItem(id, req.body)
+router.post('/items/:id/update', validate(metadataItemUpdateSchema), validate(metadataIdParamSchema, 'params'), asyncHandler(async (req, res) => {
+  updateMetadataItem(idOf(req), req.body)
   res.json(success(null, '更新成功'))
 }))
 
-router.post('/items/:id/status', validate(metadataItemStatusSchema), asyncHandler(async (req, res) => {
-  const id = getPositiveId(req, res)
-  if (id === undefined)
-    return
-
-  changeMetadataItemStatus(id, req.body.status)
+router.post('/items/:id/status', validate(metadataItemStatusSchema), validate(metadataIdParamSchema, 'params'), asyncHandler(async (req, res) => {
+  changeMetadataItemStatus(idOf(req), req.body.status)
   res.json(success(null, '状态更新成功'))
 }))
 
-router.post('/items/:id/delete', asyncHandler(async (req, res) => {
-  const id = getPositiveId(req, res)
-  if (id === undefined)
-    return
-
-  deleteMetadataItem(id)
+router.post('/items/:id/delete', validate(metadataIdParamSchema, 'params'), asyncHandler(async (req, res) => {
+  deleteMetadataItem(idOf(req))
   res.json(success(null, '删除成功'))
 }))
 

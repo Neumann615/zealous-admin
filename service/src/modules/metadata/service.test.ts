@@ -93,4 +93,49 @@ describe('metadata local service', () => {
 
     expect(remains.count).toBe(0)
   })
+
+  it('编码项可通过显式 null 移回根级', () => {
+    const rootId = metadataService.createMetadataItem({
+      setCode: 'ORGANIZATION',
+      code: 'MOVE_ROOT',
+      name: '移动根',
+    }).id
+    const childId = metadataService.createMetadataItem({
+      setCode: 'ORGANIZATION',
+      parentId: rootId,
+      code: 'MOVE_CHILD',
+      name: '移动子',
+    }).id
+
+    metadataService.updateMetadataItem(childId, { parentId: null })
+
+    const rootIds = metadataService.getOptionSet('ORGANIZATION', false, true).items.map(item => item.id)
+    expect(rootIds).toContain(childId)
+  })
+
+  it('更新编码集时显式 null 可清空描述', () => {
+    const id = metadataService.createMetadataSet({
+      code: 'CLEAR_DESC',
+      name: '清空描述',
+      description: '原始描述',
+    }).id
+
+    metadataService.updateMetadataSet(id, { description: null })
+
+    expect(metadataService.getMetadataSet(id).description).toBeNull()
+  })
+
+  it('被表单引用的编码集不允许删除', () => {
+    getDb().prepare(
+      'INSERT INTO za_form (name, schema, status, version, create_time, update_time) VALUES (?, ?, 1, 1, ?, ?)',
+    ).run(
+      '引用测试表单',
+      JSON.stringify({ fields: [{ type: 'select', props: { setCode: 'GENDER' } }] }),
+      '2026-01-01 00:00:00',
+      '2026-01-01 00:00:00',
+    )
+    const gender = metadataService.getMetadataSetPage({ pageNum: 1, pageSize: 100 }).list.find(item => item.code === 'GENDER')!
+
+    expect(() => metadataService.deleteMetadataSet(gender.id)).toThrow(ConflictError)
+  })
 })

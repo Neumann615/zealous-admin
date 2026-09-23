@@ -1,6 +1,5 @@
 import type { NextFunction, Request, Response } from 'express'
 import type { ZodSchema } from 'zod'
-import { failed } from '../lib/response'
 
 type Source = 'body' | 'query' | 'params'
 
@@ -11,7 +10,7 @@ export function validate(schema: ZodSchema, source: Source = 'body') {
       const message = result.error.issues
         .map(i => `${i.path.join('.')}: ${i.message}`)
         .join('; ')
-      res.status(400).json(failed(message || '参数校验失败'))
+      res.status(400).json({ code: 400, message: message || '参数校验失败', data: null })
       return
     }
     if (source === 'body') {
@@ -19,6 +18,9 @@ export function validate(schema: ZodSchema, source: Source = 'body') {
     }
     else if (source === 'query') {
       Object.defineProperty(req, 'query', { value: result.data, writable: true })
+    }
+    else {
+      Object.defineProperty(req, 'params', { value: result.data, writable: true })
     }
     next()
   }

@@ -36,6 +36,9 @@ interface ItemFormValues {
 
 type PreviewShape = 'flat' | 'tree' | 'path'
 
+const SET_CODE_PATTERN = /^[a-z]\w*$/i
+const ITEM_CODE_PATTERN = /^[a-z0-9][\w-]*$/i
+
 const STATUS_OPTIONS = [
   { label: '启用', value: 1 },
   { label: '停用', value: 0 },
@@ -61,7 +64,14 @@ function collectDescendantIds(items: MetadataItem[], rootId: number): number[] {
   return ids
 }
 
-function toTreeData(options: MetadataFieldOption[]) {
+interface MetadataTreeNode {
+  key: string | number
+  title: string
+  disabled?: boolean
+  children?: MetadataTreeNode[]
+}
+
+function toTreeData(options: MetadataFieldOption[]): MetadataTreeNode[] {
   return options.map(option => ({
     key: option.value,
     title: option.label,
@@ -495,7 +505,7 @@ export function MetadataManager() {
         destroyOnHidden
       >
         <Form form={setForm} layout="vertical">
-          <Form.Item name="code" label="编码" rules={[{ required: true }, { max: 50 }]}>
+          <Form.Item name="code" label="编码" rules={[{ required: true }, { max: 50 }, { pattern: SET_CODE_PATTERN, message: '仅允许字母、数字与下划线，且以字母开头' }]}>
             <Input disabled={!!editingSet} placeholder="如 GENDER" />
           </Form.Item>
           <Form.Item name="name" label="名称" rules={[{ required: true }, { max: 50 }]}>
@@ -529,7 +539,7 @@ export function MetadataManager() {
               placeholder="留空表示一级编码项"
             />
           </Form.Item>
-          <Form.Item name="code" label="编码" rules={[{ required: true }, { max: 80 }]}>
+          <Form.Item name="code" label="编码" rules={[{ required: true }, { max: 80 }, { pattern: ITEM_CODE_PATTERN, message: '仅允许字母、数字、中划线与下划线' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="name" label="名称" rules={[{ required: true }, { max: 80 }]}>

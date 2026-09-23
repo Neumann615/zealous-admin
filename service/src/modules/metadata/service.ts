@@ -7,7 +7,7 @@ import { ConflictError, NotFoundError } from '../../lib/errors'
 interface MetadataSetInput {
   code?: string
   name?: string
-  description?: string
+  description?: string | null
   status?: number
 }
 
@@ -15,11 +15,13 @@ interface MetadataItemInput {
   parentId?: number | null
   code?: string
   name?: string
-  shortName?: string
-  description?: string
+  shortName?: string | null
+  description?: string | null
   sortOrder?: number
   status?: number
 }
+
+type SqlValue = string | number | null
 
 function runInTransaction<T>(operation: () => T): T {
   const db = getDb()
@@ -115,15 +117,30 @@ export function updateMetadataSet(id: number, data: MetadataSetInput) {
   if (data.code)
     assertSetCodeAvailable(data.code, id)
 
-  getDb().prepare(`
-    UPDATE za_metadata_set SET
-      code = COALESCE(?, code),
-      name = COALESCE(?, name),
-      description = COALESCE(?, description),
-      status = COALESCE(?, status),
-      update_time = ?
-    WHERE id = ?
-  `).run(data.code ?? null, data.name ?? null, data.description ?? null, data.status ?? null, now(), id)
+  const sets: string[] = []
+  const values: SqlValue[] = []
+  if (data.code !== undefined) {
+    sets.push('code = ?')
+    values.push(data.code)
+  }
+  if (data.name !== undefined) {
+    sets.push('name = ?')
+    values.push(data.name)
+  }
+  if (data.description !== undefined) {
+    sets.push('description = ?')
+    values.push(data.description)
+  }
+  if (data.status !== undefined) {
+    sets.push('status = ?')
+    values.push(data.status)
+  }
+  if (sets.length === 0)
+    return
+
+  sets.push('update_time = ?')
+  values.push(now(), id)
+  getDb().prepare(`UPDATE za_metadata_set SET ${sets.join(', ')} WHERE id = ?`).run(...values)
 }
 
 export function changeMetadataSetStatus(id: number, status: 0 | 1) {
@@ -131,11 +148,50 @@ export function changeMetadataSetStatus(id: number, status: 0 | 1) {
   getDb().prepare('UPDATE za_metadata_set SET status = ?, update_time = ? WHERE id = ?').run(status, now(), id)
 }
 
+function collectSetCodes(value: unknown, out = new Set<string>()): Set<string> {
+  if (Array.isArray(value)) {
+    for (const item of value)
+      collectSetCodes(item, out)
+    return out
+  }
+  if (value && typeof value === 'object') {
+    for (const [key, item] of Object.entries(value)) {
+      if (key === 'setCode' && typeof item === 'string')
+        out.add(item)
+      else
+        collectSetCodes(item, out)
+    }
+  }
+  return out
+}
+
+/** 表单契约以 setCode 引用元数据；删除前拦截，避免表单渲染期才报错 */
+export function findFormReferences(setCode: string): Array<{ id: number, name: string }> {
+  const rows = getDb().prepare('SELECT id, name, schema FROM za_form WHERE schema LIKE ?').all('%setCode%') as Array<{ id: number, name: string, schema: string | null }>
+  const references: Array<{ id: number, name: string }> = []
+  for (const row of rows) {
+    if (!row.schema)
+      continue
+    try {
+      if (collectSetCodes(JSON.parse(row.schema)).has(setCode))
+        references.push({ id: row.id, name: row.name })
+    }
+    catch { /* 契约损坏的表单不参与引用检查 */ }
+  }
+  return references
+}
+
 export function deleteMetadataSet(id: number) {
-  getSetRow(id)
-  const db = getDb()
-  db.prepare('DELETE FROM za_metadata_item WHERE set_id = ?').run(id)
-  db.prepare('DELETE FROM za_metadata_set WHERE id = ?').run(id)
+  const set = getSetRow(id)
+  const references = findFormReferences(set.code)
+  if (references.length > 0)
+    throw new ConflictError(`表单「${references.map(item => item.name).join('、')}」仍引用该编码集，请先解除引用`)
+
+  runInTransaction(() => {
+    const db = getDb()
+    db.prepare('DELETE FROM za_metadata_item WHERE set_id = ?').run(id)
+    db.prepare('DELETE FROM za_metadata_set WHERE id = ?').run(id)
+  })
 }
 
 export function getOptionSet(setCode: string, onlyValid: boolean, includeDisabledSet = false) {
@@ -230,28 +286,43 @@ export function updateMetadataItem(id: number, data: MetadataItemInput) {
     }
   }
 
-  getDb().prepare(`
-    UPDATE za_metadata_item SET
-      parent_id = COALESCE(?, parent_id),
-      code = COALESCE(?, code),
-      name = COALESCE(?, name),
-      short_name = COALESCE(?, short_name),
-      description = COALESCE(?, description),
-      sort_order = COALESCE(?, sort_order),
-      status = COALESCE(?, status),
-      update_time = ?
-    WHERE id = ?
-  `).run(
-    data.parentId === undefined ? null : data.parentId,
-    data.code ?? null,
-    data.name ?? null,
-    data.shortName ?? null,
-    data.description ?? null,
-    data.sortOrder ?? null,
-    data.status ?? null,
-    now(),
-    id,
-  )
+  const sets: string[] = []
+  const values: SqlValue[] = []
+  // 显式 null = 移回根级；undefined = 不改动该字段
+  if (data.parentId !== undefined) {
+    sets.push('parent_id = ?')
+    values.push(data.parentId)
+  }
+  if (data.code !== undefined) {
+    sets.push('code = ?')
+    values.push(data.code)
+  }
+  if (data.name !== undefined) {
+    sets.push('name = ?')
+    values.push(data.name)
+  }
+  if (data.shortName !== undefined) {
+    sets.push('short_name = ?')
+    values.push(data.shortName)
+  }
+  if (data.description !== undefined) {
+    sets.push('description = ?')
+    values.push(data.description)
+  }
+  if (data.sortOrder !== undefined) {
+    sets.push('sort_order = ?')
+    values.push(data.sortOrder)
+  }
+  if (data.status !== undefined) {
+    sets.push('status = ?')
+    values.push(data.status)
+  }
+  if (sets.length === 0)
+    return
+
+  sets.push('update_time = ?')
+  values.push(now(), id)
+  getDb().prepare(`UPDATE za_metadata_item SET ${sets.join(', ')} WHERE id = ?`).run(...values)
 }
 
 export function changeMetadataItemStatus(id: number, status: 0 | 1) {

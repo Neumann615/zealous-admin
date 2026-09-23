@@ -1,9 +1,9 @@
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
-import { defineConfig } from 'vite'
 import Pages from 'vite-plugin-pages'
 import svgr from 'vite-plugin-svgr'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [
@@ -73,5 +73,9 @@ export default defineConfig({
         },
       },
     },
+  },
+  test: {
+    // e2e 由 Playwright 负责，vitest 只跑单元/组件测试
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
   },
 })
