@@ -1,8 +1,8 @@
-import type { MenuNode } from '@zealous-admin/layout/index'
+import type { MenuNode } from '@zealous-admin/auth'
 import type { DataNode } from 'antd/es/tree'
 import { assignRoleMenus, getMenuTree, getRoleMenus } from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
-import { Modal, Tree } from 'antd'
+import { Modal, Space, Tag, Tree } from 'antd'
 import { useEffect, useState } from 'react'
 
 interface AllocMenuModalProps {
@@ -44,12 +44,23 @@ export default function AllocMenuModal({ visible, roleId, onClose }: AllocMenuMo
     }
   }, [visible, roleId, menuTreeList])
 
+  /** 按钮节点是权限叶子，标出权限标识避免与页面菜单混淆 */
   const convertToTreeData = (menuList: MenuNode[]): DataNode[] => {
-    return menuList.map(menu => ({
-      key: menu.id!,
-      title: menu.title,
-      children: menu.children && menu.children.length > 0 ? convertToTreeData(menu.children as MenuNode[]) : undefined,
-    }))
+    return menuList.map((menu) => {
+      const title = menu.type === 2
+        ? (
+            <Space size={4}>
+              <span>{menu.title}</span>
+              <Tag color="orange" style={{ marginInlineEnd: 0 }}>{menu.permission || '未配置权限标识'}</Tag>
+            </Space>
+          )
+        : menu.title
+      return {
+        key: menu.id!,
+        title,
+        children: menu.children && menu.children.length > 0 ? convertToTreeData(menu.children) : undefined,
+      }
+    })
   }
 
   const buildNodeMap = (nodes: MenuNode[]): Map<number, MenuNode> => {

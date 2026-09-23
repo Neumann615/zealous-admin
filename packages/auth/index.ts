@@ -7,6 +7,7 @@ export type * from './types/menu'
 // Runtime
 export { configureAuthClient, authRequest } from './runtime/client'
 export type { AuthRequestConfig, AuthRequester } from './runtime/client'
+export { getPageKeys, registerPageKeys } from './runtime/pageRegistry'
 
 // API
 export * from './api/auth'

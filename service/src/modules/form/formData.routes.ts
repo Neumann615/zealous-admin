@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/error'
 import { authMiddleware } from '../../middleware/auth'
+import { permissionMiddleware } from '../../middleware/permission'
 import { validate } from '../../middleware/validate'
 import { success } from '../../lib/response'
 import {
@@ -14,7 +15,7 @@ import {
 
 const router = Router()
 
-router.use(authMiddleware)
+router.use(authMiddleware, permissionMiddleware)
 
 router.post('/form/data/submit', validate(submitFormDataSchema), asyncHandler(async (req, res) => {
   const { formId, data } = req.body

@@ -1,4 +1,4 @@
-import { configureAuthClient, convertMenus, useUserStore } from '@zealous-admin/auth'
+import { configureAuthClient, convertMenus, registerPageKeys, useUserStore } from '@zealous-admin/auth'
 import { registerFormDataApis } from '@zealous-admin/form-designer/index'
 import { http, LayoutProvider } from '@zealous-admin/layout/index'
 import { configureMetadataClient, getOptionSetByCodeAPI, normalizeOptionSet } from '@zealous-admin/metadata/index'
@@ -8,11 +8,15 @@ import { Spin } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useRoutes } from 'react-router'
 import { renderFormAPI } from './apis/form'
+import { knownPageKeys } from './registry/pages'
 import { buildRoutes } from './registry/routes'
 import './App.css'
 
 /** 访问令牌默认 2h 有效，页面开着时每 25 分钟静默续期一次 */
 const SESSION_REFRESH_INTERVAL_MS = 25 * 60 * 1000
+
+// 菜单管理页需要知道有哪些页面组件可绑定，注册表在主应用侧，启动时注入 auth 包
+registerPageKeys(knownPageKeys())
 
 /** 路由表来自菜单接口，已有令牌且不在登录页时需要先把会话拉回来才能渲染路由 */
 function needSessionBootstrap() {

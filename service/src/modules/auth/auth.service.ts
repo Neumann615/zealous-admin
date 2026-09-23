@@ -3,6 +3,7 @@ import { getDb } from '../../db'
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../lib/errors'
 import { now } from '../../lib/date'
 import { signToken } from '../../lib/jwt'
+import { getActiveRoles, getPermissions } from './permission.service'
 import { revokeAllTokensBefore } from './session'
 
 interface AdminRow {
@@ -50,23 +51,22 @@ export function getUserInfo(username: string) {
   if (!admin)
     throw new NotFoundError('用户不存在')
 
-  const roleRelations = db.prepare('SELECT role_id FROM za_admin_role_relation WHERE admin_id = ?').all(admin.id) as any[]
-  const roleIds = roleRelations.map(r => r.role_id)
+  // 停用角色不下发菜单，也不参与权限聚合
+  const activeRoles = getActiveRoles(admin.id)
+  const roles = activeRoles.map(role => role.name)
+  const roleIds = activeRoles.map(role => role.id)
 
-  let roles: string[] = []
   let menus: any[] = []
 
   if (roleIds.length > 0) {
     const placeholders = roleIds.map(() => '?').join(',')
-    const roleRows = db.prepare(`SELECT name FROM za_role WHERE id IN (${placeholders})`).all(...roleIds) as any[]
-    roles = roleRows.map(r => r.name)
-
     const menuRelations = db.prepare(`SELECT menu_id FROM za_role_menu_relation WHERE role_id IN (${placeholders})`).all(...roleIds) as any[]
     const menuIds = [...new Set(menuRelations.map(m => m.menu_id))] as number[]
 
     if (menuIds.length > 0) {
       const mPlaceholders = menuIds.map(() => '?').join(',')
-      menus = (db.prepare(`SELECT * FROM za_menu WHERE id IN (${mPlaceholders}) ORDER BY sort`).all(...menuIds) as any[]).map(m => ({
+      // 按钮节点（type = 2）只贡献权限标识，不参与导航与路由，因此不下发
+      menus = (db.prepare(`SELECT * FROM za_menu WHERE id IN (${mPlaceholders}) AND (type IS NULL OR type <> 2) ORDER BY sort`).all(...menuIds) as any[]).map(m => ({
         id: m.id,
         parentId: m.parent_id,
         title: m.title,
@@ -77,13 +77,15 @@ export function getUserInfo(username: string) {
         hidden: m.hidden,
         path: m.path,
         component: m.component,
+        type: m.type ?? 1,
         createTime: m.create_time,
         activeIcon: m.active_icon || null,
       }))
     }
   }
 
-  return { ...admin, menus, roles }
+  // 权限标识下发给前端做按钮级隐藏；服务端由 permissionMiddleware 独立校验，前端只是体验优化
+  return { ...admin, menus, roles, permissions: getPermissions(admin.id) }
 }
 
 export async function updatePassword(username: string, oldPassword: string, newPassword: string) {

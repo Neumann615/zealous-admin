@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/error'
 import { authMiddleware } from '../../middleware/auth'
+import { permissionMiddleware } from '../../middleware/permission'
 import { validate } from '../../middleware/validate'
 import { success } from '../../lib/response'
 import {
@@ -11,7 +12,7 @@ import { registerSchema, updateUserSchema, pageQuerySchema, assignRolesSchema } 
 
 const router = Router()
 
-router.use(authMiddleware)
+router.use(authMiddleware, permissionMiddleware)
 
 router.post('/admin/register', validate(registerSchema), asyncHandler(async (req, res) => {
   const admin = await register(req.body)

@@ -9,6 +9,10 @@ export const createMenuSchema = z.object({
   icon: z.string().optional(),
   hidden: z.number().optional().default(0),
   component: z.string().optional(),
+  /** 0 目录 / 1 菜单 / 2 按钮 */
+  type: z.number().int().min(0).max(2).optional().default(1),
+  /** 权限标识，如 system:user:add；按钮节点必填，目录/菜单可为空 */
+  permission: z.string().optional(),
   activeIcon: z.string().optional(),
 })
 
@@ -21,5 +25,7 @@ export const updateMenuSchema = z.object({
   icon: z.string().optional(),
   hidden: z.number().optional(),
   component: z.string().optional(),
+  type: z.number().int().min(0).max(2).optional(),
+  permission: z.string().optional(),
   activeIcon: z.string().optional(),
 })

@@ -23,6 +23,8 @@ export interface UserInfo {
 export interface UserInfoWithAuth extends UserInfo {
   menus: any[]
   roles: string[]
+  /** 权限标识集合，超管为 ['*']；服务端已独立校验，前端仅用于隐藏无权操作的入口 */
+  permissions: string[]
 }
 
 export interface AdminRecord {

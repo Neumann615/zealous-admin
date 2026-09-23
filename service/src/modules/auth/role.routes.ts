@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/error'
 import { authMiddleware } from '../../middleware/auth'
+import { permissionMiddleware } from '../../middleware/permission'
 import { validate } from '../../middleware/validate'
 import { success } from '../../lib/response'
 import {
@@ -13,7 +14,7 @@ import {
 
 const router = Router()
 
-router.use(authMiddleware)
+router.use(authMiddleware, permissionMiddleware)
 
 router.get('/role/list', validate(rolePageQuerySchema, 'query'), asyncHandler(async (req, res) => {
   const result = getRoleList(req.query as any)

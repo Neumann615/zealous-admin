@@ -9,6 +9,7 @@ import {
   getUserRoles,
   updateUser,
   updateUserStatus,
+  useHasPermission,
 } from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
@@ -73,6 +74,7 @@ const FORM_RULES = {
 // ============================================================
 export default function SystemAdmin() {
   const { message, modal } = useAppMessage()
+  const hasPermission = useHasPermission()
   const { styles } = useStyles()
   const [form] = Form.useForm()
 
@@ -243,7 +245,11 @@ export default function SystemAdmin() {
       width: 100,
       align: 'center' as const,
       render: (status: number, row: AdminRecord) => (
-        <Switch checked={status === 1} onChange={checked => handleStatusChange(row, checked)} />
+        <Switch
+          checked={status === 1}
+          disabled={!hasPermission('system:user:edit')}
+          onChange={checked => handleStatusChange(row, checked)}
+        />
       ),
     },
     {
@@ -253,9 +259,9 @@ export default function SystemAdmin() {
       align: 'center' as const,
       render: (_: any, row: AdminRecord) => (
         <Space size="small">
-          <Button type="link" onClick={() => handleSelectRole(row)}>分配角色</Button>
-          <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>
-          <Button type="link" danger onClick={() => handleDelete(row)}>删除</Button>
+          {hasPermission('system:user:assignRole') && <Button type="link" onClick={() => handleSelectRole(row)}>分配角色</Button>}
+          {hasPermission('system:user:edit') && <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>}
+          {hasPermission('system:user:delete') && <Button type="link" danger onClick={() => handleDelete(row)}>删除</Button>}
         </Space>
       ),
     },
@@ -278,7 +284,7 @@ export default function SystemAdmin() {
             <Button type="primary" onClick={handleSearch}>查询</Button>
             <Button onClick={handleReset}>重置</Button>
           </Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
+          {hasPermission('system:user:add') && <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>}
         </div>
         <div className={styles.tableWrapper}>
           <Table

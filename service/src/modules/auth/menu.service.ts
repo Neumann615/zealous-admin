@@ -69,20 +69,20 @@ export function getMenuById(id: number) {
   return mapMenu(menu)
 }
 
-export function createMenu(data: { parentId?: number, title: string, level?: number, sort?: number, name?: string, icon?: string, hidden?: number, component?: string, activeIcon?: string }) {
+export function createMenu(data: { parentId?: number, title: string, level?: number, sort?: number, name?: string, icon?: string, hidden?: number, component?: string, type?: number, permission?: string, activeIcon?: string }) {
   const db = getDb()
   const pid = data.parentId || 0
   const menuName = data.name || ''
   const menuPath = computePath(pid, menuName)
 
   const result = db.prepare(
-    'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, create_time, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-  ).run(pid, data.title, data.level || 0, data.sort || 0, menuName, data.icon || null, data.hidden || 0, menuPath, data.component || null, now(), data.activeIcon || null)
+    'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, type, permission, create_time, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  ).run(pid, data.title, data.level || 0, data.sort || 0, menuName, data.icon || null, data.hidden || 0, menuPath, data.component || null, data.type ?? 1, data.permission || null, now(), data.activeIcon || null)
 
   return mapMenu(db.prepare('SELECT * FROM za_menu WHERE id = ?').get(result.lastInsertRowid))
 }
 
-export function updateMenu(id: number, data: { parentId?: number, title?: string, level?: number, sort?: number, name?: string, icon?: string, hidden?: number, component?: string, activeIcon?: string }) {
+export function updateMenu(id: number, data: { parentId?: number, title?: string, level?: number, sort?: number, name?: string, icon?: string, hidden?: number, component?: string, type?: number, permission?: string, activeIcon?: string }) {
   const db = getDb()
   const existing = db.prepare('SELECT * FROM za_menu WHERE id = ?').get(id) as any
   if (!existing)
@@ -99,6 +99,8 @@ export function updateMenu(id: number, data: { parentId?: number, title?: string
   if (data.icon !== undefined) { sets.push('icon = ?'); values.push(data.icon) }
   if (data.hidden !== undefined) { sets.push('hidden = ?'); values.push(data.hidden) }
   if (data.component !== undefined) { sets.push('component = ?'); values.push(data.component) }
+  if (data.type !== undefined) { sets.push('type = ?'); values.push(data.type) }
+  if (data.permission !== undefined) { sets.push('permission = ?'); values.push(data.permission || null) }
   if (data.activeIcon !== undefined) { sets.push('active_icon = ?'); values.push(data.activeIcon) }
 
   const newName = data.name !== undefined ? (data.name || '') : existing.name
@@ -130,10 +132,23 @@ export function deleteMenu(id: number) {
   if (!existing)
     throw new NotFoundError('菜单不存在')
 
-  const childCount = (db.prepare('SELECT COUNT(*) AS count FROM za_menu WHERE parent_id = ?').get(id) as any).count
+  // 按钮节点（type = 2）随父级一起删；目录 / 菜单子节点仍需先处理，避免误删整棵子树
+  const childCount = (db.prepare('SELECT COUNT(*) AS count FROM za_menu WHERE parent_id = ? AND (type IS NULL OR type <> 2)').get(id) as any).count
   if (childCount > 0)
     throw new NotFoundError('存在子菜单，无法删除')
 
-  db.prepare('DELETE FROM za_role_menu_relation WHERE menu_id = ?').run(id)
-  db.prepare('DELETE FROM za_menu WHERE id = ?').run(id)
+  const buttonIds = (db.prepare('SELECT id FROM za_menu WHERE parent_id = ? AND type = 2').all(id) as Array<{ id: number }>).map(row => row.id)
+  const targetIds = [id, ...buttonIds]
+  const placeholders = targetIds.map(() => '?').join(',')
+
+  db.exec('BEGIN')
+  try {
+    db.prepare(`DELETE FROM za_role_menu_relation WHERE menu_id IN (${placeholders})`).run(...targetIds)
+    db.prepare(`DELETE FROM za_menu WHERE id IN (${placeholders})`).run(...targetIds)
+    db.exec('COMMIT')
+  }
+  catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
 }

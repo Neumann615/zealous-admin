@@ -3,6 +3,7 @@ import { Router } from 'express'
 import { success } from '../../lib/response'
 import { authMiddleware } from '../../middleware/auth'
 import { asyncHandler } from '../../middleware/error'
+import { permissionMiddleware } from '../../middleware/permission'
 import { validate } from '../../middleware/validate'
 import {
   changeMetadataItemStatus,
@@ -32,7 +33,7 @@ import {
 
 const router = Router()
 
-router.use(authMiddleware)
+router.use(authMiddleware, permissionMiddleware)
 
 /** params 已由 validate 中间件 coerce 成正整数 */
 function idOf(req: Request): number {

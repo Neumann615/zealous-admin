@@ -34,8 +34,8 @@
 
 ## 2. 已知未做（待排期）
 
-- **服务端授权仍然缺失**：角色 / 菜单模型只用于拼前端菜单，任何登录用户可调用全部 API；`usePermissions` 读取的 `userInfo.permissions` 后端从不下发，`PermissionGuard` 按 permission 使用恒为 false。方案：权限码挂菜单（或独立权限表）→ `getUserInfo` 下发 → 服务端 `requirePermission` 路由级校验 → 前端守卫生效。先路由级、后按钮级。
-- `convertMenus`（`packages/auth/store/user.ts`）中 hidden 节点 `return null as any` 会连带丢弃子树；存在「隐藏父菜单 + 可见子菜单」数据时子菜单消失。需先定语义再改。
+- ~~**服务端授权仍然缺失**~~ → 已于同日落地，见 `2026-09-23-db-driven-routing-and-permissions.md`：权限标识挂菜单（`za_menu.type` / `permission`）、`getUserInfo` 下发 `permissions`、服务端 `permissionMiddleware` 做路由级强制、前端按标识隐藏入口。
+- ~~`convertMenus` 隐藏节点连带丢弃子树~~ → 已修：隐藏节点自身不进导航、可见后代上提一层，同时跳过按钮节点（`type = 2`）。
 - 元数据管理页缺 E2E 覆盖；批量导入（`createOptionSetItemsAPI`）与行内启停（`changeOptionSetItemStatusAPI`）前端尚未接上。
 - token 仍存 localStorage（XSS 可取），内网后台为已知取舍；升级 httpOnly cookie + CSRF 属会话方案重构。
 - 登录接口无限流 / 验证码，公网部署前建议补。

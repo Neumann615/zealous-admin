@@ -79,29 +79,37 @@ export function convertMenus(menus: MenuRecord[]): FrontendMenu[] {
   }
 
   function buildTree(parentId: number, parentKey: string = ''): FrontendMenu[] {
-    const children = menuMap.get(parentId) || []
-    return children
-      .sort((a, b) => (a.sort || 0) - (b.sort || 0))
-      .map((menu) => {
-        const currentKey = menu.path || (parentKey ? `${parentKey}/${menu.name}` : `/${menu.name}`)
-        const childTree = buildTree(menu.id || 0, currentKey)
+    const children = [...(menuMap.get(parentId) || [])].sort((a, b) => (a.sort || 0) - (b.sort || 0))
+    const nodes: FrontendMenu[] = []
 
-        if (menu.hidden === 1)
-          return null as any
+    for (const menu of children) {
+      // 按钮节点只承载权限标识，不进导航
+      if (menu.type === 2)
+        continue
 
-        const node: FrontendMenu = {
-          id: String(menu.id || menu.name),
-          label: menu.title || menu.name,
-          icon: menu.icon || '',
-          key: currentKey,
-          selectIcon: menu.activeIcon || '',
-        }
-        if (childTree.length > 0)
-          node.children = childTree
+      const currentKey = menu.path || (parentKey ? `${parentKey}/${menu.name}` : `/${menu.name}`)
+      const childTree = buildTree(menu.id || 0, currentKey)
 
-        return node
-      })
-      .filter(Boolean)
+      if (menu.hidden === 1) {
+        // 自身不进导航，但可见后代要上提，否则整棵子树会被一起吞掉
+        nodes.push(...childTree)
+        continue
+      }
+
+      const node: FrontendMenu = {
+        id: String(menu.id || menu.name),
+        label: menu.title || menu.name,
+        icon: menu.icon || '',
+        key: currentKey,
+        selectIcon: menu.activeIcon || '',
+      }
+      if (childTree.length > 0)
+        node.children = childTree
+
+      nodes.push(node)
+    }
+
+    return nodes
   }
 
   return buildTree(0)

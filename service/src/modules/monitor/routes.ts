@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { success } from '../../lib/response'
 import { authMiddleware } from '../../middleware/auth'
 import { asyncHandler } from '../../middleware/error'
+import { permissionMiddleware } from '../../middleware/permission'
 import { validate } from '../../middleware/validate'
 import {
   getApiStats,
@@ -66,7 +67,7 @@ router.post('/collect', validate(collectSchema), asyncHandler(async (req, res) =
   res.json(success(result))
 }))
 
-router.use(authMiddleware)
+router.use(authMiddleware, permissionMiddleware)
 
 /** 字典与规则目录：前端渲染筛选项与预警配置表单的唯一来源 */
 router.get('/meta', asyncHandler(async (_req, res) => {

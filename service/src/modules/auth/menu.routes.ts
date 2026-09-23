@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { asyncHandler } from '../../middleware/error'
 import { authMiddleware } from '../../middleware/auth'
+import { permissionMiddleware } from '../../middleware/permission'
 import { validate } from '../../middleware/validate'
 import { success } from '../../lib/response'
 import {
@@ -11,7 +12,7 @@ import { createMenuSchema, updateMenuSchema } from './menu.schema'
 
 const router = Router()
 
-router.use(authMiddleware)
+router.use(authMiddleware, permissionMiddleware)
 
 router.get('/menu/list', asyncHandler(async (req, res) => {
   const parentId = Number(req.query.parentId) || 0

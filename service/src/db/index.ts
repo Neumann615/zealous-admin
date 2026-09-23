@@ -40,7 +40,8 @@ export function initDb() {
       admin_count INTEGER DEFAULT 0,
       create_time TEXT,
       status INTEGER DEFAULT 1,
-      sort INTEGER DEFAULT 0
+      sort INTEGER DEFAULT 0,
+      is_super INTEGER DEFAULT 0
     )
   `)
 
@@ -57,6 +58,8 @@ export function initDb() {
       hidden INTEGER DEFAULT 0,
       path TEXT,
       component TEXT,
+      type INTEGER DEFAULT 1,
+      permission TEXT,
       active_icon TEXT
     )
   `)
@@ -123,8 +126,8 @@ export function initDb() {
 
     // 2. 创建默认角色
     db.prepare(
-      'INSERT INTO za_role (name, description, admin_count, create_time, status, sort) VALUES (?, ?, ?, ?, ?, ?)',
-    ).run('超级管理员', '拥有所有权限', 1, nowStr, 1, 0)
+      'INSERT INTO za_role (name, description, admin_count, create_time, status, sort, is_super) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).run('超级管理员', '拥有所有权限', 1, nowStr, 1, 0, 1)
 
     db.prepare(
       'INSERT INTO za_role (name, description, admin_count, create_time, status, sort) VALUES (?, ?, ?, ?, ?, ?)',
@@ -343,6 +346,22 @@ export function initDb() {
     )
   `)
 
+  // 已有数据库迁移：菜单补类型与权限标识、角色补超管标记（权限模型由菜单驱动）
+  const menuCols = db.prepare('PRAGMA table_info(za_menu)').all() as { name: string }[]
+  if (!menuCols.some(c => c.name === 'type')) {
+    db.exec('ALTER TABLE za_menu ADD COLUMN type INTEGER DEFAULT 1')
+    // 一次性归类：有子节点的是目录，其余是菜单；按钮节点由 seedMenuPermissions 补
+    db.exec('UPDATE za_menu SET type = 0 WHERE id IN (SELECT DISTINCT parent_id FROM za_menu WHERE parent_id <> 0)')
+  }
+  if (!menuCols.some(c => c.name === 'permission'))
+    db.exec('ALTER TABLE za_menu ADD COLUMN permission TEXT')
+
+  const roleCols = db.prepare('PRAGMA table_info(za_role)').all() as { name: string }[]
+  if (!roleCols.some(c => c.name === 'is_super')) {
+    db.exec('ALTER TABLE za_role ADD COLUMN is_super INTEGER DEFAULT 0')
+    db.exec(`UPDATE za_role SET is_super = 1 WHERE name = '超级管理员'`)
+  }
+
   // 已有数据库迁移：菜单绑定页面组件 key（路由表由菜单配置驱动）
   const menuComponentSeeds: Array<[string, string]> = [
     ['/system/admin', 'auth/admin'],
@@ -421,6 +440,7 @@ export function initDb() {
   prepareMonitor(db)
 
   seedMonitorMenu(db)
+  seedMenuPermissions(db)
 }
 
 /** 监控中心菜单：幂等种子（老库升级也会补），路径与 src/pages/index/monitor/** 文件路由一一对应 */
@@ -461,6 +481,82 @@ function seedMonitorMenu(db: DatabaseSync): void {
     for (const menuId of created)
       relation.run(role.id, menuId)
   }
+}
+
+/**
+ * 菜单权限种子：菜单行（type = 1）挂「查询」权限，按钮行（type = 2）挂「操作」权限。
+ * 幂等：菜单权限只在 permission 为空时回填，按钮行按 (父菜单, permission) 判重。
+ * 新增按钮继承父菜单已有的授权，避免老库升级后非超管角色突然失去操作入口。
+ */
+function seedMenuPermissions(db: DatabaseSync): void {
+  const menuPermissions: Array<[string, string]> = [
+    ['/system/admin', 'system:user:list'],
+    ['/system/role', 'system:role:list'],
+    ['/system/menu', 'system:menu:list'],
+    ['/metadata', 'metadata:set:list'],
+    ['/form/list', 'form:form:list'],
+    ['/form/data', 'form:data:list'],
+    ['/monitor/log', 'monitor:log:list'],
+    ['/monitor/app', 'monitor:app:list'],
+    ['/monitor/workbench', 'monitor:stats:list'],
+    ['/monitor/analysis/perf', 'monitor:stats:list'],
+    ['/monitor/analysis/api', 'monitor:stats:list'],
+    ['/monitor/analysis/behavior', 'monitor:stats:list'],
+    ['/monitor/analysis/js-error', 'monitor:stats:list'],
+    ['/monitor/analysis/biz-error', 'monitor:stats:list'],
+    ['/monitor/analysis/alert-history', 'monitor:alert:list'],
+  ]
+  const bindPermission = db.prepare(`UPDATE za_menu SET permission = ? WHERE path = ? AND (permission IS NULL OR permission = '')`)
+  for (const [menuPath, permission] of menuPermissions)
+    bindPermission.run(permission, menuPath)
+
+  const buttons: Array<[string, string, string]> = [
+    // [父菜单 path, 权限标识, 按钮名]
+    ['/system/admin', 'system:user:add', '新增'],
+    ['/system/admin', 'system:user:edit', '修改'],
+    ['/system/admin', 'system:user:delete', '删除'],
+    ['/system/admin', 'system:user:assignRole', '分配角色'],
+    ['/system/role', 'system:role:add', '新增'],
+    ['/system/role', 'system:role:edit', '修改'],
+    ['/system/role', 'system:role:delete', '删除'],
+    ['/system/role', 'system:role:assignMenu', '分配菜单'],
+    ['/system/menu', 'system:menu:add', '新增'],
+    ['/system/menu', 'system:menu:edit', '修改'],
+    ['/system/menu', 'system:menu:delete', '删除'],
+    ['/metadata', 'metadata:set:add', '新增选项集'],
+    ['/metadata', 'metadata:set:edit', '修改选项集'],
+    ['/metadata', 'metadata:set:delete', '删除选项集'],
+    ['/metadata', 'metadata:item:add', '新增选项'],
+    ['/metadata', 'metadata:item:edit', '修改选项'],
+    ['/metadata', 'metadata:item:delete', '删除选项'],
+    ['/form/list', 'form:form:add', '新增表单'],
+    ['/form/list', 'form:form:edit', '修改表单'],
+    ['/form/list', 'form:form:delete', '删除表单'],
+    ['/form/data', 'form:data:submit', '提交数据'],
+    ['/form/data', 'form:data:edit', '修改数据'],
+    ['/form/data', 'form:data:delete', '删除数据'],
+    ['/monitor/app', 'monitor:app:add', '创建应用'],
+    ['/monitor/app', 'monitor:app:edit', '编辑应用'],
+    ['/monitor/log', 'monitor:maintenance:prune', '清理日志'],
+    ['/monitor/analysis/alert-history', 'monitor:alert:retry', '重发通知'],
+  ]
+
+  const findMenu = db.prepare('SELECT id, level FROM za_menu WHERE path = ?')
+  const findButton = db.prepare('SELECT id FROM za_menu WHERE parent_id = ? AND permission = ?')
+  const insertButton = db.prepare(
+    'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, type, permission, create_time, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+  const parentRoleRows = db.prepare('SELECT role_id FROM za_role_menu_relation WHERE menu_id = ?')
+  const insertRoleMenu = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
+
+  buttons.forEach(([parentPath, permission, title], index) => {
+    const parent = findMenu.get(parentPath) as { id: number, level: number } | undefined
+    if (!parent || findButton.get(parent.id, permission))
+      return
+    const result = insertButton.run(parent.id, title, parent.level + 1, index, '', null, 1, null, null, 2, permission, now(), null)
+    for (const rel of parentRoleRows.all(parent.id) as Array<{ role_id: number }>)
+      insertRoleMenu.run(rel.role_id, Number(result.lastInsertRowid))
+  })
 }
 
 export function getDb() {

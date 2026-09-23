@@ -1,6 +1,6 @@
 import type { PageParam, RoleRecord } from '@zealous-admin/auth'
 import { PlusOutlined } from '@ant-design/icons'
-import { createRole, deleteRole, getRolePage, updateRole } from '@zealous-admin/auth'
+import { createRole, deleteRole, getRolePage, updateRole, useHasPermission } from '@zealous-admin/auth'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
   Button,
@@ -56,6 +56,7 @@ const FORM_RULES = {
 // ============================================================
 export default function SystemRole() {
   const { message, modal } = useAppMessage()
+  const hasPermission = useHasPermission()
   const { styles } = useStyles()
   const [form] = Form.useForm()
 
@@ -180,9 +181,9 @@ export default function SystemRole() {
       align: 'center' as const,
       render: (_: any, row: RoleRecord) => (
         <Space size="small">
-          <Button type="link" onClick={() => handleSelectMenu(row)}>分配菜单</Button>
-          <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>
-          <Button type="link" danger onClick={() => handleDelete(row)}>删除</Button>
+          {hasPermission('system:role:assignMenu') && <Button type="link" onClick={() => handleSelectMenu(row)}>分配菜单</Button>}
+          {hasPermission('system:role:edit') && <Button type="link" onClick={() => handleUpdate(row)}>编辑</Button>}
+          {hasPermission('system:role:delete') && <Button type="link" danger onClick={() => handleDelete(row)}>删除</Button>}
         </Space>
       ),
     },
@@ -205,7 +206,7 @@ export default function SystemRole() {
             <Button type="primary" onClick={handleSearch}>查询</Button>
             <Button onClick={handleReset}>重置</Button>
           </Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>
+          {hasPermission('system:role:add') && <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加</Button>}
         </div>
         <div className={styles.tableWrapper}>
           <Table
