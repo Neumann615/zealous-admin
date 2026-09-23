@@ -324,17 +324,19 @@ export function initDb() {
     db.exec('ALTER TABLE za_form ADD COLUMN permissions TEXT')
   }
 
-  const existMetadataMenu = db.prepare('SELECT id FROM za_menu WHERE path = ?').get('/metadata')
-  if (!existMetadataMenu) {
+  const metadataMenu = db.prepare('SELECT id, parent_id FROM za_menu WHERE path = ?').get('/metadata') as any
+  const formMenu = db.prepare('SELECT id, sort FROM za_menu WHERE path = ? AND parent_id = 0').get('/form') as any
+  const metadataSort = formMenu ? formMenu.sort - 1 : 80
+
+  if (metadataMenu && metadataMenu.parent_id !== 0) {
+    db.prepare('UPDATE za_menu SET parent_id = 0, level = 0, sort = ? WHERE id = ?').run(metadataSort, metadataMenu.id)
+  }
+
+  if (!metadataMenu) {
     const nowStr = now()
-    const parent = db.prepare('SELECT id, level FROM za_menu WHERE path = ?').get('/system') as any
-    const menu = parent
-      ? db.prepare(
-          'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        ).run(parent.id, '元数据管理', parent.level + 1, 3, 'metadata', 'ai:AiOutlineDatabase', 0, nowStr, '/metadata', null)
-      : db.prepare(
-          'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        ).run(0, '元数据管理', 0, 95, 'metadata', 'ai:AiOutlineDatabase', 0, nowStr, '/metadata', null)
+    const menu = db.prepare(
+      'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(0, '元数据管理', 0, metadataSort, 'metadata', 'ai:AiOutlineDatabase', 0, nowStr, '/metadata', null)
     const menuId = Number(menu.lastInsertRowid)
     const roles = db.prepare('SELECT id FROM za_role').all() as any[]
     const relation = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
