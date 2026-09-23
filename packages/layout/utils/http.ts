@@ -40,10 +40,11 @@ http.interceptors.response.use(
     }
   },
   (error) => {
-    const { response } = error
-    const { data } = response
-    getGlobalMessage()?.error(data.message, 3)
-    if (data.code === 401) {
+    // 网络错误/超时时没有 response，直接解构会在这里二次抛错，掩盖真实原因
+    const response = error.response
+    const data = response?.data as CommonResult<unknown> | undefined
+    getGlobalMessage()?.error(data?.message || error.message || '请求失败', 3)
+    if (response?.status === 401 || data?.code === 401) {
       const expireMode = useAppStore.getState().account.expireMode
       // 延时让用户先看到错误提示，再执行后续操作
       setTimeout(() => {
