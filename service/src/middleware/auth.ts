@@ -1,11 +1,15 @@
 import type { NextFunction, Request, Response } from 'express'
 import { verifyToken } from '../lib/jwt'
 import { unauthorized } from '../lib/response'
+import { resolveSession } from '../modules/auth/session'
 
 declare global {
   namespace Express {
     interface Request {
       username?: string
+      adminId?: number
+      tokenJti?: string
+      tokenExpMs?: number
     }
   }
 }
@@ -22,8 +26,16 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     : authHeader
 
   verifyToken(token)
-    .then((username) => {
-      req.username = username
+    .then((payload) => {
+      const session = resolveSession(payload)
+      if (!session) {
+        res.status(401).json(unauthorized())
+        return
+      }
+      req.username = session.admin.username
+      req.adminId = session.admin.id
+      req.tokenJti = session.jti
+      req.tokenExpMs = session.expMs
       next()
     })
     .catch(() => {

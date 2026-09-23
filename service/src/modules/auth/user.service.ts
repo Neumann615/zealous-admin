@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import { getDb } from '../../db'
 import { ConflictError, NotFoundError } from '../../lib/errors'
 import { now } from '../../lib/date'
+import { revokeAllTokensBefore } from './session'
 
 const ADMIN_FIELDS = 'id, username, icon, email, nick_name AS nickName, note, create_time AS createTime, login_time AS loginTime, status'
 
@@ -84,6 +85,8 @@ export async function updateUser(id: number, data: { username?: string, password
 
   values.push(id)
   db.prepare(`UPDATE za_admin SET ${sets.join(', ')} WHERE id = ?`).run(...values)
+  if (data.password || data.status === 0)
+    revokeAllTokensBefore(id)
   return db.prepare(`SELECT ${ADMIN_FIELDS} FROM za_admin WHERE id = ?`).get(id)
 }
 
@@ -104,6 +107,8 @@ export function updateUserStatus(id: number, status: number) {
     throw new NotFoundError('管理员不存在')
 
   db.prepare('UPDATE za_admin SET status = ? WHERE id = ?').run(status, id)
+  if (status !== 1)
+    revokeAllTokensBefore(id)
 }
 
 export function assignRoles(adminId: number, roleIdsStr: string) {

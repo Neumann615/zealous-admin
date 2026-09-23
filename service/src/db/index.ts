@@ -4,11 +4,17 @@ import { DatabaseSync } from 'node:sqlite'
 import bcrypt from 'bcryptjs'
 import { now } from '../lib/date.js'
 import { prepareMetadataSchema } from '../modules/metadata/schema.js'
+import { prepareMonitor } from '../modules/monitor/index.js'
 
 const dbPath = process.env.DB_PATH || './data/sqlite.db'
 mkdirSync('./data', { recursive: true })
 
 const db = new DatabaseSync(dbPath)
+
+// WAL 提升读写并发（监控队列与业务写并行）；busy_timeout 兜住 SQLITE_BUSY；foreign_keys 让 schema 里声明的 FK 真正生效
+db.exec('PRAGMA journal_mode = WAL')
+db.exec('PRAGMA busy_timeout = 5000')
+db.exec('PRAGMA foreign_keys = ON')
 
 export function initDb() {
   db.exec(`
@@ -324,6 +330,19 @@ export function initDb() {
     db.exec('ALTER TABLE za_form ADD COLUMN permissions TEXT')
   }
 
+  // 已有数据库迁移：za_admin 补令牌整体吊销水位线（改密/禁用后存量令牌立即失效）
+  const adminCols = db.prepare('PRAGMA table_info(za_admin)').all() as { name: string }[]
+  if (!adminCols.some(c => c.name === 'token_revoked_before')) {
+    db.exec('ALTER TABLE za_admin ADD COLUMN token_revoked_before INTEGER DEFAULT 0')
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS za_token_revocation (
+      jti TEXT PRIMARY KEY,
+      expires_at INTEGER NOT NULL
+    )
+  `)
+
   const metadataMenu = db.prepare('SELECT id, parent_id FROM za_menu WHERE path = ?').get('/metadata') as any
   const formMenu = db.prepare('SELECT id, sort FROM za_menu WHERE path = ? AND parent_id = 0').get('/form') as any
   const metadataSort = formMenu ? formMenu.sort - 1 : 80
@@ -345,6 +364,49 @@ export function initDb() {
   }
 
   prepareMetadataSchema(db)
+  prepareMonitor(db)
+
+  seedMonitorMenu(db)
+}
+
+/** 监控中心菜单：幂等种子（老库升级也会补），路径与 src/pages/index/monitor/** 文件路由一一对应 */
+function seedMonitorMenu(db: DatabaseSync): void {
+  const exists = db.prepare('SELECT id FROM za_menu WHERE path = ?').get('/monitor')
+  if (exists)
+    return
+
+  const timestamp = now()
+  const insertMenu = db.prepare(
+    'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, create_time, path, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  )
+  const created: number[] = []
+
+  const add = (parentId: number, title: string, level: number, sort: number, name: string, icon: string, path: string): number => {
+    const result = insertMenu.run(parentId, title, level, sort, name, icon, 0, timestamp, path, null)
+    const id = Number(result.lastInsertRowid)
+    created.push(id)
+    return id
+  }
+
+  const rootId = add(0, '监控中心', 0, 70, 'monitor', 'ai:AiOutlineFundProjectionScreen', '/monitor')
+  add(rootId, '工作台', 1, 0, 'workbench', 'ai:AiOutlineDashboard', '/monitor/workbench')
+  add(rootId, '实时日志', 1, 1, 'log', 'ai:AiOutlineFileSearch', '/monitor/log')
+  add(rootId, '应用管理', 1, 2, 'app', 'ai:AiOutlineAppstore', '/monitor/app')
+
+  const analysisId = add(rootId, '数据分析', 1, 3, 'analysis', 'ai:AiOutlineLineChart', '/monitor/analysis')
+  add(analysisId, '性能统计', 2, 0, 'perf', 'ai:AiOutlineDashboard', '/monitor/analysis/perf')
+  add(analysisId, '接口分析', 2, 1, 'api', 'ai:AiOutlineApi', '/monitor/analysis/api')
+  add(analysisId, '行为分析', 2, 2, 'behavior', 'ai:AiOutlineUsergroupAdd', '/monitor/analysis/behavior')
+  add(analysisId, 'JS错误分析', 2, 3, 'js-error', 'ai:AiOutlineBug', '/monitor/analysis/js-error')
+  add(analysisId, '业务错误分析', 2, 4, 'biz-error', 'ai:AiOutlineWarning', '/monitor/analysis/biz-error')
+  add(analysisId, '预警记录', 2, 5, 'alert-history', 'ai:AiOutlineAlert', '/monitor/analysis/alert-history')
+
+  const roles = db.prepare('SELECT id FROM za_role').all() as Array<{ id: number }>
+  const relation = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
+  for (const role of roles) {
+    for (const menuId of created)
+      relation.run(role.id, menuId)
+  }
 }
 
 export function getDb() {

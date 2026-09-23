@@ -1,13 +1,14 @@
 import type { FrontendMenu, LoginReq, MenuRecord, UserInfoWithAuth } from '../types'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import { getUserInfo as fetchUserInfo, login as loginApi, logout as logoutApi } from '../api/auth'
+import { getUserInfo as fetchUserInfo, login as loginApi, logout as logoutApi, refreshToken as refreshTokenApi } from '../api/auth'
 
 interface UserState {
   token: string
   userInfo: UserInfoWithAuth | null
   userLogin: (params: LoginReq) => Promise<void>
   fetchUserInfo: () => Promise<void>
+  refreshSession: () => Promise<void>
   userLogout: () => Promise<void>
   fedLogout: () => void
 }
@@ -27,6 +28,12 @@ export const useUserStore = create<UserState>()(
       fetchUserInfo: async () => {
         const info = await fetchUserInfo()
         set({ userInfo: info })
+      },
+
+      refreshSession: async () => {
+        const res = await refreshTokenApi()
+        set({ token: res.tokenHead + res.token })
+        await get().fetchUserInfo()
       },
 
       userLogout: async () => {

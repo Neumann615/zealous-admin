@@ -14,6 +14,9 @@ dist-ssr
 pnpm-lock.yaml
 *.local
 service/data/*.db
+service/data/*.db-wal
+service/data/*.db-shm
+service/.env
 yarn.lock
 stats.html
 
@@ -35,3 +38,10 @@ stats.html
 # VitePress
 docs/.vitepress/dist
 docs/.vitepress/cache
+
+# Playwright E2E 产物
+e2e/.auth/
+e2e/.cache/
+e2e/screenshots/
+playwright-report/
+test-results/

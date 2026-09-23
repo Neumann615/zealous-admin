@@ -5,6 +5,7 @@ import { validate } from '../../middleware/validate'
 import { success } from '../../lib/response'
 import { login, getUserInfo, refreshToken, updatePassword } from './auth.service'
 import { loginSchema, updatePasswordSchema } from './auth.schema'
+import { revokeToken } from './session'
 
 const router = Router()
 
@@ -17,7 +18,7 @@ router.post('/admin/login', validate(loginSchema), asyncHandler(async (req, res)
 router.use('/admin', authMiddleware)
 
 router.get('/admin/refreshToken', asyncHandler(async (req, res) => {
-  const result = await refreshToken(req.username!)
+  const result = await refreshToken(req.adminId!)
   res.json(success(result))
 }))
 
@@ -26,7 +27,9 @@ router.get('/admin/info', asyncHandler(async (req, res) => {
   res.json(success(info))
 }))
 
-router.post('/admin/logout', (_req, res) => {
+router.post('/admin/logout', (req, res) => {
+  if (req.tokenJti)
+    revokeToken(req.tokenJti, req.tokenExpMs ?? Date.now() + 2 * 60 * 60 * 1000)
   res.json(success(null, '登出成功'))
 })
 

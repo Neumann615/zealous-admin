@@ -2,11 +2,16 @@ import { AuthGuard, configureAuthClient, convertMenus, useUserStore } from '@zea
 import { registerFormDataApis } from '@zealous-admin/form-designer/index'
 import { http, LayoutProvider } from '@zealous-admin/layout/index'
 import { configureMetadataClient, getOptionSetByCodeAPI, normalizeOptionSet } from '@zealous-admin/metadata/index'
+import { monitor } from '@zealous-admin/monitor-sdk/index'
+import { configureMonitorClient } from '@zealous-admin/monitor/index'
 import { useEffect, useMemo } from 'react'
 import { useRoutes } from 'react-router'
 import routes from '~react-pages'
 import { renderFormAPI } from './apis/form'
 import './App.css'
+
+/** 访问令牌默认 2h 有效，页面开着时每 25 分钟静默续期一次 */
+const SESSION_REFRESH_INTERVAL_MS = 25 * 60 * 1000
 
 configureAuthClient(async config => http({
   url: config.url,
@@ -16,6 +21,14 @@ configureAuthClient(async config => http({
 }))
 
 configureMetadataClient(async config => http({
+  url: config.url,
+  method: (config.method || 'GET').toLowerCase() as 'get' | 'post',
+  data: config.data,
+  params: config.params,
+  signal: config.signal,
+}))
+
+configureMonitorClient(async config => http({
   url: config.url,
   method: (config.method || 'GET').toLowerCase() as 'get' | 'post',
   data: config.data,
@@ -58,14 +71,27 @@ export default function App() {
     if (window.location.pathname === '/login') {
       return
     }
-    const token = useUserStore.getState().token
-    if (token) {
-      useUserStore.getState().fetchUserInfo()
+    if (!useUserStore.getState().token) {
+      return
     }
+    // 启动即续期并拉取最新用户信息：令牌过期或账号被禁用时由 http 拦截器统一走重新登录
+    useUserStore.getState().refreshSession().catch(() => {})
+    const timer = window.setInterval(() => {
+      useUserStore.getState().refreshSession().catch(() => {})
+    }, SESSION_REFRESH_INTERVAL_MS)
+    return () => window.clearInterval(timer)
   }, [])
 
   // 响应式订阅 menus，登录后 menus 变化时自动重新生成菜单
   const userInfo = useUserStore(state => state.userInfo)
+
+  // 登录态同步到监控 SDK：日志与统计按 nickname/uid 归因
+  useEffect(() => {
+    if (!userInfo) {
+      return
+    }
+    monitor.setUser({ nickname: userInfo.nickName || userInfo.username, uid: String(userInfo.id) })
+  }, [userInfo])
   const menuData = useMemo(() => {
     const menus = userInfo?.menus ?? []
     if (menus.length === 0)

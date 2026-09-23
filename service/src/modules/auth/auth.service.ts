@@ -3,6 +3,7 @@ import { getDb } from '../../db'
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../lib/errors'
 import { now } from '../../lib/date'
 import { signToken } from '../../lib/jwt'
+import { revokeAllTokensBefore } from './session'
 
 interface AdminRow {
   id: number
@@ -27,13 +28,16 @@ export async function login(username: string, password: string) {
   if (!valid)
     throw new UnauthorizedError('用户名或密码错误')
 
+  if (admin.status !== 1)
+    throw new UnauthorizedError('账号已被禁用')
+
   db.prepare('UPDATE za_admin SET login_time = ? WHERE id = ?').run(now(), admin.id)
-  const token = await signToken({ sub: admin.username })
+  const token = await signToken({ sub: String(admin.id) })
   return { tokenHead: 'Bearer ', token }
 }
 
-export async function refreshToken(username: string) {
-  const token = await signToken({ sub: username })
+export async function refreshToken(adminId: number) {
+  const token = await signToken({ sub: String(adminId) })
   return { tokenHead: 'Bearer ', token }
 }
 
@@ -93,4 +97,5 @@ export async function updatePassword(username: string, oldPassword: string, newP
 
   const hashedPassword = await bcrypt.hash(newPassword, 10)
   db.prepare('UPDATE za_admin SET password = ? WHERE id = ?').run(hashedPassword, admin.id)
+  revokeAllTokensBefore(admin.id)
 }
