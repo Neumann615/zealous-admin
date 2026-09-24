@@ -76,33 +76,6 @@ function isRecord(value: unknown): value is Record<string, any> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 
-/** antd Upload 的 fileList 含 File/originFileObj 等运行时对象；提交前收敛成服务端返回的文件元数据 */
-function normalizeSubmittedValues(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    const looksLikeFileList = value.some(item => isRecord(item) && (isRecord(item.response) || typeof item.uid === 'string'))
-    if (looksLikeFileList) {
-      const files = value.map((item) => {
-        if (!isRecord(item) || !isRecord(item.response)) {
-          return item
-        }
-        return item.response
-      })
-      if (files.every(item => isRecord(item) && typeof item.objectId === 'string')) {
-        return files
-      }
-    }
-    return value.map(normalizeSubmittedValues)
-  }
-  if (isRecord(value)) {
-    const result: Record<string, any> = {}
-    for (const [key, item] of Object.entries(value)) {
-      result[key] = normalizeSubmittedValues(item)
-    }
-    return result
-  }
-  return value
-}
-
 /** antd 首次装载 initialValues 前，公式也需要能算：store 已有值优先，缺失处回落 initial 值 */
 function mergeInitialValues(values: Record<string, any>, initialValues: Record<string, any>): Record<string, any> {
   const walk = (current: unknown, initial: unknown): any => {
@@ -440,7 +413,7 @@ function FormRendererInner({
     // 快照，这里重新取一次，钩子的改值才真的进 onSubmit。
     // 不传 true：无参取值只回已注册字段，与改造前 onFinish 收到的值一致；传 true 会把整个 store
     // （未注册字段、preserve 保留值、钩子注入的键）带进提交报文
-    const submitted = normalizeSubmittedValues(form.getFieldsValue()) as Record<string, any>
+    const submitted = form.getFieldsValue()
     try {
       await onSubmit?.(submitted)
       await runHooks('afterSubmit', schemaRef.current.events?.afterSubmit, buildCtx({ values: submitted }), custom)

@@ -4,12 +4,6 @@ export { getComponent, getMenus, registerComponent } from './registry/registry'
 export type { ComponentDef, ConfigMeta, ListRenderCtx, MenuGroup } from './registry/registry'
 export { getFormDataApi, getFormDataApiCatalog, registerFormDataApis, setFormDataApiCatalog } from './renderer/dataApis'
 export type { FormDataApi } from './renderer/dataApis'
-export {
-  clearFormFileTransport,
-  getFormFileTransport,
-  registerFormFileTransport,
-} from './renderer/fileTransport'
-export type { FormFileTransport, FormFileValue } from './renderer/fileTransport'
 export { FormRenderer } from './renderer/FormRenderer'
 export type { FormRendererProps } from './renderer/FormRenderer'
 export type {

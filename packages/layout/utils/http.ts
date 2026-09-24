@@ -28,10 +28,6 @@ http.interceptors.request.use(
 // axios响应拦截器
 http.interceptors.response.use(
   (response) => {
-    // 文件下载绕过业务响应包裹，直接把 AxiosResponse 交给调用方取 Blob
-    if (response.config.responseType === 'blob') {
-      return response
-    }
     const res: CommonResult<unknown> = response.data
     if (res.code !== 200) {
       // code为非200是抛错，这里统一处理提示信息

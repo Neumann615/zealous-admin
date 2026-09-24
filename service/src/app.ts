@@ -9,7 +9,6 @@ import roleRoutes from './modules/auth/role.routes'
 import userRoutes from './modules/auth/user.routes'
 import formRoutes from './modules/form/form.routes'
 import formDataRoutes from './modules/form/formData.routes'
-import formFileRoutes from './modules/form/formFile.routes'
 import mcpRoutes from './modules/mcp/mcp.routes'
 import metadataRoutes from './modules/metadata'
 import monitorRoutes from './modules/monitor'
@@ -29,7 +28,7 @@ app.use(cors({
   origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-File-Name', 'X-File-Type'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: [REQUEST_ID_HEADER],
 }))
 app.use(express.json())
@@ -43,7 +42,6 @@ app.use('/', roleRoutes)
 app.use('/', menuRoutes)
 app.use('/metadata', metadataRoutes)
 app.use('/', formRoutes)
-app.use('/', formFileRoutes)
 app.use('/', formDataRoutes)
 
 app.get('/', (_req, res) => {

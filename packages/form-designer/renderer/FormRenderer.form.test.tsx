@@ -4,17 +4,13 @@ import type { FormSchema } from '../types/schema'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Form } from 'antd'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { clearFormFileTransport, registerFormFileTransport } from './fileTransport'
 import { getMenus } from '../registry/registry'
 import { FormRenderer } from './FormRenderer'
 import '../registry/components'
 import '../test/setupDom'
 
 // vitest 未开启 globals，RTL 的自动 cleanup 不会注册，这里手动清理避免跨用例串台
-afterEach(() => {
-  cleanup()
-  clearFormFileTransport()
-})
+afterEach(cleanup)
 
 const defs = getMenus().flatMap(g => g.list)
 
@@ -86,37 +82,6 @@ describe('渲染器外部表单实例（FormRenderer）', () => {
     submit(container)
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ [field]: '李四' }))
-  })
-})
-
-describe('渲染器文件字段', () => {
-  it('上传成功后提交文件元数据而不是运行时 File 对象', async () => {
-    const node = pick('upload').defaultSchema()
-    node.field = 'attachment'
-    const metadata = {
-      objectId: '0123456789abcdef',
-      fileName: 'hello.txt',
-      fileSize: 5,
-      fileType: 'text/plain',
-    }
-    const upload = vi.fn().mockResolvedValue(metadata)
-    registerFormFileTransport({ upload })
-    const onSubmit = vi.fn()
-    const { container } = render(
-      <FormRenderer
-        schema={{ version: 2, form: { layout: 'vertical' }, children: [node] }}
-        onSubmit={onSubmit}
-      />,
-    )
-
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement
-    const file = new File(['hello'], 'hello.txt', { type: 'text/plain' })
-    await fireEvent.change(input, { target: { files: [file] } })
-
-    await waitFor(() => expect(upload).toHaveBeenCalledWith(file))
-    await waitFor(() => expect(screen.getAllByText('hello.txt').length).toBeGreaterThan(0))
-    fireEvent.click(container.querySelector('button[type="submit"]') as HTMLElement)
-    await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ attachment: [metadata] }))
   })
 })
 

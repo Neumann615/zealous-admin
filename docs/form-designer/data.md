@@ -22,7 +22,6 @@
 | `za_form` | `form_key`、`current_version_id`、`deleted_at` | 稳定身份、当前/最近生效版本指针、软删除标记 |
 | `za_form_version` | `schema`、`field_contract`、`status`、`is_current`、`lock_version` | 草稿与发布历史；同一表单最多一个草稿和一个当前版 |
 | `za_form_data` | `form_version_id`、`form_version`、`data` | 提交数据关联版本行；旧 `form_version` 继续保留追溯 |
-| `za_form_file` | `object_id`、`content`、文件元数据 | 附件 BLOB 主存与上传人审计；表单值只引用 `objectId` |
 
 老库启动时会自动补列、生成首个版本行，并把存量填写数据回填到该版本。早期历史版本原本只存版本号、不存 Schema 快照，因此这批 legacy 记录只能关联迁移时的结构；新提交会严格关联真实版本。
 
@@ -52,8 +51,6 @@
 | `GET /form/versions` | 查看版本历史 |
 | `POST /form/data/submit` | 仅当前发布版可提交；写入版本关联 |
 | `POST /form/render` | 新填写取发布版；按 `dataId` 回显时取提交时版本 |
-| `POST /form/files/upload` | 上传 10MB 内附件，返回 `objectId` 与文件元数据 |
-| `GET /form/files/:objectId` | 登录鉴权下载附件，保留原始文件名与类型 |
 
 ## 数据页版本化
 
@@ -61,18 +58,11 @@
 - 详情抽屉通过 `dataId` 走统一渲染接口，每条记录始终按提交时的版本 Schema 回显。
 - CSV 导出跟随当前版本与提交人筛选，前端按每页 100 条分页聚合，并对以 `=`、`+`、`-`、`@` 开头的单元格做公式注入防护。
 
-## 附件存储
-
-- 设计器通过宿主注册的文件传输实现调用授权接口，Schema 本身不携带上传 URL 或 token。
-- 上传成功后，表单字段值保存 `[{ objectId, fileName, fileSize, fileType }]` 元数据数组，不再序列化浏览器 `File` 对象。
-- 详情回显时元数据会还原为 antd 上传列表；点击文件名可通过同一授权接口下载。
-- 原始内容存 `za_form_file.content` BLOB，随机 `objectId` 不暴露本地路径；文件名会清理换行、斜杠、反斜杠与冒号。
-
 ## 已知限制
 
 | 限制 | 说明 |
 |---|---|
 | 字段级查询 | 数据仍整份 JSON 存储，数据库侧不能直接按字段索引或聚合 |
 | Legacy 历史 | 旧系统未保存每版 Schema，迁移前提交只能关联迁移时结构 |
-| 附件治理 | 单文件限制 10MB；未随表单提交的孤儿文件还需要后续清理策略 |
+| 文件上传 | `upload` 仍缺少服务端上传与下载闭环，`File` JSON 化后是 `{}` |
 | CSV 导出 | 超大数据量仍在浏览器内存聚合，后续可演进为后端流式导出 |

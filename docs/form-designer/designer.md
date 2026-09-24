@@ -144,7 +144,7 @@ interface FormRendererProps {
 |------|------|
 | 单页签 / 单面板 / 单步骤 | `tabs`、`collapse`、`stepForm` 均为简化版视觉容器，多页签需要给 children 增加分组语义（schema 扩展） |
 | `descriptions` 画布态 | 无法把子节点拆分到各个 item，画布内按顺序平铺 |
-| 附件治理 | 上传 / 下载闭环已接入本地 BLOB 存储；孤儿文件清理策略待补 |
+| `upload` 无后端 | 仅前端收集 `fileList`，service 端尚无上传路由与静态目录 |
 | `tableForm` 细节 | 列宽 / 对齐、行内校验、数组级 min/max 规则（`Form.List` rules）未接入 |
 | 填写渲染取发布版 | `/form/render` 默认只取当前发布版；设计器预览在本地渲染草稿，不进入填写链路 |
 | 历史 schema 的字段名 | 早期保存的 schema 若存在重名字段，重新打开后保存会被拦截，需要先按提示改名 |

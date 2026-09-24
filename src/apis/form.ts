@@ -52,14 +52,6 @@ export interface FormDataRecord {
   createTime: string
 }
 
-/** 表单值中持久化的文件引用 */
-export interface FormFileRecord {
-  objectId: string
-  fileName: string
-  fileSize: number
-  fileType: string
-}
-
 /** 分页获取表单列表 */
 export function getFormListAPI(params: PageParam) {
   return http<CommonPage<FormRecord>>({
@@ -183,33 +175,6 @@ export function renderFormAPI(data: Record<string, any>, signal?: AbortSignal) {
     url: '/form/render',
     method: 'post',
     data,
-    signal,
-  })
-}
-
-/** 上传表单附件，表单值保存返回的元数据 */
-export function uploadFormFileAPI(file: File, signal?: AbortSignal) {
-  return http<FormFileRecord>({
-    url: '/form/files/upload',
-    method: 'post',
-    data: file,
-    signal,
-    timeout: 30_000,
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      'X-File-Type': file.type || 'application/octet-stream',
-      'X-File-Name': encodeURIComponent(file.name || 'unnamed'),
-    },
-  })
-}
-
-/** 下载表单附件 */
-export function downloadFormFileAPI(objectId: string, signal?: AbortSignal) {
-  return http<Blob>({
-    url: `/form/files/${objectId}`,
-    method: 'get',
-    responseType: 'blob',
-    timeout: 30_000,
     signal,
   })
 }
