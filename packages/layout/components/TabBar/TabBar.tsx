@@ -383,12 +383,13 @@ export function TabBar() {
 
   // 根据配置的标签页样式选择对应的 className
   const getTabItemClass = (isActive: boolean) => {
+    const tabBarStyle = tabBar.style as 'default' | 'card' | 'block'
     const styleMap = {
       default: isActive ? 'nowTabItem' : 'headerTabItem',
       card: isActive ? 'cardNowTabItem' : 'cardTabItem',
       block: isActive ? 'blockNowTabItem' : 'blockTabItem',
-    }
-    return styles[styleMap[tabBar.style] || styleMap.default]
+    } as const
+    return styles[styleMap[tabBarStyle] || styleMap.default]
   }
 
   // 根据 tabBar.widthType 计算标签宽度样式

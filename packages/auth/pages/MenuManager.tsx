@@ -1,7 +1,10 @@
+import type { DragEndEvent } from '@dnd-kit/react'
 import type { MenuNode, MenuRecord } from '@zealous-admin/auth'
 import type { TableColumnsType } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
-import { createMenu, deleteMenu, getMenuDetail, getMenuTree, getPageKeys, updateMenu, updateMenuStatus, useHasPermission } from '@zealous-admin/auth'
+import { DragDropProvider } from '@dnd-kit/react'
+import { isSortable, useSortable } from '@dnd-kit/react/sortable'
+import { createMenu, deleteMenu, getMenuDetail, getMenuPermissionCodes, getMenuTree, getPageKeys, updateMenu, updateMenuStatus, useHasPermission } from '@zealous-admin/auth'
 import { ZaIcon, ZaIconPicker } from '@zealous-admin/components/index'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import {
@@ -9,7 +12,6 @@ import {
   Card,
   Form,
   Input,
-  InputNumber,
   Modal,
   Radio,
   Select,
@@ -20,7 +22,28 @@ import {
   TreeSelect,
 } from 'antd'
 import { createStyles } from 'antd-style'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+interface SortableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+  'data-row-key'?: React.Key
+  'sortableIndex': number
+  'sortableParentId': number
+}
+
+function SortableRow({ 'data-row-key': rowKey, sortableIndex, sortableParentId, style, ...rest }: SortableRowProps) {
+  const { ref, isDragging } = useSortable({
+    id: Number(rowKey),
+    index: sortableIndex,
+    group: `menu-siblings-${sortableParentId}`,
+  })
+  return (
+    <tr
+      {...rest}
+      ref={ref}
+      style={{ ...style, cursor: 'grab', opacity: isDragging ? 0.5 : undefined }}
+    />
+  )
+}
 
 // ============================================================
 // 样式
@@ -28,6 +51,13 @@ import { useEffect, useState } from 'react'
 const useStyles = createStyles(({ token, css }) => ({
   toolbar: css`
     margin-bottom: ${token.marginSM}px;
+    display: flex;
+    align-items: center;
+    gap: ${token.marginSM}px;
+  `,
+  sortHint: css`
+    color: ${token.colorTextTertiary};
+    font-size: 12px;
   `,
   tableWrapper: css`
     .ant-table-thead > tr > th {
@@ -74,6 +104,7 @@ export default function SystemMenu() {
 
   const [treeData, setTreeData] = useState<MenuNode[]>([])
   const [listLoading, setListLoading] = useState(true)
+  const [permissionCodes, setPermissionCodes] = useState<string[]>([])
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isEdit, setIsEdit] = useState(false)
@@ -84,6 +115,40 @@ export default function SystemMenu() {
   const nodeType = Form.useWatch('type', form) ?? 1
   const isButton = nodeType === 2
   const pageOptions = getPageKeys().map(key => ({ value: key, label: key }))
+  const permissionValue = Form.useWatch('permission', form)
+  const permissionOptions = useMemo(() => {
+    const codes = [...permissionCodes]
+    if (permissionValue && !codes.includes(permissionValue))
+      codes.unshift(permissionValue)
+    return codes.map(code => ({ value: code, label: code }))
+  }, [permissionCodes, permissionValue])
+
+  const canSort = hasPermission('system:menu:edit')
+
+  const sortableMeta = useMemo(() => {
+    const meta = new Map<number, { parentId: number, index: number }>()
+    const walk = (nodes: MenuNode[], parentId: number) => {
+      nodes.forEach((node, index) => {
+        meta.set(node.id!, { parentId, index })
+        if (node.children?.length)
+          walk(node.children, node.id!)
+      })
+    }
+    walk(treeData, 0)
+    return meta
+  }, [treeData])
+
+  const tableComponents = useMemo(() => ({
+    body: {
+      row: (props: any) => {
+        const rowKey = props['data-row-key']
+        const meta = sortableMeta.get(Number(rowKey))
+        if (!meta || !canSort)
+          return <tr {...props} />
+        return <SortableRow {...props} sortableIndex={meta.index} sortableParentId={meta.parentId} />
+      },
+    },
+  }), [sortableMeta, canSort])
 
   const fetchTree = async () => {
     setListLoading(true)
@@ -110,6 +175,9 @@ export default function SystemMenu() {
 
   useEffect(() => {
     fetchTree()
+    getMenuPermissionCodes()
+      .then(setPermissionCodes)
+      .catch(() => setPermissionCodes([]))
   }, [])
 
   const handleAdd = () => {
@@ -118,7 +186,7 @@ export default function SystemMenu() {
     setEditMenuId(undefined)
     getSelectMenuList()
     form.resetFields()
-    form.setFieldsValue({ parentId: 0, hidden: 0, sort: 0, type: 1 })
+    form.setFieldsValue({ parentId: 0, hidden: 0, type: 1 })
   }
 
   const handleUpdate = async (row: MenuRecord) => {
@@ -148,6 +216,47 @@ export default function SystemMenu() {
     fetchTree()
   }
 
+  const findSiblings = (nodes: MenuNode[], parentId: number): MenuNode[] => {
+    if (parentId === 0)
+      return nodes
+    for (const node of nodes) {
+      if (node.id === parentId)
+        return node.children ?? []
+      const found = findSiblings(node.children ?? [], parentId)
+      if (found.length)
+        return found
+    }
+    return []
+  }
+
+  const nextSort = (parentId: number) => {
+    const siblings = findSiblings(treeData, parentId)
+    return siblings.reduce((max, node) => Math.max(max, node.sort ?? 0), -1) + 1
+  }
+
+  const handleSortEnd = async (event: DragEndEvent) => {
+    if (event.canceled)
+      return
+    const { source } = event.operation
+    if (!isSortable(source) || source.index === source.initialIndex)
+      return
+    const parentId = Number(String(source.group).replace('menu-siblings-', ''))
+    const siblings = [...findSiblings(treeData, parentId)]
+    const [moved] = siblings.splice(source.initialIndex, 1)
+    if (!moved || moved.id !== source.id)
+      return
+    siblings.splice(source.index, 0, moved)
+    try {
+      for (let i = 0; i < siblings.length; i++) {
+        if (siblings[i].sort !== i)
+          await updateMenu(siblings[i].id!, { sort: i })
+      }
+      message.success('排序已更新')
+      fetchTree()
+    }
+    catch { /* 失败提示由 http 拦截器统一弹出 */ }
+  }
+
   const findNodeLevel = (td: any[], targetId: number, currentLevel = 0): number => {
     for (const node of td) {
       if (node.value === targetId)
@@ -170,14 +279,14 @@ export default function SystemMenu() {
         const level = values.parentId === 0 ? 0 : findNodeLevel(selectMenuList, values.parentId, 0) + 1
         // 按钮节点清空前端名称，后端算出的 path 为空串，路由表里不会出现它
         const submitData = values.type === 2
-          ? { ...values, level, name: '', hidden: 1 }
-          : { ...values, level }
+          ? { ...values, name: '', hidden: 1 }
+          : { ...values }
         if (isEdit) {
-          await updateMenu(editMenuId!, submitData)
+          await updateMenu(editMenuId!, { ...submitData, level })
           message.success('修改成功！')
         }
         else {
-          await createMenu(submitData)
+          await createMenu({ ...submitData, level, sort: nextSort(values.parentId) })
           message.success('添加成功！')
         }
         setDialogOpen(false)
@@ -301,18 +410,22 @@ export default function SystemMenu() {
       <Card>
         <div className={styles.toolbar}>
           {hasPermission('system:menu:add') && <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>添加导航</Button>}
+          <span className={styles.sortHint}>拖拽行可在同级内调整排序，新增节点自动追加到末尾</span>
         </div>
         <div className={styles.tableWrapper}>
-          <Table
-            columns={columns}
-            dataSource={treeData}
-            loading={listLoading}
-            pagination={false}
-            rowKey="id"
-            expandable={{
-              defaultExpandedRowKeys: [1, 23],
-            }}
-          />
+          <DragDropProvider onDragEnd={handleSortEnd}>
+            <Table
+              columns={columns}
+              dataSource={treeData}
+              loading={listLoading}
+              pagination={false}
+              rowKey="id"
+              components={tableComponents}
+              expandable={{
+                defaultExpandedRowKeys: [1, 23],
+              }}
+            />
+          </DragDropProvider>
         </div>
       </Card>
 
@@ -369,12 +482,9 @@ export default function SystemMenu() {
             label="权限标识"
             name="permission"
             rules={isButton ? FORM_RULES.permission : []}
-            extra="服务端接口鉴权与前端按钮显隐都认这个标识"
+            extra="选项来自服务端路由权限表；服务端接口鉴权与前端按钮显隐都认这个标识"
           >
-            <Input allowClear placeholder={isButton ? '必填，形如 system:user:add' : '选填，形如 system:user:list'} />
-          </Form.Item>
-          <Form.Item label="排序" name="sort">
-            <InputNumber style={{ width: '100%' }} />
+            <Select showSearch allowClear optionFilterProp="value" options={permissionOptions} placeholder={isButton ? '必填，请选择权限标识' : '选填，请选择权限标识'} />
           </Form.Item>
         </Form>
       </Modal>

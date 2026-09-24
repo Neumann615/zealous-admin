@@ -12,6 +12,7 @@
   },
   "peerDependencies": {
     "@ant-design/icons": "catalog:",
+    "@zealous-admin/auth": "workspace:*",
     "antd": "catalog:",
     "antd-style": "catalog:",
     "dayjs": "*",

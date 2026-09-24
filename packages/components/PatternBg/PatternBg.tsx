@@ -31,8 +31,7 @@ export interface PatternBgProps {
   children?: React.ReactNode
 }
 
-function getMaskStyle(direction: MaskDirection, size: number) {
-  const fadeSize = `${size * 4}px`
+function getMaskStyle(direction: MaskDirection) {
   const fadePercent = '12%'
 
   switch (direction) {
@@ -120,8 +119,8 @@ const moveRight = keyframes({
   },
 })
 
-const useStyles = createStyles(({ token, css }) => {
-  const defaultColor = token.colorBorder
+const useStyles = createStyles(({ token, css }, color?: string) => {
+  const defaultColor = color ?? token.colorBorder
 
   return {
     wrapper: css`
@@ -179,9 +178,9 @@ export function PatternBg({
   style,
   children,
 }: PatternBgProps) {
-  const { styles, cx } = useStyles()
+  const { styles, cx } = useStyles(color)
 
-  const maskStyle = getMaskStyle(maskDirection, size)
+  const maskStyle = getMaskStyle(maskDirection)
   const animationName = animationMap[animationDirection]
   const animationDuration = animationName ? `${1.5 * (24 / size)}s` : undefined
 

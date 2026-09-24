@@ -1,6 +1,6 @@
 import { getDb } from '../../db'
-import { NotFoundError } from '../../lib/errors'
 import { now } from '../../lib/date'
+import { NotFoundError } from '../../lib/errors'
 
 function mapMenu(row: any) {
   if (!row)
@@ -32,6 +32,22 @@ function updateDescendantPaths(parentId: number) {
     db.prepare('UPDATE za_menu SET path = ? WHERE id = ?').run(newPath, child.id)
     updateDescendantPaths(child.id)
   }
+}
+
+/**
+ * 子节点增删 / 移动后重算父级类型：
+ * 有路由型子节点（目录 / 菜单）即为目录，只剩按钮或没有子节点则回到菜单。
+ * 按钮只承载权限标识，不参与导航结构，不应把页面菜单推成目录。
+ */
+function refreshParentType(parentId: number) {
+  if (!parentId)
+    return
+  const db = getDb()
+  const parent = db.prepare('SELECT id FROM za_menu WHERE id = ?').get(parentId)
+  if (!parent)
+    return
+  const routeChildCount = (db.prepare('SELECT COUNT(*) AS count FROM za_menu WHERE parent_id = ? AND (type IS NULL OR type <> 2)').get(parentId) as any).count
+  db.prepare('UPDATE za_menu SET type = ? WHERE id = ?').run(routeChildCount > 0 ? 0 : 1, parentId)
 }
 
 export function getMenuList(parentId = 0) {
@@ -79,6 +95,8 @@ export function createMenu(data: { parentId?: number, title: string, level?: num
     'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, type, permission, create_time, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ).run(pid, data.title, data.level || 0, data.sort || 0, menuName, data.icon || null, data.hidden || 0, menuPath, data.component || null, data.type ?? 1, data.permission || null, now(), data.activeIcon || null)
 
+  refreshParentType(pid)
+
   return mapMenu(db.prepare('SELECT * FROM za_menu WHERE id = ?').get(result.lastInsertRowid))
 }
 
@@ -91,17 +109,32 @@ export function updateMenu(id: number, data: { parentId?: number, title?: string
   const sets: string[] = []
   const values: any[] = []
 
-  if (data.parentId !== undefined) { sets.push('parent_id = ?'); values.push(data.parentId) }
-  if (data.title !== undefined) { sets.push('title = ?'); values.push(data.title) }
-  if (data.level !== undefined) { sets.push('level = ?'); values.push(data.level) }
-  if (data.sort !== undefined) { sets.push('sort = ?'); values.push(data.sort) }
-  if (data.name !== undefined) { sets.push('name = ?'); values.push(data.name) }
-  if (data.icon !== undefined) { sets.push('icon = ?'); values.push(data.icon) }
-  if (data.hidden !== undefined) { sets.push('hidden = ?'); values.push(data.hidden) }
-  if (data.component !== undefined) { sets.push('component = ?'); values.push(data.component) }
-  if (data.type !== undefined) { sets.push('type = ?'); values.push(data.type) }
-  if (data.permission !== undefined) { sets.push('permission = ?'); values.push(data.permission || null) }
-  if (data.activeIcon !== undefined) { sets.push('active_icon = ?'); values.push(data.activeIcon) }
+  const assign = (column: string, value: unknown) => {
+    sets.push(`${column} = ?`)
+    values.push(value)
+  }
+  if (data.parentId !== undefined)
+    assign('parent_id', data.parentId)
+  if (data.title !== undefined)
+    assign('title', data.title)
+  if (data.level !== undefined)
+    assign('level', data.level)
+  if (data.sort !== undefined)
+    assign('sort', data.sort)
+  if (data.name !== undefined)
+    assign('name', data.name)
+  if (data.icon !== undefined)
+    assign('icon', data.icon)
+  if (data.hidden !== undefined)
+    assign('hidden', data.hidden)
+  if (data.component !== undefined)
+    assign('component', data.component)
+  if (data.type !== undefined)
+    assign('type', data.type)
+  if (data.permission !== undefined)
+    assign('permission', data.permission || null)
+  if (data.activeIcon !== undefined)
+    assign('active_icon', data.activeIcon)
 
   const newName = data.name !== undefined ? (data.name || '') : existing.name
   const newParentId = data.parentId !== undefined ? data.parentId : existing.parent_id
@@ -123,12 +156,17 @@ export function updateMenu(id: number, data: { parentId?: number, title?: string
   if (needsPathUpdate)
     updateDescendantPaths(id)
 
+  if (data.parentId !== undefined && data.parentId !== existing.parent_id) {
+    refreshParentType(existing.parent_id)
+    refreshParentType(data.parentId)
+  }
+
   return mapMenu(db.prepare('SELECT * FROM za_menu WHERE id = ?').get(id))
 }
 
 export function deleteMenu(id: number) {
   const db = getDb()
-  const existing = db.prepare('SELECT id FROM za_menu WHERE id = ?').get(id)
+  const existing = db.prepare('SELECT id, parent_id FROM za_menu WHERE id = ?').get(id) as any
   if (!existing)
     throw new NotFoundError('菜单不存在')
 
@@ -145,6 +183,7 @@ export function deleteMenu(id: number) {
   try {
     db.prepare(`DELETE FROM za_role_menu_relation WHERE menu_id IN (${placeholders})`).run(...targetIds)
     db.prepare(`DELETE FROM za_menu WHERE id IN (${placeholders})`).run(...targetIds)
+    refreshParentType(existing.parent_id)
     db.exec('COMMIT')
   }
   catch (error) {

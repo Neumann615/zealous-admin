@@ -25,10 +25,14 @@
 - 校验补齐：编码集 / 编码项 code 增加格式与长度约束（前后端一致），name / description / shortName 增加 max；管理页表单同步 pattern 提示。
 - `toTreeData` 补返回类型注解，消除前端 tsc 的两个 TS7023/7024 错误。
 - 路由参数改走 `validate(schema, 'params')`（中间件补 params 回写），删除手写的 `getPositiveId`；校验失败的 body code 由 500 修正为 400。
+- 管理页补齐按钮级权限：编码集 / 编码项的新增、编辑、删除入口按权限渲染，状态开关无权限时禁用。
+- 编码项状态支持行内启停（`changeOptionSetItemStatusAPI`），批量导入弹窗接入 `createOptionSetItemsAPI`，支持「编码,名称,简称」逐行导入与行级校验提示。
+- 修复编码集分页筛选 SQL：keyword / status 统计查询补表别名，列表查询补 `WHERE` 拼接；此前带筛选条件会 500。
 
 ### 1.4 测试与基建
 - 新增 `service/src/modules/auth/session.test.ts`（4 例）：禁用账号登录、sub=id、登出吊销、整体吊销。
-- `service/src/modules/metadata/service.test.ts` 增 3 例：null 移回根级、null 清空描述、被表单引用的编码集拒绝删除。
+- `service/src/modules/metadata/service.test.ts` 增 4 例：null 移回根级、null 清空描述、被表单引用的编码集拒绝删除、keyword 分页筛选。
+- 新增 `e2e/metadata.spec.ts`（2 例）：编码集 / 编码项闭环（新增、挂子项、清空父级、批量导入、行内启停、编辑、删除）与表单引用删除保护。
 - `vite.config.ts` 增加 vitest `test.exclude: ['e2e/**']`：此前 `pnpm test` 会把 Playwright 用例当 vitest suite 收集并报错，CI 的单元测试步骤必然红。
 - 验证矩阵：service tsc 0 错；前端 tsc 剩余错误全部位于历史遗留文件（layout/components）；vitest 38 文件 497 例全过；Playwright 全量 22/22；API 冒烟覆盖新校验、清空、引用保护、登出后令牌 401。
 
@@ -36,6 +40,6 @@
 
 - ~~**服务端授权仍然缺失**~~ → 已于同日落地，见 `2026-09-23-db-driven-routing-and-permissions.md`：权限标识挂菜单（`za_menu.type` / `permission`）、`getUserInfo` 下发 `permissions`、服务端 `permissionMiddleware` 做路由级强制、前端按标识隐藏入口。
 - ~~`convertMenus` 隐藏节点连带丢弃子树~~ → 已修：隐藏节点自身不进导航、可见后代上提一层，同时跳过按钮节点（`type = 2`）。
-- 元数据管理页缺 E2E 覆盖；批量导入（`createOptionSetItemsAPI`）与行内启停（`changeOptionSetItemStatusAPI`）前端尚未接上。
+- ~~元数据管理页缺 E2E 覆盖；批量导入（`createOptionSetItemsAPI`）与行内启停（`changeOptionSetItemStatusAPI`）前端尚未接上~~ → 已于 2026-09-24 落地，见上文字档与 `e2e/metadata.spec.ts`。
 - token 仍存 localStorage（XSS 可取），内网后台为已知取舍；升级 httpOnly cookie + CSRF 属会话方案重构。
-- 登录接口无限流 / 验证码，公网部署前建议补。
+- ~~登录接口无限流 / 验证码，公网部署前建议补~~ → 已于 2026-09-24 落地：持久化用户名/IP 双维度限流 + 服务端滑块验证码，见 `2026-09-24-login-hardening-and-audit.md`。

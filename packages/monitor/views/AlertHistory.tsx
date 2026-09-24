@@ -1,6 +1,7 @@
 import type { MonitorQueryParams } from '../components/MonitorFilterBar'
 import type { AlertHistoryQuery, AlertHistoryRecord } from '../contracts/monitor'
 import { CheckCircleOutlined, CloseCircleOutlined, RedoOutlined, SettingOutlined } from '@ant-design/icons'
+import { useHasPermission } from '@zealous-admin/auth'
 import { App, Button, Descriptions, Select, Space, Table, Tag, Tooltip } from 'antd'
 import { createStyles } from 'antd-style'
 import { useCallback, useState } from 'react'
@@ -66,6 +67,7 @@ interface BaseQuery {
 export function AlertHistory() {
   const { styles } = useStyles()
   const { message } = App.useApp()
+  const hasPermission = useHasPermission()
   const [base, setBase] = useState<BaseQuery | null>(null)
   const [currentApp, setCurrentApp] = useState<MonitorQueryParams['app'] | null>(null)
   const [alertType, setAlertType] = useState('')
@@ -255,6 +257,8 @@ export function AlertHistory() {
                 fixed: 'right',
                 render: (_v, row) => {
                   const hasFailed = row.channels.length === 0 || row.channels.some(item => !item.ok)
+                  if (!hasPermission('monitor:alert:retry'))
+                    return null
                   return (
                     <Button
                       size="small"

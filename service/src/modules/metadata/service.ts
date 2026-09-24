@@ -86,11 +86,12 @@ export function getMetadataSetPage(params: {
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
-  const total = (db.prepare(`SELECT COUNT(*) AS count FROM za_metadata_set ${where}`).get(...args) as any).count
+  const total = (db.prepare(`SELECT COUNT(*) AS count FROM za_metadata_set AS set_table ${where}`).get(...args) as any).count
   const list = toCamelCaseList<MetadataSet>(db.prepare(
     `SELECT set_table.*, COUNT(item.id) AS item_count
      FROM za_metadata_set set_table
      LEFT JOIN za_metadata_item item ON item.set_id = set_table.id
+     ${where}
      GROUP BY set_table.id
      ORDER BY set_table.id LIMIT ? OFFSET ?`,
   ).all(...args, params.pageSize, (params.pageNum - 1) * params.pageSize) as any[])
@@ -167,7 +168,7 @@ function collectSetCodes(value: unknown, out = new Set<string>()): Set<string> {
 
 /** 表单契约以 setCode 引用元数据；删除前拦截，避免表单渲染期才报错 */
 export function findFormReferences(setCode: string): Array<{ id: number, name: string }> {
-  const rows = getDb().prepare('SELECT id, name, schema FROM za_form WHERE schema LIKE ?').all('%setCode%') as Array<{ id: number, name: string, schema: string | null }>
+  const rows = getDb().prepare('SELECT id, name, schema FROM za_form WHERE deleted_at IS NULL AND schema LIKE ?').all('%setCode%') as Array<{ id: number, name: string, schema: string | null }>
   const references: Array<{ id: number, name: string }> = []
   for (const row of rows) {
     if (!row.schema)

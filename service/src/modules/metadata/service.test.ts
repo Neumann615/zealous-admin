@@ -17,6 +17,12 @@ describe('metadata local service', () => {
     expect(page.list.find(item => item.code === 'GENDER')?.itemCount).toBe(4)
   })
 
+  it('按关键词查询编码集分页', () => {
+    const page = metadataService.getMetadataSetPage({ keyword: 'GENDER', pageNum: 1, pageSize: 10 })
+    expect(page.list.map(item => item.code)).toContain('GENDER')
+    expect(page.list.every(item => item.code.includes('GENDER') || item.name.includes('GENDER'))).toBe(true)
+  })
+
   it('停用编码集后默认取不到编码项，管理端仍可显式读取', async () => {
     const created = metadataService.createMetadataSet({
       code: 'TEST_DISABLED',

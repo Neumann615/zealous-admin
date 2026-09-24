@@ -9,6 +9,10 @@ export function getMenuAll() {
   return authRequest<MenuRecord[]>({ url: '/menu/all' })
 }
 
+export function getMenuPermissionCodes() {
+  return authRequest<string[]>({ url: '/menu/permissions' })
+}
+
 export function getMenuList(parentId?: number) {
   return authRequest<MenuRecord[]>({ url: '/menu/list', params: parentId !== undefined ? { parentId } : undefined })
 }

@@ -11,6 +11,7 @@
   },
   "peerDependencies": {
     "@ant-design/icons": "catalog:",
+    "@zealous-admin/auth": "workspace:*",
     "antd": "catalog:",
     "react": "catalog:"
   }

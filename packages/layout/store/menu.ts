@@ -1,10 +1,28 @@
+import type { LayoutConfig, MenuData } from '../types/config'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import defaultSetting from '../defaultSetting'
 
-export const useMenuStore = create(
+type MenuState = LayoutConfig['menu'] & {
+  // 运行时状态（不持久化）
+  mobileDrawerOpen: boolean
+  setMobileDrawerOpen: (open: boolean) => void
+  menuCurrentKeys: string[]
+  menuData: MenuData
+  mainNavData: MenuData
+  mainNavCurrentKeys: string[]
+  openKeys: string[]
+  setMenuData: (data: MenuData) => void
+  setMainNavData: (data: MenuData) => void
+  changeSubMenuCollapse: () => void
+  setMenuCurrentKeys: (keyPath: string[]) => void
+  setMainNavCurrentKeys: (keyPath: string[]) => void
+  setOpenKeys: (keyPath: string[]) => void
+}
+
+export const useMenuStore = create<MenuState>()(
   persist(
-    (set: any) => ({
+    set => ({
       ...defaultSetting.menu,
       // 运行时状态（不持久化）
       mobileDrawerOpen: false,
@@ -14,11 +32,11 @@ export const useMenuStore = create(
       mainNavData: [],
       mainNavCurrentKeys: [],
       openKeys: [],
-      setMenuData: (data: any[]) => set(() => ({ menuData: data })),
-      setMainNavData: (data: any[]) =>
+      setMenuData: (data: MenuData) => set(() => ({ menuData: data })),
+      setMainNavData: (data: MenuData) =>
         set(() => ({ mainNavData: data })),
       changeSubMenuCollapse: () =>
-        set((state: any) => ({ subMenuCollapse: !state.subMenuCollapse })),
+        set(state => ({ subMenuCollapse: !state.subMenuCollapse })),
       setMenuCurrentKeys: (keyPath: string[]) =>
         set(() => ({ menuCurrentKeys: keyPath })),
       setMainNavCurrentKeys: (keyPath: string[]) =>

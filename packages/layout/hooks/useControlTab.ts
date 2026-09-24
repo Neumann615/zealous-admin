@@ -151,9 +151,7 @@ export function useControlTab() {
       if (['side', 'head'].includes(menuType)) {
         for (let i = 0; i < mainNavData.length; i++) {
           if (mainNavData[i].key === menuKeys[1]) {
-            useMenuStore.setState((store: any) => ({
-              menuData: mainNavData[i].children,
-            }))
+            useMenuStore.setState({ menuData: mainNavData[i].children ?? [] })
           }
         }
       }
@@ -223,7 +221,7 @@ export function useControlTab() {
           openTab(tabs[delIndex].menuData)
         }
       }
-      setTabs(tabs.filter((item: any, index: number) => index >= delIndex))
+      setTabs(tabs.filter((_item: any, index: number) => index >= delIndex))
     }
     else if (action === 'right') {
       if (nowTab.tabId !== tabId) {
@@ -231,7 +229,7 @@ export function useControlTab() {
           openTab(tabs[delIndex].menuData)
         }
       }
-      setTabs(tabs.filter((item: any, index: number) => index <= delIndex))
+      setTabs(tabs.filter((_item: any, index: number) => index <= delIndex))
     }
     else if (action === 'other') {
       if (nowTab.tabId !== tabId) {

@@ -10,6 +10,7 @@
     }
   },
   "peerDependencies": {
+    "@dnd-kit/react": "catalog:",
     "react": "catalog:",
     "zustand": "catalog:"
   }

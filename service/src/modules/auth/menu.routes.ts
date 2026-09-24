@@ -1,14 +1,19 @@
 import { Router } from 'express'
-import { asyncHandler } from '../../middleware/error'
-import { authMiddleware } from '../../middleware/auth'
-import { permissionMiddleware } from '../../middleware/permission'
-import { validate } from '../../middleware/validate'
 import { success } from '../../lib/response'
-import {
-  getMenuList, getMenuTree, getAllMenus, getMenuById,
-  createMenu, updateMenu, deleteMenu,
-} from './menu.service'
+import { authMiddleware } from '../../middleware/auth'
+import { asyncHandler } from '../../middleware/error'
+import { getPermissionCodes, permissionMiddleware } from '../../middleware/permission'
+import { validate } from '../../middleware/validate'
 import { createMenuSchema, updateMenuSchema } from './menu.schema'
+import {
+  createMenu,
+  deleteMenu,
+  getAllMenus,
+  getMenuById,
+  getMenuList,
+  getMenuTree,
+  updateMenu,
+} from './menu.service'
 
 const router = Router()
 
@@ -28,6 +33,10 @@ router.get('/menu/tree', asyncHandler(async (_req, res) => {
 router.get('/menu/all', asyncHandler(async (_req, res) => {
   const menus = getAllMenus()
   res.json(success(menus))
+}))
+
+router.get('/menu/permissions', asyncHandler(async (_req, res) => {
+  res.json(success(getPermissionCodes()))
 }))
 
 router.post('/menu/create', validate(createMenuSchema), asyncHandler(async (req, res) => {

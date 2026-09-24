@@ -1,3 +1,4 @@
+import type { LayoutMessages } from '@zealous-admin/locales/index'
 import type {
   ExpireMode,
   LayoutScope,
@@ -19,7 +20,7 @@ import {
   yellow,
 } from '@ant-design/colors'
 
-export const themeColorList = [
+export const themeColorList: string[] = [
   // "#000",
   blue.primary,
   red.primary,
@@ -33,10 +34,12 @@ export const themeColorList = [
   magenta.primary,
   lime.primary,
   gold.primary,
-]
+].filter((color): color is string => color !== undefined)
 
 // 选项列表统一使用 labelKey（i18n 文案 key），由消费方（如 ConfigPanel）用 useT 动态翻译
-export const themeTypeList: Array<{ labelKey: string, value: ThemeType }> = [
+type LabelKey = keyof LayoutMessages
+
+export const themeTypeList: Array<{ labelKey: LabelKey, value: ThemeType }> = [
   { labelKey: 'configPanel.common.default', value: 'default' },
   { labelKey: 'configPanel.themeType.illustration', value: 'illustration' },
   { labelKey: 'configPanel.themeType.cartoon', value: 'cartoon' },
@@ -49,7 +52,7 @@ export const themeTypeList: Array<{ labelKey: string, value: ThemeType }> = [
 
 export const menuFillStyleList = ['none', 'radius']
 
-export const breadcrumbStyleList = [
+export const breadcrumbStyleList: Array<{ labelKey: LabelKey, value: 'default' | 'modern' }> = [
   {
     labelKey: 'configPanel.common.default',
     value: 'default',
@@ -60,7 +63,7 @@ export const breadcrumbStyleList = [
   },
 ]
 
-export const topBarPositionList = [
+export const topBarPositionList: Array<{ labelKey: LabelKey, value: 'static' | 'fixed' | 'sticky' }> = [
   {
     labelKey: 'configPanel.common.default',
     value: 'static',
@@ -75,7 +78,7 @@ export const topBarPositionList = [
   },
 ]
 
-export const tabBarPositionList = [
+export const tabBarPositionList: Array<{ labelKey: LabelKey, value: 'static' | 'fixed' | 'sticky' }> = [
   {
     labelKey: 'configPanel.common.default',
     value: 'static',
@@ -90,7 +93,7 @@ export const tabBarPositionList = [
   },
 ]
 
-export const tabBarStyleList = [
+export const tabBarStyleList: Array<{ labelKey: LabelKey, value: 'default' | 'card' | 'block' }> = [
   {
     labelKey: 'configPanel.common.default',
     value: 'default',
@@ -106,7 +109,7 @@ export const tabBarStyleList = [
 ]
 
 export const tabBarDblClickEventTypeList: Array<{
-  labelKey: string
+  labelKey: LabelKey
   value: TabBarDblClickEventType
 }> = [
   {
@@ -131,7 +134,7 @@ export const tabBarDblClickEventTypeList: Array<{
   },
 ]
 
-export const tabBarWidthTypeList = [
+export const tabBarWidthTypeList: Array<{ labelKey: LabelKey, value: 'fixed' | 'auto' | 'auto-min' | 'auto-max' }> = [
   {
     labelKey: 'configPanel.common.fixed',
     value: 'fixed',
@@ -150,7 +153,7 @@ export const tabBarWidthTypeList = [
   },
 ]
 
-export const expireModeList: Array<{ labelKey: string, value: ExpireMode }> = [
+export const expireModeList: Array<{ labelKey: LabelKey, value: ExpireMode }> = [
   {
     labelKey: 'configPanel.app.expireMode.logout',
     value: 'logout',
@@ -161,7 +164,7 @@ export const expireModeList: Array<{ labelKey: string, value: ExpireMode }> = [
   },
 ]
 
-export const layoutScopeList: Array<{ labelKey: string, value: LayoutScope }> = [
+export const layoutScopeList: Array<{ labelKey: LabelKey, value: LayoutScope }> = [
   {
     labelKey: 'configPanel.app.layoutScope.inside',
     value: 'inside',
@@ -185,7 +188,11 @@ export const storageTypeList = [
   },
 ]
 
-export const transitionTypeList = [
+export const transitionTypeList: Array<{
+  labelKey: LabelKey
+  value: 'fade-in' | 'fade-up' | 'fade-down' | 'fade-left' | 'fade-right'
+  classNames: Record<'appear' | 'appearActive' | 'enter' | 'enterActive' | 'exit' | 'exitActive', string>
+}> = [
   {
     labelKey: 'configPanel.transition.fadeIn',
     value: 'fade-in',
@@ -255,7 +262,7 @@ transitionTypeList.forEach((transition: any) => {
 
 export { transitionTypeSet }
 
-export const menuTypeList = [
+export const menuTypeList: Array<{ labelKey: LabelKey, value: 'side' | 'only-side' | 'head' | 'only-head' | 'simple' }> = [
   {
     labelKey: 'configPanel.menuType.side',
     value: 'side',

@@ -2,13 +2,16 @@ import type { ColumnsType } from 'antd/es/table'
 import type { MetadataItem, MetadataSet } from './contracts/metadata'
 import type { MetadataFieldOption } from './runtime/option-set'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
-import { App, Button, Card, Col, Empty, Form, Input, InputNumber, List, Modal, Radio, Row, Select, Space, Switch, Table, Tag, Tree, TreeSelect } from 'antd'
+import { useHasPermission } from '@zealous-admin/auth'
+import { App, Button, Card, Col, Empty, Form, Input, InputNumber, List, Modal, Radio, Row, Select, Space, Switch, Table, Tree, TreeSelect } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { normalizeOptionSet } from './runtime/option-set'
 import {
+  changeOptionSetItemStatusAPI,
   changeOptionSetStatusAPI,
   createOptionSetAPI,
   createOptionSetItemAPI,
+  createOptionSetItemsAPI,
   deleteOptionSetAPI,
   deleteOptionSetItemAPI,
   getOptionSetByCodeAPI,
@@ -43,6 +46,22 @@ const STATUS_OPTIONS = [
   { label: '启用', value: 1 },
   { label: '停用', value: 0 },
 ]
+
+/** 批量导入行格式：编码,名称,简称（简称可空），每行一条编码项 */
+function parseBatchItems(text: string): Array<{ code: string, name: string, shortName?: string, sortOrder: number, status: 1 }> {
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+  return lines.map((line, index) => {
+    const parts = line.split(',').map(part => part.trim())
+    const [code, name, shortName] = parts
+    if (!code || !name)
+      throw new Error(`第 ${index + 1} 行需要「编码,名称」两列`)
+    if (!ITEM_CODE_PATTERN.test(code))
+      throw new Error(`第 ${index + 1} 行编码「${code}」不合法（仅允许字母、数字、中划线与下划线）`)
+    if (code.length > 80 || name.length > 80)
+      throw new Error(`第 ${index + 1} 行编码或名称超过 80 字符`)
+    return { code, name, shortName: shortName || undefined, sortOrder: index, status: 1 as const }
+  })
+}
 
 function collectDescendantIds(items: MetadataItem[], rootId: number): number[] {
   const childMap = new Map<number, number[]>()
@@ -82,6 +101,7 @@ function toTreeData(options: MetadataFieldOption[]): MetadataTreeNode[] {
 
 export function MetadataManager() {
   const { message, modal } = App.useApp()
+  const hasPermission = useHasPermission()
   const [setForm] = Form.useForm<SetFormValues>()
   const [itemForm] = Form.useForm<ItemFormValues>()
 
@@ -108,6 +128,10 @@ export function MetadataManager() {
   const [editingItem, setEditingItem] = useState<MetadataItem>()
   const [itemParentId, setItemParentId] = useState<number>()
   const [itemSaving, setItemSaving] = useState(false)
+
+  const [batchModalOpen, setBatchModalOpen] = useState(false)
+  const [batchText, setBatchText] = useState('')
+  const [batchSaving, setBatchSaving] = useState(false)
 
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewShape, setPreviewShape] = useState<PreviewShape>('flat')
@@ -181,6 +205,7 @@ export function MetadataManager() {
       render: (_, row) => (
         <Switch
           checked={row.status === 1}
+          disabled={!hasPermission('metadata:set:edit')}
           onChange={checked => changeSetStatus(row, checked)}
         />
       ),
@@ -192,27 +217,31 @@ export function MetadataManager() {
       align: 'center',
       render: (_, row) => (
         <Space size={0}>
-          <Button
-            type="link"
-            size="small"
-            onClick={(event) => {
-              event.stopPropagation()
-              openSetModal(row)
-            }}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            danger
-            onClick={(event) => {
-              event.stopPropagation()
-              deleteSet(row)
-            }}
-          >
-            删除
-          </Button>
+          {hasPermission('metadata:set:edit') && (
+            <Button
+              type="link"
+              size="small"
+              onClick={(event) => {
+                event.stopPropagation()
+                openSetModal(row)
+              }}
+            >
+              编辑
+            </Button>
+          )}
+          {hasPermission('metadata:set:delete') && (
+            <Button
+              type="link"
+              size="small"
+              danger
+              onClick={(event) => {
+                event.stopPropagation()
+                deleteSet(row)
+              }}
+            >
+              删除
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -228,7 +257,14 @@ export function MetadataManager() {
       dataIndex: 'status',
       width: 90,
       align: 'center',
-      render: (_, row) => <Tag color={row.status === 1 ? 'success' : 'default'}>{row.status === 1 ? '启用' : '停用'}</Tag>,
+      render: (_, row) => (
+        <Switch
+          size="small"
+          checked={row.status === 1}
+          disabled={!hasPermission('metadata:item:edit')}
+          onChange={checked => changeItemStatus(row, checked)}
+        />
+      ),
     },
     {
       title: '操作',
@@ -237,9 +273,9 @@ export function MetadataManager() {
       align: 'center',
       render: (_, row) => (
         <Space size={0}>
-          <Button type="link" size="small" onClick={() => openItemModal(undefined, row)}>新增子项</Button>
-          <Button type="link" size="small" onClick={() => openItemModal(row)}>编辑</Button>
-          <Button type="link" size="small" danger onClick={() => deleteItem(row)}>删除</Button>
+          {hasPermission('metadata:item:add') && <Button type="link" size="small" onClick={() => openItemModal(undefined, row)}>新增子项</Button>}
+          {hasPermission('metadata:item:edit') && <Button type="link" size="small" onClick={() => openItemModal(row)}>编辑</Button>}
+          {hasPermission('metadata:item:delete') && <Button type="link" size="small" danger onClick={() => deleteItem(row)}>删除</Button>}
         </Space>
       ),
     },
@@ -404,6 +440,53 @@ export function MetadataManager() {
     })
   }
 
+  const changeItemStatus = async (row: MetadataItem, checked: boolean) => {
+    try {
+      await changeOptionSetItemStatusAPI(row.id, checked ? 1 : 0)
+      message.success('状态已更新')
+      await loadItems(selectedSet)
+    }
+    catch (error) {
+      message.error(error instanceof Error ? error.message : '状态更新失败')
+    }
+  }
+
+  const openBatchModal = () => {
+    setBatchText('')
+    setBatchModalOpen(true)
+  }
+
+  const saveBatchItems = async () => {
+    if (!selectedSet)
+      return
+    let parsed: ReturnType<typeof parseBatchItems>
+    try {
+      parsed = parseBatchItems(batchText)
+    }
+    catch (error) {
+      message.warning(error instanceof Error ? error.message : '批量导入内容不合法')
+      return
+    }
+    if (!parsed.length) {
+      message.warning('请先输入要导入的编码项')
+      return
+    }
+    setBatchSaving(true)
+    try {
+      await createOptionSetItemsAPI(selectedSet.code, parsed)
+      message.success(`已导入 ${parsed.length} 条编码项`)
+      setBatchModalOpen(false)
+      await loadItems(selectedSet)
+      await loadSets()
+    }
+    catch (error) {
+      message.error(error instanceof Error ? error.message : '批量导入失败')
+    }
+    finally {
+      setBatchSaving(false)
+    }
+  }
+
   return (
     <Card
       title="元数据管理"
@@ -466,7 +549,8 @@ export function MetadataManager() {
                   extra={(
                     <Space>
                       <Button disabled={selectedSet.status !== 1} onClick={() => setPreviewOpen(true)}>预览</Button>
-                      <Button type="primary" disabled={selectedSet.status !== 1} onClick={() => openItemModal()}>新增编码项</Button>
+                      {hasPermission('metadata:item:add') && <Button type="primary" disabled={selectedSet.status !== 1} onClick={() => openItemModal()}>新增编码项</Button>}
+                      {hasPermission('metadata:item:add') && <Button disabled={selectedSet.status !== 1} onClick={openBatchModal}>批量导入</Button>}
                     </Space>
                   )}
                 >
@@ -518,6 +602,24 @@ export function MetadataManager() {
             <Radio.Group options={STATUS_OPTIONS} optionType="button" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={`批量导入编码项：${selectedSet?.name ?? ''}`}
+        open={batchModalOpen}
+        confirmLoading={batchSaving}
+        onOk={() => void saveBatchItems()}
+        onCancel={() => setBatchModalOpen(false)}
+        okText="导入"
+        destroyOnHidden
+      >
+        <div className="mb-2 text-xs opacity-70">每行一条，格式：编码,名称,简称（简称可省略），导入后自动按行序追加排序。</div>
+        <Input.TextArea
+          rows={10}
+          value={batchText}
+          onChange={event => setBatchText(event.target.value)}
+          placeholder={'male,男\nfemale,女\nunknown,未知,其他'}
+        />
       </Modal>
 
       <Modal

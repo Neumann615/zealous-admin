@@ -1,6 +1,7 @@
 import type { ColumnsType } from 'antd/es/table'
 import type { MonitorApp, QueueStats } from '../contracts/monitor'
 import { PlusOutlined, ReloadOutlined, SettingOutlined } from '@ant-design/icons'
+import { useHasPermission } from '@zealous-admin/auth'
 import {
   App,
   Button,
@@ -86,6 +87,7 @@ const QUEUE_FIELDS: Array<{ name: keyof AppFormValues, label: string, min: numbe
 export function AppManager() {
   const { styles } = useStyles()
   const { message, modal } = App.useApp()
+  const hasPermission = useHasPermission()
   const [form] = Form.useForm<AppFormValues>()
   const { apps, loading, reload } = useMonitorApps({ consumeOnly: false })
 
@@ -247,7 +249,7 @@ export function AppManager() {
       dataIndex: 'operatingState',
       width: 90,
       render: (value: number, record) => (
-        <Switch checked={value === 1} onChange={checked => toggleState(record, checked)} />
+        <Switch checked={value === 1} disabled={!hasPermission('monitor:app:edit')} onChange={checked => toggleState(record, checked)} />
       ),
     },
     {
@@ -258,6 +260,7 @@ export function AppManager() {
           <Switch
             size="small"
             checked={record.props?.enableQueue === true}
+            disabled={!hasPermission('monitor:app:edit')}
             onChange={checked => toggleQueue(record, checked)}
           />
           <Tooltip title={record.props?.enableQueue ? '异步批量落库' : '同步写库'}>
@@ -287,8 +290,8 @@ export function AppManager() {
       fixed: 'right',
       render: (_v, record) => (
         <Space size={4}>
-          <Button size="small" type="link" onClick={() => openEdit(record)}>编辑</Button>
-          <Button size="small" type="link" icon={<SettingOutlined />} onClick={() => setAlertApp(record)}>消费配置</Button>
+          {hasPermission('monitor:app:edit') && <Button size="small" type="link" onClick={() => openEdit(record)}>编辑</Button>}
+          {hasPermission('monitor:app:edit') && <Button size="small" type="link" icon={<SettingOutlined />} onClick={() => setAlertApp(record)}>消费配置</Button>}
           <Button size="small" type="link" onClick={() => setStatsApp(record)}>队列状态</Button>
         </Space>
       ),
@@ -308,7 +311,7 @@ export function AppManager() {
           />
           <Button icon={<ReloadOutlined />} onClick={reload}>刷新</Button>
         </Space>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>创建应用</Button>
+        {hasPermission('monitor:app:add') && <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>创建应用</Button>}
       </div>
 
       <Table
