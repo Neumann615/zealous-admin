@@ -77,6 +77,8 @@ export const ROUTE_PERMISSIONS: RoutePermissionRule[] = [
   { method: 'POST', path: '/form/delete', permission: ['form:form:delete'] },
   { method: 'GET', path: '/form/versions', permission: ['form:form:list'] },
   { method: 'POST', path: '/form/render', permission: ['form:form:list', 'form:data:list', 'form:data:submit'] },
+  { method: 'POST', path: '/form/files/upload', permission: ['form:data:submit', 'form:form:edit'] },
+  { method: 'GET', path: '/form/files/:objectId', permission: ['form:data:list', 'form:data:submit', 'form:form:edit'] },
   { method: 'POST', path: '/form/data/submit', permission: ['form:data:submit'] },
   { method: 'GET', path: '/form/data/list', permission: ['form:data:list'] },
   { method: 'GET', path: '/form/data/detail', permission: ['form:data:list'] },

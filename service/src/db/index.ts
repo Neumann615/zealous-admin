@@ -141,6 +141,21 @@ export function initDb() {
     )
   `)
 
+  // 表单文件主存：内容进 SQLite BLOB，表单值只引用随机 objectId，避免把 File 对象 JSON 化
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS za_form_file (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      object_id TEXT NOT NULL UNIQUE,
+      file_name TEXT NOT NULL,
+      file_type TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      content BLOB NOT NULL,
+      uploaded_by TEXT,
+      create_time TEXT
+    )
+  `)
+  db.exec('CREATE INDEX IF NOT EXISTS idx_form_file_object_id ON za_form_file (object_id)')
+
   db.exec('CREATE INDEX IF NOT EXISTS idx_form_data_form ON za_form_data (form_id, id)')
   db.exec('CREATE INDEX IF NOT EXISTS idx_form_version_form ON za_form_version (form_id, schema_version)')
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_version_draft ON za_form_version (form_id) WHERE status = 0')

@@ -71,7 +71,7 @@
 
 实现要点：
 
-- `upload` 通过 `formItemProps: { valuePropName: 'fileList', getValueFromEvent }` 让 `Upload` 受控；`beforeUpload` 返回 `false`，**本期只做前端收集，不落服务端**，上传地址与鉴权待后续扩展。`buttonText` 是自定义键，其余 props 透传给 antd `Upload`。
+- `upload` 通过 `formItemProps: { valuePropName: 'fileList', getValueFromEvent }` 让 `Upload` 受控；宿主可用 `registerFormFileTransport` 注入授权上传 / 下载实现，提交值收敛为 `objectId + 文件元数据`。`buttonText` 是自定义键，其余 props 透传给 antd `Upload`。
 - `money` 基于 `InputNumber`，自定义键 `thousands` 换算成 `formatter` / `parser` 实现千分位。
 - `icon` 直接复用 `@zealous-admin/components` 的 `ZaIconPicker`（value/onChange 受控，`Form.Item` 注入即可用）。
 - `formula` 使用安全算术 DSL，不支持任意 JavaScript；表达式和运行结果见 [FieldSchema · `computed`](/form-designer/schema#fieldschema)。

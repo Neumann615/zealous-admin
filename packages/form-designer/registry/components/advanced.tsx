@@ -1,6 +1,8 @@
 import { CalculatorOutlined, MoneyCollectOutlined, SmileOutlined, UploadOutlined } from '@ant-design/icons'
 import { ZaIconPicker } from '@zealous-admin/components/index'
 import { Button, Input, InputNumber, Upload } from 'antd'
+import type { UploadFile, UploadProps } from 'antd'
+import { getFormFileTransport, type FormFileValue } from '../../renderer/fileTransport'
 import { registerComponent } from '../registry'
 import { fieldSchema } from './helpers'
 
@@ -9,22 +11,108 @@ function normFileList(e: any) {
   return Array.isArray(e) ? e : e?.fileList
 }
 
+function isFileValue(value: any): value is FormFileValue {
+  return !!value && typeof value === 'object'
+    && typeof value.objectId === 'string'
+    && typeof value.fileName === 'string'
+}
+
+function toDisplayFileList(value: UploadFile[] | FormFileValue | undefined): UploadFile[] {
+  if (!value) {
+    return []
+  }
+  const values = Array.isArray(value) ? value : [value]
+  return values.map((item) => {
+    if (isFileValue(item)) {
+      return {
+        uid: item.objectId,
+        name: item.fileName,
+        size: item.fileSize,
+        status: 'done' as const,
+        response: item,
+      }
+    }
+    return item as UploadFile
+  })
+}
+
+function toStoredFileList(fileList: UploadFile[]) {
+  const files = fileList.map((item) => {
+    if (isFileValue(item.response)) {
+      return item.response
+    }
+    return undefined
+  })
+  if (files.some(item => item === undefined)) {
+    return fileList
+  }
+  const values = files as FormFileValue[]
+  if (!values.length) {
+    return []
+  }
+  return values
+}
+
+function UploadField({
+  buttonText,
+  fileList,
+  onChange,
+  ...rest
+}: {
+  buttonText?: string
+  fileList?: Array<UploadFile<any>>
+  onChange?: (fileList: Array<UploadFile<any>>) => void
+} & UploadProps) {
+  const transport = getFormFileTransport()
+
+  const customRequest: UploadProps['customRequest'] = async (options) => {
+    if (!transport) {
+      options.onError?.(new Error('宿主未注册文件上传接口'), options.file)
+      return
+    }
+    try {
+      const metadata = await transport.upload(options.file as File)
+      options.onSuccess?.(metadata, options.file)
+    }
+    catch (error) {
+      options.onError?.(error instanceof Error ? error : new Error(String(error)), options.file)
+    }
+  }
+
+  return (
+    <Upload
+      {...rest}
+      fileList={toDisplayFileList(fileList)}
+      beforeUpload={() => !!transport}
+      customRequest={customRequest}
+      onChange={(event) => {
+        const fileList = normFileList(event) ?? []
+        onChange?.(toStoredFileList(fileList) as any)
+      }}
+      onPreview={(file) => {
+        const metadata = isFileValue(file.response) ? file.response : undefined
+        if (metadata) {
+          void transport?.download?.(metadata)
+        }
+      }}
+    >
+      <Button icon={<UploadOutlined />} disabled={rest.disabled}>{buttonText || '点击上传'}</Button>
+    </Upload>
+  )
+}
+
 registerComponent({
   type: 'upload',
   title: '上传',
   menu: 'advanced',
   icon: <UploadOutlined />,
   defaultSchema: () => fieldSchema('upload', '上传', { listType: 'text', buttonText: '点击上传', maxCount: 1 }),
-  // 本期只做前端收集（beforeUpload 返回 false，不落服务端）；上传地址与鉴权后续按需扩展
+  // 宿主可通过 registerFormFileTransport 注入上传实现；未注入时保持前端收集兼容行为
   formItemProps: { valuePropName: 'fileList', getValueFromEvent: normFileList },
   render: (schema) => {
     // buttonText 是自定义键，其余（listType/multiple/maxCount/accept 等）透传给 Upload
     const { buttonText, ...rest } = schema.props
-    return (
-      <Upload {...rest} beforeUpload={() => false}>
-        <Button icon={<UploadOutlined />}>{buttonText || '点击上传'}</Button>
-      </Upload>
-    )
+    return <UploadField {...rest} buttonText={buttonText} />
   },
   configForm: [
     { field: 'props.buttonText', label: '按钮文案', type: 'input' },

@@ -1,13 +1,14 @@
 import { configureAuthClient, convertMenus, registerPageKeys, useUserStore } from '@zealous-admin/auth'
-import { registerFormDataApis } from '@zealous-admin/form-designer/index'
+import { registerFormDataApis, registerFormFileTransport } from '@zealous-admin/form-designer/index'
 import { http, LayoutProvider } from '@zealous-admin/layout/index'
 import { configureMetadataClient, getOptionSetByCodeAPI, normalizeOptionSet } from '@zealous-admin/metadata/index'
 import { monitor } from '@zealous-admin/monitor-sdk/index'
 import { configureMonitorClient } from '@zealous-admin/monitor/index'
+import { createDownloadUrl } from '@zealous-admin/utils/index'
 import { Spin } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useRoutes } from 'react-router'
-import { renderFormAPI } from './apis/form'
+import { downloadFormFileAPI, renderFormAPI, uploadFormFileAPI } from './apis/form'
 import { knownPageKeys } from './registry/pages'
 import { buildRoutes } from './registry/routes'
 import './App.css'
@@ -65,6 +66,17 @@ registerFormDataApis({
   __render: async (params, signal) => {
     const res = await renderFormAPI(params, signal)
     return res.data.renderContract
+  },
+})
+
+registerFormFileTransport({
+  upload: async (file, signal) => {
+    const res = await uploadFormFileAPI(file, signal)
+    return res.data
+  },
+  download: async (file) => {
+    const res = await downloadFormFileAPI(file.objectId)
+    createDownloadUrl(res.data, file.fileName)
   },
 })
 
