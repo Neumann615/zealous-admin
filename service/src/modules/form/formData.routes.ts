@@ -10,7 +10,7 @@ import {
 } from './formData.service'
 import {
   submitFormDataSchema, updateStatusSchema,
-  deleteFormDataSchema, formDataPageQuerySchema,
+  deleteFormDataSchema, formDataDetailQuerySchema, formDataPageQuerySchema,
 } from './formData.schema'
 
 const router = Router()
@@ -28,8 +28,8 @@ router.get('/form/data/list', validate(formDataPageQuerySchema, 'query'), asyncH
   res.json(success(result))
 }))
 
-router.get('/form/data/detail', asyncHandler(async (req, res) => {
-  const detail = getFormDataDetail(Number(req.query.id))
+router.get('/form/data/detail', validate(formDataDetailQuerySchema, 'query'), asyncHandler(async (req, res) => {
+  const detail = getFormDataDetail((req.query as any).id)
   res.json(success(detail))
 }))
 

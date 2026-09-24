@@ -60,6 +60,9 @@ export default defineConfig({
   },
   test: {
     // e2e 由 Playwright 负责，vitest 只跑单元/组件测试
+    env: {
+      DB_PATH: ':memory:',
+    },
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
   },
 })

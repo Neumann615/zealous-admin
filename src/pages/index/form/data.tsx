@@ -1,17 +1,19 @@
 import type { FormSchema } from '@zealous-admin/form-designer/index'
-import type { FormDataRecord, FormRecord } from '@/apis/form'
+import type { FormDataRecord, FormRecord, FormVersionRecord } from '@/apis/form'
 import { DeleteOutlined, DownloadOutlined, EyeOutlined, ReloadOutlined, RollbackOutlined, StopOutlined } from '@ant-design/icons'
+import { useHasPermission } from '@zealous-admin/auth'
 import { FormRenderer, parseSchema } from '@zealous-admin/form-designer/index'
 import { useAppMessage } from '@zealous-admin/layout/index'
 import { createDownloadUrl } from '@zealous-admin/utils/index'
-import { Button, Card, Drawer, Empty, Input, Space, Table, Tag, Tooltip } from 'antd'
+import { Button, Card, Drawer, Empty, Input, Select, Space, Spin, Table, Tag, Tooltip } from 'antd'
 import { createStyles } from 'antd-style'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { deleteFormDataAPI, getFormDataListAPI, getFormDetailAPI, updateFormDataStatusAPI } from '@/apis/form'
+import { deleteFormDataAPI, getFormDataListAPI, getFormDetailAPI, renderFormAPI, updateFormDataStatusAPI } from '@/apis/form'
 
 const PAGE_SIZE = 10
+const EXPORT_PAGE_SIZE = 100
 const CELL_MAX = 40
 
 interface Row extends FormDataRecord {
@@ -59,18 +61,32 @@ function stringifyCell(value: any): string {
   return String(value)
 }
 
-/** CSV 单元格转义 */
+/** CSV 单元格转义，并阻止常见公式注入 */
 function csvCell(value: any): string {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`
+  let text = stringifyCell(value)
+  if (/^[=+\-@]/.test(text)) {
+    text = `'${text}`
+  }
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+function versionStatusName(status: number) {
+  if (status === 1) {
+    return '已发布'
+  }
+  return status === 2 ? '已退役' : '草稿'
 }
 
 export default function FormDataPage() {
   const { message, modal } = useAppMessage()
+  const hasPermission = useHasPermission()
   const { styles } = useStyles()
   const [searchParams] = useSearchParams()
   const formId = Number(searchParams.get('id'))
 
   const [form, setForm] = useState<FormRecord | null>(null)
+  const [versions, setVersions] = useState<FormVersionRecord[]>([])
+  const [selectedVersionId, setSelectedVersionId] = useState<number>()
   const [schema, setSchema] = useState<FormSchema | null>(null)
   const [list, setList] = useState<Row[]>([])
   const [total, setTotal] = useState(0)
@@ -79,6 +95,8 @@ export default function FormDataPage() {
   const [pageNum, setPageNum] = useState(1)
   const [submitter, setSubmitter] = useState('')
   const [detail, setDetail] = useState<Row | null>(null)
+  const [detailSchema, setDetailSchema] = useState<FormSchema | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
 
   const toRows = (records: FormDataRecord[]): Row[] => records.map((item) => {
     let values: Record<string, any> | null = null
@@ -89,13 +107,13 @@ export default function FormDataPage() {
     return { ...item, values }
   })
 
-  const load = async (page = pageNum, kw = submitter) => {
+  const load = async (page = pageNum, kw = submitter, versionId = selectedVersionId) => {
     if (!formId) {
       return
     }
     setLoading(true)
     try {
-      const res = await getFormDataListAPI({ formId, pageNum: page, pageSize: PAGE_SIZE, submitter: kw })
+      const res = await getFormDataListAPI({ formId, versionId, pageNum: page, pageSize: PAGE_SIZE, submitter: kw })
       setList(toRows(res.data.list))
       setTotal(res.data.total)
       setPageNum(page)
@@ -106,7 +124,7 @@ export default function FormDataPage() {
     }
   }
 
-  // 表单结构决定动态列，解析失败时退化为原始数据展示
+  // 数据页默认使用当前发布版；切换版本后再按对应 Schema 生成动态列
   useEffect(() => {
     if (!formId) {
       return
@@ -114,21 +132,28 @@ export default function FormDataPage() {
     getFormDetailAPI(formId)
       .then((res) => {
         setForm(res.data)
-        if (res.data.schema) {
-          try {
-            setSchema(parseSchema(res.data.schema))
-          }
-          catch (e: any) {
-            message.warning(`表单结构解析失败，已退化为原始数据展示（${e?.message}）`)
-          }
-        }
+        setVersions(res.data.versions ?? [])
+        setSelectedVersionId(res.data.currentVersionId ?? res.data.versionId)
       })
       .catch(() => { /* 失败提示由 http 拦截器统一弹出 */ })
   }, [formId])
 
   useEffect(() => {
-    load(1)
-  }, [formId])
+    if (selectedVersionId === undefined)
+      return
+    load(1, '', selectedVersionId)
+    getFormDetailAPI(formId, selectedVersionId)
+      .then((res) => {
+        try {
+          setSchema(parseSchema(res.data.schema))
+        }
+        catch (e: any) {
+          setSchema(null)
+          message.warning(`表单结构解析失败，已退化为原始数据展示（${e?.message}）`)
+        }
+      })
+      .catch(() => setSchema(null))
+  }, [formId, selectedVersionId])
 
   const fields = useMemo(
     () => (schema?.children ?? [])
@@ -175,12 +200,43 @@ export default function FormDataPage() {
     })
   }
 
-  // 导出全量 CSV（前端拼装，带 BOM 以便 Excel 正确识别中文）
+  const openDetail = async (row: Row) => {
+    setDetail(row)
+    setDetailSchema(null)
+    setDetailLoading(true)
+    try {
+      const res = await renderFormAPI({ formId, dataId: row.id })
+      setDetailSchema(parseSchema(res.data.renderContract.schema))
+    }
+    catch { /* 失败提示由 http 拦截器统一弹出 */ }
+    finally {
+      setDetailLoading(false)
+    }
+  }
+
+  // 按当前筛选条件导出全量 CSV；接口单页上限 100，需分页聚合
   const handleExport = async () => {
     setExporting(true)
     try {
-      const res = await getFormDataListAPI({ formId, pageNum: 1, pageSize: 9999, submitter })
-      const rows = toRows(res.data.list)
+      const firstRes = await getFormDataListAPI({
+        formId,
+        versionId: selectedVersionId,
+        pageNum: 1,
+        pageSize: EXPORT_PAGE_SIZE,
+        submitter,
+      })
+      const rows = toRows(firstRes.data.list)
+      const pageCount = Math.ceil(firstRes.data.total / EXPORT_PAGE_SIZE)
+      for (let page = 2; page <= pageCount; page += 1) {
+        const res = await getFormDataListAPI({
+          formId,
+          versionId: selectedVersionId,
+          pageNum: page,
+          pageSize: EXPORT_PAGE_SIZE,
+          submitter,
+        })
+        rows.push(...toRows(res.data.list))
+      }
       if (!rows.length) {
         message.warning('暂无数据可导出')
         return
@@ -195,7 +251,9 @@ export default function FormDataPage() {
         return cells.map(csvCell).join(',')
       })
       const csv = `\uFEFF${[header.map(csvCell).join(','), ...lines].join('\r\n')}`
-      const filename = `${form?.name || 'form'}-数据-${dayjs().format('YYYYMMDDHHmm')}.csv`
+      const selectedVersion = versions.find(item => item.id === selectedVersionId)
+      const versionLabel = selectedVersion ? `-v${selectedVersion.schemaVersion}` : ''
+      const filename = `${form?.name || 'form'}${versionLabel}-数据-${dayjs().format('YYYYMMDDHHmm')}.csv`
       createDownloadUrl(new Blob([csv], { type: 'text/csv;charset=utf-8' }), filename)
       message.success(`已导出 ${rows.length} 条`)
     }
@@ -252,16 +310,18 @@ export default function FormDataPage() {
       align: 'center' as const,
       render: (_: any, row: Row) => (
         <Space size="small">
-          <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => setDetail(row)}>查看</Button>
-          <Button
-            size="small"
-            type="link"
-            icon={row.status === 1 ? <StopOutlined /> : <RollbackOutlined />}
-            onClick={() => handleToggleStatus(row)}
-          >
-            {row.status === 1 ? '作废' : '恢复'}
-          </Button>
-          <Button size="small" type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(row)}>删除</Button>
+          <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => openDetail(row)}>查看</Button>
+          {hasPermission('form:data:edit') && (
+            <Button
+              size="small"
+              type="link"
+              icon={row.status === 1 ? <StopOutlined /> : <RollbackOutlined />}
+              onClick={() => handleToggleStatus(row)}
+            >
+              {row.status === 1 ? '作废' : '恢复'}
+            </Button>
+          )}
+          {hasPermission('form:data:delete') && <Button size="small" type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(row)}>删除</Button>}
         </Space>
       ),
     },
@@ -276,15 +336,30 @@ export default function FormDataPage() {
       <Card title={form ? `表单数据：${form.name}` : '表单数据'}>
         {form?.description && <div className={styles.desc}>{form.description}</div>}
         <div className={styles.toolbar}>
-          <Input.Search
-            placeholder="搜索提交人"
-            allowClear
-            onSearch={(v) => {
-              setSubmitter(v)
-              load(1, v)
-            }}
-            style={{ width: 220 }}
-          />
+          <Space wrap>
+            <Select
+              value={selectedVersionId}
+              placeholder="选择表单版本"
+              style={{ minWidth: 180 }}
+              options={versions.map(item => ({
+                value: item.id,
+                label: `v${item.schemaVersion}（${versionStatusName(item.status)}）`,
+              }))}
+              onChange={(value) => {
+                setSubmitter('')
+                setSelectedVersionId(value)
+              }}
+            />
+            <Input.Search
+              placeholder="搜索提交人"
+              allowClear
+              onSearch={(v) => {
+                setSubmitter(v)
+                load(1, v)
+              }}
+              style={{ width: 220 }}
+            />
+          </Space>
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => load()}>刷新</Button>
             <Button type="primary" icon={<DownloadOutlined />} loading={exporting} onClick={handleExport}>导出 CSV</Button>
@@ -312,9 +387,13 @@ export default function FormDataPage() {
         title={detail ? `提交详情 #${detail.id}` : '提交详情'}
         width={720}
         open={!!detail}
-        onClose={() => setDetail(null)}
+        onClose={() => {
+          setDetail(null)
+          setDetailSchema(null)
+        }}
       >
-        {detail && (
+        {detailLoading && <Spin />}
+        {detail && !detailLoading && (
           <>
             <Space style={{ marginBottom: 16 }} wrap>
               <Tag>
@@ -331,11 +410,11 @@ export default function FormDataPage() {
               </Tag>
               {detail.status === 0 && <Tag color="red">已作废</Tag>}
             </Space>
-            {schema
+            {detailSchema
               ? (
                   <FormRenderer
                     key={detail.id}
-                    schema={{ ...schema, form: { ...schema.form, disabled: true } }}
+                    schema={{ ...detailSchema, form: { ...detailSchema.form, disabled: true } }}
                     initialValues={detail.values || {}}
                     showActions={false}
                   />

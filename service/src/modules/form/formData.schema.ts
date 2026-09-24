@@ -14,8 +14,13 @@ export const deleteFormDataSchema = z.object({
   id: z.number().min(1, '缺少 id'),
 })
 
+export const formDataDetailQuerySchema = z.object({
+  id: z.coerce.number().min(1, '缺少 id'),
+})
+
 export const formDataPageQuerySchema = z.object({
   formId: z.coerce.number().min(1, '缺少 formId'),
+  versionId: z.coerce.number().min(1).optional(),
   submitter: z.string().optional(),
   status: z.union([z.string(), z.coerce.number()]).optional(),
   pageNum: z.coerce.number().min(1).default(1),

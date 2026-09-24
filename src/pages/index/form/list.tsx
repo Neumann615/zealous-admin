@@ -1,11 +1,20 @@
 import type { FormRecord } from '@/apis/form'
 import { DatabaseOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SendOutlined, StopOutlined } from '@ant-design/icons'
+import { useHasPermission } from '@zealous-admin/auth'
 import { useAppMessage, useControlTab } from '@zealous-admin/layout/index'
 import { Button, Card, Input, Modal, Space, Table, Tag } from 'antd'
 import { createStyles } from 'antd-style'
 import dayjs from 'dayjs'
 import { useEffect, useState } from 'react'
-import { createFormAPI, deleteFormAPI, getFormListAPI, updateFormAPI } from '@/apis/form'
+import {
+  createFormAPI,
+  createFormDraftAPI,
+  deleteFormAPI,
+  getFormListAPI,
+  publishFormAPI,
+  retireFormAPI,
+  reviveFormAPI,
+} from '@/apis/form'
 
 const useStyles = createStyles(({ token, css }) => ({
   toolbar: css`
@@ -26,6 +35,7 @@ const useStyles = createStyles(({ token, css }) => ({
 
 export default function FormListPage() {
   const { message, modal } = useAppMessage()
+  const hasPermission = useHasPermission()
   const { openTab } = useControlTab()
   const { styles } = useStyles()
 
@@ -69,11 +79,26 @@ export default function FormListPage() {
     openTab({ key: `/form/design?id=${res.data.id}`, label: `设计-${name.trim()}` })
   }
 
+  const openDesign = async (row: FormRecord) => {
+    if (row.status === 1 && !row.hasDraft)
+      await createFormDraftAPI(row.id)
+    openTab({ key: `/form/design?id=${row.id}`, label: `设计-${row.name}` })
+  }
+
   const handleToggleStatus = async (row: FormRecord) => {
-    const next = row.status === 1 ? 0 : 1
     try {
-      await updateFormAPI({ id: row.id, status: next })
-      message.success(next === 1 ? '已发布' : '已下线')
+      if (row.status === 0) {
+        await publishFormAPI(row.id)
+        message.success('发布成功')
+      }
+      else if (row.status === 1) {
+        await retireFormAPI(row.id)
+        message.success('已退役')
+      }
+      else {
+        await reviveFormAPI(row.id)
+        message.success('已恢复')
+      }
       load()
     }
     catch { /* 失败提示由 http 拦截器统一弹出 */ }
@@ -82,7 +107,9 @@ export default function FormListPage() {
   const handleDelete = (row: FormRecord) => {
     modal.confirm({
       title: '提示',
-      content: `确认删除表单「${row.name}」?`,
+      content: row.status === 1 && row.hasDraft
+        ? `确认放弃表单「${row.name}」的未发布草稿?`
+        : `确认删除草稿表单「${row.name}」?`,
       onOk: async () => {
         await deleteFormAPI(row.id)
         message.success('删除成功!')
@@ -103,7 +130,9 @@ export default function FormListPage() {
       key: 'status',
       width: 90,
       align: 'center' as const,
-      render: (s: number) => (s === 1 ? <Tag color="green">已发布</Tag> : <Tag>草稿</Tag>),
+      render: (s: number) => (s === 1
+        ? <Tag color="green">已发布</Tag>
+        : s === 2 ? <Tag color="default">已退役</Tag> : <Tag>草稿</Tag>),
     },
     {
       title: '更新时间',
@@ -120,13 +149,15 @@ export default function FormListPage() {
       align: 'center' as const,
       render: (_: any, row: FormRecord) => (
         <Space size="small">
-          <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openTab({ key: `/form/design?id=${row.id}`, label: `设计-${row.name}` })}>设计</Button>
-          <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => openTab({ key: `/form/render?id=${row.id}`, label: `渲染-${row.name}` })}>渲染</Button>
-          <Button size="small" type="link" icon={<DatabaseOutlined />} onClick={() => openTab({ key: `/form/data?id=${row.id}`, label: `数据-${row.name}` })}>数据</Button>
-          <Button size="small" type="link" icon={row.status === 1 ? <StopOutlined /> : <SendOutlined />} onClick={() => handleToggleStatus(row)}>
-            {row.status === 1 ? '下线' : '发布'}
-          </Button>
-          <Button size="small" type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(row)}>删除</Button>
+          {hasPermission('form:form:edit') && row.status !== 2 && <Button size="small" type="link" icon={<EditOutlined />} onClick={() => openDesign(row)}>设计</Button>}
+          {hasPermission('form:form:list') && row.status === 1 && <Button size="small" type="link" icon={<EyeOutlined />} onClick={() => openTab({ key: `/form/render?id=${row.id}`, label: `渲染-${row.name}` })}>渲染</Button>}
+          {hasPermission('form:data:list') && <Button size="small" type="link" icon={<DatabaseOutlined />} onClick={() => openTab({ key: `/form/data?id=${row.id}`, label: `数据-${row.name}` })}>数据</Button>}
+          {hasPermission('form:form:edit') && (
+            <Button size="small" type="link" icon={row.status === 1 ? <StopOutlined /> : <SendOutlined />} onClick={() => handleToggleStatus(row)}>
+              {row.status === 1 ? '退役' : row.status === 2 ? '恢复' : '发布'}
+            </Button>
+          )}
+          {hasPermission('form:form:delete') && (row.status === 0 || row.hasDraft) && <Button size="small" type="link" danger icon={<DeleteOutlined />} onClick={() => handleDelete(row)}>{row.status === 1 ? '放弃草稿' : '删除'}</Button>}
         </Space>
       ),
     },
@@ -145,7 +176,7 @@ export default function FormListPage() {
             }}
             style={{ width: 220 }}
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>新建表单</Button>
+          {hasPermission('form:form:add') && <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>新建表单</Button>}
         </div>
         <div className={styles.tableWrapper}>
           <Table

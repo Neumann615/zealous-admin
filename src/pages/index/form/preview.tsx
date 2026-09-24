@@ -66,7 +66,7 @@ export default function FormPreviewPage() {
     getFormListAPI({ pageNum: 1, pageSize: 100 })
       .then((res) => {
         setList(res.data.list)
-        const first = res.data.list.find((item: FormOption) => item.status === 1) || res.data.list[0]
+        const first = res.data.list.find((item: FormOption) => item.status === 1)
         if (first)
           setSelectedId(first.id)
       })
