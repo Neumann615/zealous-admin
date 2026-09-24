@@ -4,6 +4,7 @@ import { toCamelCase, toCamelCaseList } from '../../lib/camel'
 import { BadRequestError, ConflictError, NotFoundError } from '../../lib/errors'
 import { now } from '../../lib/date'
 import { createEmptyFormContract, parseFormContract, type FormContract } from './form.contract'
+import { assertAssignableCategory, getCategoryBranchIds } from './formCategory.service'
 
 interface FormRow {
   id: number
@@ -14,6 +15,7 @@ interface FormRow {
   status: number
   version: number | null
   permissions: string | null
+  category_id: number | null
   current_version_id: number | null
   deleted_at: string | null
   create_time: string | null
@@ -132,7 +134,7 @@ function versionSummary(row: VersionRow) {
   }
 }
 
-export function getFormList(params: { keyword?: string, status?: number, pageNum: number, pageSize: number }) {
+export function getFormList(params: { keyword?: string, status?: number, categoryId?: number, pageNum: number, pageSize: number }) {
   const db = getDb()
   const offset = (params.pageNum - 1) * params.pageSize
   const where = ['f.deleted_at IS NULL']
@@ -145,10 +147,16 @@ export function getFormList(params: { keyword?: string, status?: number, pageNum
     where.push('f.status = ?')
     args.push(params.status)
   }
+  if (params.categoryId !== undefined) {
+    const categoryIds = getCategoryBranchIds(params.categoryId)
+    where.push(`f.category_id IN (${categoryIds.map(() => '?').join(',')})`)
+    args.push(...categoryIds)
+  }
   const whereSql = where.join(' AND ')
   const listSql = `
     SELECT
       f.*,
+      category.name AS category_name,
       current_version.schema_version AS current_schema_version,
       draft_version.id AS draft_version_id,
       draft_version.schema_version AS draft_schema_version,
@@ -156,6 +164,7 @@ export function getFormList(params: { keyword?: string, status?: number, pageNum
       (SELECT COUNT(*) FROM za_form_version v WHERE v.form_id = f.id AND v.status <> 3) AS version_count,
       (SELECT COUNT(*) FROM za_form_data d WHERE d.form_id = f.id) AS data_count
     FROM za_form f
+    LEFT JOIN za_form_category category ON category.id = f.category_id
     LEFT JOIN za_form_version current_version ON current_version.id = f.current_version_id
     LEFT JOIN za_form_version draft_version ON draft_version.form_id = f.id AND draft_version.status = 0
     WHERE ${whereSql}
@@ -206,17 +215,18 @@ export function getFormDetail(id: number, versionId?: number) {
   })
 }
 
-export function createForm(data: { name: string, description?: string, schema?: string }) {
+export function createForm(data: { name: string, description?: string, schema?: string, categoryId?: number | null }) {
   const db = getDb()
   const nowStr = now()
   return withTransaction(() => {
+    assertAssignableCategory(data.categoryId)
     let formKey = generateFormKey()
     while (db.prepare('SELECT 1 FROM za_form WHERE form_key = ? AND deleted_at IS NULL').get(formKey))
       formKey = generateFormKey()
     const formResult = db.prepare(`
-      INSERT INTO za_form (form_key, name, description, schema, status, version, permissions, create_time, update_time)
-      VALUES (?, ?, ?, '', 0, 1, NULL, ?, ?)
-    `).run(formKey, data.name, data.description || '', nowStr, nowStr)
+      INSERT INTO za_form (form_key, name, description, schema, status, version, permissions, category_id, create_time, update_time)
+      VALUES (?, ?, ?, '', 0, 1, NULL, ?, ?, ?)
+    `).run(formKey, data.name, data.description || '', data.categoryId ?? null, nowStr, nowStr)
     const formId = Number(formResult.lastInsertRowid)
     const schema = data.schema || ''
     const contract = schema ? parseFormContract(schema).contract : createEmptyFormContract()
@@ -237,12 +247,15 @@ export function updateForm(data: {
   id: number
   name?: string
   description?: string
+  categoryId?: number | null
   schema?: string
   lockVersion?: number
 }) {
   const db = getDb()
   return withTransaction(() => {
     const form = getForm(data.id)
+    if (data.categoryId !== undefined)
+      assertAssignableCategory(data.categoryId)
     if (data.schema !== undefined) {
       const draft = getDraftVersion(form.id)
       if (!draft)
@@ -258,12 +271,27 @@ export function updateForm(data: {
         WHERE id = ?
       `).run(data.schema, JSON.stringify(contract.contract), now(), draft.id)
     }
-    if (data.name !== undefined || data.description !== undefined) {
+    if (data.name !== undefined || data.description !== undefined || data.categoryId !== undefined) {
+      const updates = ['update_time = ?']
+      const metadataArgs: any[] = [now()]
+      if (data.name !== undefined) {
+        updates.push('name = ?')
+        metadataArgs.push(data.name)
+      }
+      if (data.description !== undefined) {
+        updates.push('description = ?')
+        metadataArgs.push(data.description)
+      }
+      if (data.categoryId !== undefined) {
+        updates.push('category_id = ?')
+        metadataArgs.push(data.categoryId)
+      }
+      metadataArgs.push(form.id)
       db.prepare(`
         UPDATE za_form
-        SET name = COALESCE(?, name), description = COALESCE(?, description), update_time = ?
+        SET ${updates.join(', ')}
         WHERE id = ?
-      `).run(data.name ?? null, data.description ?? null, now(), form.id)
+      `).run(...metadataArgs)
     }
     const next = getDraftVersion(form.id) ?? getCurrentVersion(form.id)
     syncLegacyColumns(form.id, next)

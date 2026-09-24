@@ -18,13 +18,23 @@ import {
   updateForm,
 } from './form.service'
 import {
+  createCategory,
+  deleteCategory,
+  getCategoryTree,
+  updateCategory,
+  updateCategoryStatus,
+} from './formCategory.service'
+import {
+  createFormCategorySchema,
   createFormSchema,
   deleteFormSchema,
   formDetailQuerySchema,
   formIdSchema,
   formPageQuerySchema,
+  formCategoryStatusSchema,
   renderFormSchema,
   updateFormSchema,
+  updateFormCategorySchema,
 } from './form.schema'
 
 const router = Router()
@@ -42,6 +52,27 @@ router.get('/form/detail', validate(formDetailQuerySchema, 'query'), asyncHandle
 
 router.get('/form/versions', validate(formIdSchema, 'query'), asyncHandler(async (req, res) => {
   res.json(success(getFormVersions((req.query as any).id)))
+}))
+
+router.get('/form/categories/tree', asyncHandler(async (_req, res) => {
+  res.json(success(getCategoryTree()))
+}))
+
+router.post('/form/categories/create', validate(createFormCategorySchema), asyncHandler(async (req, res) => {
+  res.json(success(createCategory(req.body), '创建成功'))
+}))
+
+router.post('/form/categories/:id/update', validate(updateFormCategorySchema), asyncHandler(async (req, res) => {
+  res.json(success(updateCategory(Number(req.params.id), req.body), '保存成功'))
+}))
+
+router.post('/form/categories/:id/status', validate(formCategoryStatusSchema), asyncHandler(async (req, res) => {
+  const { status } = req.body
+  res.json(success(updateCategoryStatus(Number(req.params.id), status), status === 1 ? '已启用' : '已停用'))
+}))
+
+router.post('/form/categories/:id/delete', asyncHandler(async (req, res) => {
+  res.json(success(deleteCategory(Number(req.params.id)), '删除成功'))
 }))
 
 router.post('/form/create', validate(createFormSchema), asyncHandler(async (req, res) => {

@@ -20,6 +20,7 @@
 | 表 | 关键列 | 说明 |
 |---|---|---|
 | `za_form` | `form_key`、`current_version_id`、`deleted_at` | 稳定身份、当前/最近生效版本指针、软删除标记 |
+| `za_form_category` | `parent_id`、`name`、`sort_order`、`status` | 最多两级的表单分类树 |
 | `za_form_version` | `schema`、`field_contract`、`status`、`is_current`、`lock_version` | 草稿与发布历史；同一表单最多一个草稿和一个当前版 |
 | `za_form_data` | `form_version_id`、`form_version`、`data` | 提交数据关联版本行；旧 `form_version` 继续保留追溯 |
 
@@ -49,8 +50,20 @@
 | `POST /form/revive` | 恢复已退役表单 |
 | `POST /form/delete` | 纯草稿软删除，或放弃已发布表的草稿 |
 | `GET /form/versions` | 查看版本历史 |
+| `GET /form/categories/tree` | 查看两级分类树 |
+| `POST /form/categories/create` | 新建分类；父级必须启用且不能是二级分类 |
+| `POST /form/categories/:id/update` | 编辑分类名称 / 排序 / 层级 |
+| `POST /form/categories/:id/status` | 启用 / 停用分类 |
+| `POST /form/categories/:id/delete` | 删除无子分类、无表单引用的分类 |
 | `POST /form/data/submit` | 仅当前发布版可提交；写入版本关联 |
 | `POST /form/render` | 新填写取发布版；按 `dataId` 回显时取提交时版本 |
+
+## 分类与检索
+
+- 表单列表支持按名称 / `formKey` 关键字、状态、分类筛选；选择一级分类时会包含其二级分类下的表单。
+- 新建和编辑表单时可选择启用状态的分类；停用分类不会影响已挂载表单，但不能再新挂载。
+- 分类最多两级；同级名称唯一，分类不能挂载到自己或自己的子分类下。
+- 删除分类前必须确认没有子分类和未软删除表单引用。
 
 ## 数据页版本化
 

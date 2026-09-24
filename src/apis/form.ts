@@ -5,6 +5,8 @@ export interface FormRecord {
   id: number
   formKey: string
   name: string
+  categoryId?: number | null
+  categoryName?: string | null
   description: string
   schema: string
   permissions?: string
@@ -25,6 +27,17 @@ export interface FormRecord {
   updateTime: string
   /** 已收集的填写数据条数 */
   dataCount: number
+}
+
+export interface FormCategoryRecord {
+  id: number
+  parentId: number | null
+  name: string
+  sortOrder: number
+  status: number
+  createTime?: string
+  updateTime?: string
+  children?: FormCategoryRecord[]
 }
 
 export interface FormVersionRecord {
@@ -53,7 +66,7 @@ export interface FormDataRecord {
 }
 
 /** 分页获取表单列表 */
-export function getFormListAPI(params: PageParam) {
+export function getFormListAPI(params: PageParam & { status?: number, categoryId?: number }) {
   return http<CommonPage<FormRecord>>({
     url: '/form/list',
     method: 'get',
@@ -71,7 +84,7 @@ export function getFormDetailAPI(id: number, versionId?: number) {
 }
 
 /** 新建表单 */
-export function createFormAPI(data: { name: string, description?: string }) {
+export function createFormAPI(data: { name: string, description?: string, categoryId?: number | null }) {
   return http<{ id: number, formKey: string, versionId: number, schemaVersion: number, lockVersion: number }>({
     url: '/form/create',
     method: 'post',
@@ -80,11 +93,54 @@ export function createFormAPI(data: { name: string, description?: string }) {
 }
 
 /** 更新表单（名称/描述/schema/权限/状态） */
-export function updateFormAPI(data: { id: number, name?: string, description?: string, schema?: string, lockVersion?: number }) {
+export function updateFormAPI(data: { id: number, name?: string, description?: string, categoryId?: number | null, schema?: string, lockVersion?: number }) {
   return http<{ id: number, versionId?: number, lockVersion: number }>({
     url: '/form/update',
     method: 'post',
     data,
+  })
+}
+
+/** 查询表单分类树 */
+export function getFormCategoryTreeAPI() {
+  return http<FormCategoryRecord[]>({
+    url: '/form/categories/tree',
+    method: 'get',
+  })
+}
+
+/** 新建表单分类 */
+export function createFormCategoryAPI(data: { parentId?: number | null, name: string, sortOrder?: number }) {
+  return http<FormCategoryRecord>({
+    url: '/form/categories/create',
+    method: 'post',
+    data,
+  })
+}
+
+/** 更新 / 移动表单分类 */
+export function updateFormCategoryAPI(id: number, data: { parentId?: number | null, name?: string, sortOrder?: number }) {
+  return http<FormCategoryRecord>({
+    url: `/form/categories/${id}/update`,
+    method: 'post',
+    data,
+  })
+}
+
+/** 启用 / 停用表单分类 */
+export function updateFormCategoryStatusAPI(id: number, status: number) {
+  return http<FormCategoryRecord>({
+    url: `/form/categories/${id}/status`,
+    method: 'post',
+    data: { id, status },
+  })
+}
+
+/** 删除表单分类 */
+export function deleteFormCategoryAPI(id: number) {
+  return http<null>({
+    url: `/form/categories/${id}/delete`,
+    method: 'post',
   })
 }
 

@@ -103,8 +103,22 @@ export function initDb() {
       status INTEGER DEFAULT 0,
       version INTEGER DEFAULT 1,
       permissions TEXT,
+      category_id INTEGER,
       current_version_id INTEGER,
       deleted_at TEXT,
+      create_time TEXT,
+      update_time TEXT
+    )
+  `)
+
+  // 表单分类最多两级；叶子分类可挂载表单，删除前校验子分类与表单引用
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS za_form_category (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      parent_id INTEGER REFERENCES za_form_category(id),
+      name TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      status INTEGER NOT NULL DEFAULT 1,
       create_time TEXT,
       update_time TEXT
     )
@@ -143,6 +157,8 @@ export function initDb() {
 
   db.exec('CREATE INDEX IF NOT EXISTS idx_form_data_form ON za_form_data (form_id, id)')
   db.exec('CREATE INDEX IF NOT EXISTS idx_form_version_form ON za_form_version (form_id, schema_version)')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_form_category_parent ON za_form_category (parent_id, sort_order)')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_form_category_id ON za_form (category_id)')
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_version_draft ON za_form_version (form_id) WHERE status = 0')
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_version_current ON za_form_version (form_id) WHERE is_current = 1')
 
@@ -155,6 +171,8 @@ export function initDb() {
     db.exec('ALTER TABLE za_form ADD COLUMN current_version_id INTEGER')
   if (!legacyFormColumnNames.has('deleted_at'))
     db.exec('ALTER TABLE za_form ADD COLUMN deleted_at TEXT')
+  if (!legacyFormColumnNames.has('category_id'))
+    db.exec('ALTER TABLE za_form ADD COLUMN category_id INTEGER')
   db.exec(`UPDATE za_form SET form_key = 'form_' || id WHERE form_key IS NULL OR form_key = ''`)
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_key ON za_form (form_key) WHERE deleted_at IS NULL')
 
