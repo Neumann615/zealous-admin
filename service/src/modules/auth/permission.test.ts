@@ -50,7 +50,7 @@ function runMiddleware(method: string, fullPath: string, permissions: string[]) 
   const [baseUrl, path] = fullPath.startsWith('/monitor') || fullPath.startsWith('/metadata')
     ? [fullPath.slice(0, fullPath.indexOf('/', 1)), fullPath.slice(fullPath.indexOf('/', 1))]
     : ['', fullPath]
-  const req: any = { method, baseUrl, path, permissions }
+  const req: any = { method, baseUrl, path, permissions, ip: '127.0.0.1', headers: {} }
   const res = fakeRes()
   let passed = false
   const next: NextFunction = () => {
@@ -107,9 +107,13 @@ describe('接口权限中间件', () => {
   })
 
   it('缺少权限返回 403', () => {
+    const db = getDb()
+    const before = (db.prepare('SELECT COUNT(*) AS count FROM za_monitor_log WHERE title = ?').get('权限拒绝') as { count: number }).count
     const result = runMiddleware('POST', '/admin/delete/9', ['system:user:list'])
+    const after = (db.prepare('SELECT COUNT(*) AS count FROM za_monitor_log WHERE title = ?').get('权限拒绝') as { count: number }).count
     expect(result.passed).toBe(false)
     expect(result.statusCode).toBe(403)
+    expect(after - before).toBe(1)
   })
 
   it('任一权限命中即放行', () => {
@@ -125,6 +129,8 @@ describe('接口权限中间件', () => {
 
   it('白名单接口只做登录校验', () => {
     expect(runMiddleware('GET', '/admin/info', []).passed).toBe(true)
+    expect(runMiddleware('GET', '/admin/captcha', []).passed).toBe(true)
+    expect(runMiddleware('POST', '/admin/captcha/verify', []).passed).toBe(true)
     // 会话接口不能被 /admin/:id 的通配规则误伤，否则非超管登录后拿不到用户信息
     expect(runMiddleware('GET', '/admin/refreshToken', []).passed).toBe(true)
     expect(runMiddleware('POST', '/monitor/collect', []).passed).toBe(true)

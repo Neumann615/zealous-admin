@@ -1,6 +1,7 @@
 export interface LoginReq {
   username: string
   password: string
+  captchaToken?: string
 }
 
 export interface LoginRes {

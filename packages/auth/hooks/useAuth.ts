@@ -5,7 +5,7 @@ export function useLogin() {
   const [loading, setLoading] = useState(false)
   const userLogin = useUserStore(state => state.userLogin)
 
-  const login = useCallback(async (params: { username: string, password: string }) => {
+  const login = useCallback(async (params: { username: string, password: string, captchaToken?: string }) => {
     setLoading(true)
     try {
       await userLogin(params)

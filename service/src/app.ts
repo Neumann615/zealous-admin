@@ -1,3 +1,4 @@
+import process from 'node:process'
 import cors from 'cors'
 import express from 'express'
 import { errorHandler } from './middleware/error'
@@ -13,6 +14,11 @@ import metadataRoutes from './modules/metadata'
 import monitorRoutes from './modules/monitor'
 
 const app = express()
+
+// 反向代理部署时必须配置 TRUST_PROXY（如 loopback、1 或 CIDR），否则限流会把全部用户聚合到代理 IP
+const trustProxy = process.env.TRUST_PROXY
+if (trustProxy)
+  app.set('trust proxy', trustProxy)
 
 // requestId 需在 cors 之前：预检（OPTIONS）响应也要带上，否则前端读不到
 app.use(requestId)

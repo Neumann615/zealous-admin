@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express'
 import { forbidden } from '../lib/response'
+import { recordPermissionDenied } from '../modules/monitor/audit'
 
 /**
  * 接口 → 权限标识映射。
@@ -17,6 +18,9 @@ export interface RoutePermissionRule {
 /** 不做权限校验的接口：会话自身、公开采集入口、公共字典、被其它模块复用的只读查询 */
 export const UNPROTECTED_ROUTES: Array<{ method: string, path: string, reason: string }> = [
   { method: 'POST', path: '/admin/login', reason: '登录前还没有身份' },
+  { method: 'GET', path: '/admin/login/state', reason: '登录前获取是否需要验证码' },
+  { method: 'GET', path: '/admin/captcha', reason: '登录前获取滑块验证码' },
+  { method: 'POST', path: '/admin/captcha/verify', reason: '登录前校验滑块验证码' },
   { method: 'GET', path: '/admin/refreshToken', reason: '会话续期，所有登录用户都需要' },
   { method: 'GET', path: '/admin/info', reason: '会话信息本身就是权限的来源' },
   { method: 'POST', path: '/admin/logout', reason: '登出自己' },
@@ -55,6 +59,7 @@ export const ROUTE_PERMISSIONS: RoutePermissionRule[] = [
   { method: 'GET', path: '/menu/list', permission: ['system:menu:list'] },
   { method: 'GET', path: '/menu/tree', permission: ['system:menu:list', 'system:role:assignMenu'] },
   { method: 'GET', path: '/menu/all', permission: ['system:menu:list', 'system:role:assignMenu'] },
+  { method: 'GET', path: '/menu/permissions', permission: ['system:menu:list'] },
   { method: 'GET', path: '/menu/:id', permission: ['system:menu:list'] },
   { method: 'POST', path: '/menu/create', permission: ['system:menu:add'] },
   { method: 'POST', path: '/menu/update/:id', permission: ['system:menu:edit'] },
@@ -62,11 +67,16 @@ export const ROUTE_PERMISSIONS: RoutePermissionRule[] = [
 
   // 表单设计
   { method: 'GET', path: '/form/list', permission: ['form:form:list'] },
-  { method: 'GET', path: '/form/detail', permission: ['form:form:list'] },
+  { method: 'GET', path: '/form/detail', permission: ['form:form:list', 'form:data:list'] },
   { method: 'POST', path: '/form/create', permission: ['form:form:add'] },
   { method: 'POST', path: '/form/update', permission: ['form:form:edit'] },
+  { method: 'POST', path: '/form/draft', permission: ['form:form:edit'] },
+  { method: 'POST', path: '/form/publish', permission: ['form:form:edit'] },
+  { method: 'POST', path: '/form/retire', permission: ['form:form:edit'] },
+  { method: 'POST', path: '/form/revive', permission: ['form:form:edit'] },
   { method: 'POST', path: '/form/delete', permission: ['form:form:delete'] },
-  { method: 'POST', path: '/form/render', permission: ['form:form:list'] },
+  { method: 'GET', path: '/form/versions', permission: ['form:form:list'] },
+  { method: 'POST', path: '/form/render', permission: ['form:form:list', 'form:data:list', 'form:data:submit'] },
   { method: 'POST', path: '/form/data/submit', permission: ['form:data:submit'] },
   { method: 'GET', path: '/form/data/list', permission: ['form:data:list'] },
   { method: 'GET', path: '/form/data/detail', permission: ['form:data:list'] },
@@ -114,6 +124,11 @@ function toRegExp(path: string): RegExp {
 const compiledRules = ROUTE_PERMISSIONS.map(rule => ({ ...rule, regexp: toRegExp(rule.path) }))
 const compiledUnprotected = UNPROTECTED_ROUTES.map(route => ({ ...route, regexp: toRegExp(route.path) }))
 
+/** 权限标识字典：路由表里登记过的全部标识，供菜单配置下拉选择，杜绝手写打错 */
+export function getPermissionCodes(): string[] {
+  return [...new Set(ROUTE_PERMISSIONS.flatMap(rule => rule.permission))].sort()
+}
+
 /** 白名单优先：否则 /admin/info 这类会话接口会被 /admin/:id 的通配规则误伤 */
 export function isUnprotectedRoute(method: string, path: string): boolean {
   const upper = method.toUpperCase()
@@ -149,5 +164,6 @@ export function permissionMiddleware(req: Request, res: Response, next: NextFunc
     return
   }
 
+  recordPermissionDenied(req, required)
   res.status(403).json(forbidden(`没有相关权限：${required.join(' 或 ')}`))
 }

@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs'
+import path from 'node:path'
 import process from 'node:process'
 import { DatabaseSync } from 'node:sqlite'
 import bcrypt from 'bcryptjs'
@@ -7,9 +8,21 @@ import { prepareMetadataSchema } from '../modules/metadata/schema.js'
 import { prepareMonitor } from '../modules/monitor/index.js'
 
 const dbPath = process.env.DB_PATH || './data/sqlite.db'
-mkdirSync('./data', { recursive: true })
+if (dbPath !== ':memory:')
+  mkdirSync(path.dirname(path.resolve(dbPath)), { recursive: true })
 
 const db = new DatabaseSync(dbPath)
+
+function safeParseJson(value: string | null): unknown {
+  if (!value)
+    return undefined
+  try {
+    return JSON.parse(value)
+  }
+  catch {
+    return undefined
+  }
+}
 
 // WAL 提升读写并发（监控队列与业务写并行）；busy_timeout 兜住 SQLITE_BUSY；foreign_keys 让 schema 里声明的 FK 真正生效
 db.exec('PRAGMA journal_mode = WAL')
@@ -83,12 +96,15 @@ export function initDb() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS za_form (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      form_key TEXT,
       name TEXT NOT NULL,
       description TEXT,
       schema TEXT,
       status INTEGER DEFAULT 0,
       version INTEGER DEFAULT 1,
       permissions TEXT,
+      current_version_id INTEGER,
+      deleted_at TEXT,
       create_time TEXT,
       update_time TEXT
     )
@@ -103,11 +119,85 @@ export function initDb() {
       submitter TEXT,
       status INTEGER DEFAULT 1,
       data TEXT NOT NULL,
+      form_version_id INTEGER REFERENCES za_form_version(id),
       create_time TEXT
     )
   `)
 
+  // 表单版本：published 版本不可变；draft 可继续编辑，历史数据按提交时版本回显
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS za_form_version (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      form_id INTEGER NOT NULL,
+      schema_version INTEGER NOT NULL,
+      schema TEXT NOT NULL,
+      field_contract TEXT NOT NULL,
+      status INTEGER NOT NULL DEFAULT 0,
+      is_current INTEGER NOT NULL DEFAULT 0,
+      lock_version INTEGER NOT NULL DEFAULT 0,
+      create_time TEXT,
+      update_time TEXT,
+      FOREIGN KEY (form_id) REFERENCES za_form(id)
+    )
+  `)
+
   db.exec('CREATE INDEX IF NOT EXISTS idx_form_data_form ON za_form_data (form_id, id)')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_form_version_form ON za_form_version (form_id, schema_version)')
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_version_draft ON za_form_version (form_id) WHERE status = 0')
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_version_current ON za_form_version (form_id) WHERE is_current = 1')
+
+  // 老库升级：补稳定业务键、当前版本指针与软删除标记
+  const legacyFormCols = db.prepare('PRAGMA table_info(za_form)').all() as { name: string }[]
+  const legacyFormColumnNames = new Set(legacyFormCols.map(column => column.name))
+  if (!legacyFormColumnNames.has('form_key'))
+    db.exec('ALTER TABLE za_form ADD COLUMN form_key TEXT')
+  if (!legacyFormColumnNames.has('current_version_id'))
+    db.exec('ALTER TABLE za_form ADD COLUMN current_version_id INTEGER')
+  if (!legacyFormColumnNames.has('deleted_at'))
+    db.exec('ALTER TABLE za_form ADD COLUMN deleted_at TEXT')
+  db.exec(`UPDATE za_form SET form_key = 'form_' || id WHERE form_key IS NULL OR form_key = ''`)
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_key ON za_form (form_key) WHERE deleted_at IS NULL')
+
+  // 老数据迁移：现有单行 schema 生成首个版本行；历史提交先关联到该版本并保留原 version 号追溯
+  const legacyForms = db.prepare(`
+    SELECT id, schema, permissions, status, version
+    FROM za_form
+    WHERE deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM za_form_version WHERE form_id = za_form.id)
+  `).all() as Array<{ id: number, schema: string | null, permissions: string | null, status: number, version: number }>
+  const insertLegacyVersion = db.prepare(`
+    INSERT INTO za_form_version (
+      form_id, schema_version, schema, field_contract, status, is_current, lock_version, create_time, update_time
+    )
+    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
+  `)
+  const linkLegacyForm = db.prepare('UPDATE za_form SET current_version_id = ? WHERE id = ?')
+  const formDataCols = db.prepare('PRAGMA table_info(za_form_data)').all() as { name: string }[]
+  if (!formDataCols.some(column => column.name === 'form_version_id'))
+    db.exec('ALTER TABLE za_form_data ADD COLUMN form_version_id INTEGER REFERENCES za_form_version(id)')
+  const linkLegacyData = db.prepare('UPDATE za_form_data SET form_version_id = ? WHERE form_id = ? AND form_version_id IS NULL')
+  for (const form of legacyForms) {
+    const schemaVersion = Math.max(1, Number(form.version) || 1)
+    const contract = {
+      version: 1,
+      legacy: true,
+      permissions: safeParseJson(form.permissions),
+      fields: [],
+      diagnostics: ['Legacy schema migrated without historical field contract'],
+    }
+    const result = insertLegacyVersion.run(
+      form.id,
+      schemaVersion,
+      form.schema || '',
+      JSON.stringify(contract),
+      form.status === 1 ? 1 : 0,
+      form.status === 1 ? 1 : 0,
+      now(),
+      now(),
+    )
+    const versionId = Number(result.lastInsertRowid)
+    linkLegacyForm.run(versionId, form.id)
+    linkLegacyData.run(versionId, form.id)
+  }
 
   const row = db.prepare('SELECT id FROM za_admin WHERE username = ?').get('admin')
   if (!row) {
@@ -343,6 +433,15 @@ export function initDb() {
     CREATE TABLE IF NOT EXISTS za_token_revocation (
       jti TEXT PRIMARY KEY,
       expires_at INTEGER NOT NULL
+    )
+  `)
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS za_login_throttle (
+      throttle_key TEXT PRIMARY KEY,
+      fail_count INTEGER NOT NULL DEFAULT 0,
+      last_failure_at INTEGER NOT NULL DEFAULT 0,
+      locked_until INTEGER NOT NULL DEFAULT 0
     )
   `)
 

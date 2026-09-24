@@ -4,7 +4,7 @@ import { failed } from '../lib/response'
 
 export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof BusinessError) {
-    res.status(err.code).json(failed(err.message))
+    res.status(err.code).json(failed(err.message, err.code))
     return
   }
   console.error('[Unhandled]', err)

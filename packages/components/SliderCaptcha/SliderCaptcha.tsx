@@ -16,6 +16,11 @@ const defaultBgImages = [bg1, bg2, bg3]
 
 type CaptchaType = 'slider' | 'embed' | 'float'
 
+export interface RemoteSliderCaptchaConfig {
+  request: () => Promise<{ bgUrl: string, puzzleUrl: string }>
+  verify: (data: { x: number, y: number, duration: number, trail: Array<[number, number]> }) => Promise<boolean>
+}
+
 interface SliderCaptchaProps {
   type?: CaptchaType
   onVerify?: (success: boolean) => void
@@ -29,6 +34,10 @@ interface SliderCaptchaProps {
   className?: string
   /** 自定义背景图片，可以是单个图片路径或图片数组，不传则使用默认图片 */
   bgImages?: string | string[]
+  /** 服务端拼图验证：挑战与答案均由后端持有，前端只回传拖拽轨迹 */
+  remote?: RemoteSliderCaptchaConfig
+  puzzleSize?: { width?: number, height?: number, left?: number, top?: number }
+  actionRef?: { current: ActionType | undefined }
 }
 
 const useStyles = createStyles(({ token, css }) => ({
@@ -62,9 +71,12 @@ export function SliderCaptcha({
   className,
   bgImages,
   onVerify,
+  remote,
+  puzzleSize,
+  actionRef,
 }: SliderCaptchaProps) {
   const { styles, cx } = useStyles()
-  const actionRef = useRef<ActionType>()
+  const internalActionRef = useRef<ActionType | undefined>(undefined)
   const offsetXRef = useRef(0)
   const t = useT()
 
@@ -85,6 +97,20 @@ export function SliderCaptcha({
 
   const handleVerify = async (data: any) => {
     try {
+      if (remote) {
+        const verified = await remote.verify({
+          x: data.x,
+          y: data.y,
+          duration: data.duration,
+          trail: data.trail,
+        })
+        if (!verified)
+          throw new Error(t('component.sliderCaptcha.verifyFailed'))
+
+        onVerify?.(true)
+        return Promise.resolve()
+      }
+
       const tolerance = 5
       if (type === 'slider') {
         // 纯滑块验证：拖动到最右边
@@ -107,11 +133,14 @@ export function SliderCaptcha({
     }
     catch (error) {
       onVerify?.(false)
-      return Promise.reject()
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)))
     }
   }
 
   const handleRequest = async (): Promise<{ bgUrl: string, puzzleUrl: string }> => {
+    if (remote)
+      return remote.request()
+
     // 随机选择一张图片
     const randomImage = availableImages[Math.floor(Math.random() * availableImages.length)]
     const res = await createPuzzle(randomImage, {
@@ -133,10 +162,11 @@ export function SliderCaptcha({
         ? (
             <RcSliderCaptcha
               className={styles.sliderCaptcha}
-              actionRef={actionRef}
+              actionRef={actionRef ?? internalActionRef}
               mode="slider"
               showRefreshIcon={false}
               bgSize={bgSize}
+              puzzleSize={puzzleSize}
               tipText={defaultTipText}
               onVerify={handleVerify}
               errorHoldDuration={1500}
@@ -145,10 +175,11 @@ export function SliderCaptcha({
         : (
             <RcSliderCaptcha
               className={styles.sliderCaptcha}
-              actionRef={actionRef}
+              actionRef={actionRef ?? internalActionRef}
               mode={type}
               showRefreshIcon={true}
               bgSize={bgSize}
+              puzzleSize={puzzleSize}
               tipText={defaultTipText}
               onVerify={handleVerify}
               errorHoldDuration={1500}
@@ -157,7 +188,7 @@ export function SliderCaptcha({
           )}
       {/* <Button
                 className={styles.refreshButton}
-                onClick={() => actionRef.current?.refresh()}
+                onClick={() => (actionRef ?? internalActionRef).current?.refresh()}
             >
                 点击重置
             </Button> */}

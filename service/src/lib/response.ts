@@ -8,8 +8,8 @@ export function success<T>(data: T, message = '操作成功'): ApiResponse<T> {
   return { code: 200, message, data }
 }
 
-export function failed(message = '操作失败'): ApiResponse<null> {
-  return { code: 500, message, data: null }
+export function failed(message = '操作失败', code = 500): ApiResponse<null> {
+  return { code, message, data: null }
 }
 
 export function unauthorized(message = '暂未登录或 token 已过期'): ApiResponse<null> {

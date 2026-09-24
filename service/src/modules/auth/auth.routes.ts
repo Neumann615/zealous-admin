@@ -1,17 +1,55 @@
 import { Router } from 'express'
-import { asyncHandler } from '../../middleware/error'
-import { authMiddleware } from '../../middleware/auth'
-import { validate } from '../../middleware/validate'
+import { PreconditionRequiredError } from '../../lib/errors'
 import { success } from '../../lib/response'
-import { login, getUserInfo, refreshToken, updatePassword } from './auth.service'
-import { loginSchema, updatePasswordSchema } from './auth.schema'
+import { authMiddleware } from '../../middleware/auth'
+import { asyncHandler } from '../../middleware/error'
+import { validate } from '../../middleware/validate'
+import { loginSchema, loginStateQuerySchema, sliderCaptchaVerifySchema, updatePasswordSchema } from './auth.schema'
+import { getUserInfo, login, refreshToken, updatePassword } from './auth.service'
+import { consumeCaptchaToken, createSliderCaptcha, verifySliderCaptcha } from './captcha'
+import { assertLoginAllowed, clearLoginFailures, isLoginCaptchaRequired, recordLoginFailure } from './login-guard'
 import { revokeToken } from './session'
 
 const router = Router()
 
+router.get('/admin/login/state', validate(loginStateQuerySchema, 'query'), (req, res) => {
+  res.json(success({
+    captchaRequired: isLoginCaptchaRequired(req.query.username as string, req.ip ?? 'unknown'),
+  }))
+})
+
+router.get('/admin/captcha', (_req, res) => {
+  res.json(success(createSliderCaptcha()))
+})
+
+router.post('/admin/captcha/verify', validate(sliderCaptchaVerifySchema), (req, res) => {
+  const { username, ...verifyInput } = req.body
+  res.json(success({
+    captchaToken: verifySliderCaptcha(verifyInput, { username, ip: req.ip ?? 'unknown' }),
+  }))
+})
+
 router.post('/admin/login', validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.body
-  const result = await login(username, password)
+  const ip = req.ip ?? 'unknown'
+  assertLoginAllowed(username, ip)
+
+  if (isLoginCaptchaRequired(username, ip) && !consumeCaptchaToken(req.body.captchaToken, { username, ip })) {
+    recordLoginFailure(username, ip)
+    throw new PreconditionRequiredError('请先完成滑块验证码')
+  }
+
+  let result
+  try {
+    result = await login(username, password)
+  }
+  catch (error) {
+    if ((error as Error).name === 'UnauthorizedError')
+      recordLoginFailure(username, ip)
+    throw error
+  }
+
+  clearLoginFailures(username, ip)
   res.json(success(result, '登录成功'))
 }))
 

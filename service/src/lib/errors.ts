@@ -35,3 +35,17 @@ export class UnauthorizedError extends BusinessError {
     this.name = 'UnauthorizedError'
   }
 }
+
+export class PreconditionRequiredError extends BusinessError {
+  constructor(message = '请先完成验证码') {
+    super(message, 428)
+    this.name = 'PreconditionRequiredError'
+  }
+}
+
+export class TooManyRequestsError extends BusinessError {
+  constructor(message = '尝试过于频繁，请稍后再试') {
+    super(message, 429)
+    this.name = 'TooManyRequestsError'
+  }
+}

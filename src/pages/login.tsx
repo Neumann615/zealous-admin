@@ -1,14 +1,16 @@
+import type { ActionType } from 'rc-slider-captcha'
 import {
   EyeInvisibleOutlined,
   EyeOutlined,
   LockOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { useUserStore } from '@zealous-admin/auth'
+import { createSliderCaptcha, getLoginState, useUserStore, verifySliderCaptcha } from '@zealous-admin/auth'
+import { ZaSliderCaptcha } from '@zealous-admin/components/index'
 import { useAppMessage, useAppStore, useLogin } from '@zealous-admin/layout/index'
 import { Button, Checkbox, Form, Input, Tooltip, Typography } from 'antd'
 import { createStyles, keyframes } from 'antd-style'
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const { Link } = Typography
@@ -163,6 +165,11 @@ export default function Login() {
   const appStore = useAppStore()
   const { userInfo } = useUserStore()
   const { login, loading } = useLogin()
+  const [captchaRequired, setCaptchaRequired] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const captchaIdRef = useRef('')
+  const captchaUsernameRef = useRef('')
+  const captchaActionRef = useRef<ActionType | undefined>(undefined)
 
   const validateUsername = (_rule: any, value: string) => {
     if (!value || value.trim() === '') {
@@ -181,16 +188,58 @@ export default function Login() {
     return Promise.resolve()
   }
 
+  const refreshCaptchaState = useCallback(async (username: string): Promise<boolean> => {
+    try {
+      const state = await getLoginState(username.trim())
+      captchaUsernameRef.current = username.trim()
+      setCaptchaRequired(state.captchaRequired)
+      if (!state.captchaRequired)
+        setCaptchaToken('')
+      return state.captchaRequired
+    }
+    catch {
+      setCaptchaRequired(false)
+      return false
+    }
+  }, [])
+
+  const loadRemoteCaptcha = useCallback(async () => {
+    const challenge = await createSliderCaptcha()
+    captchaIdRef.current = challenge.captchaId
+    setCaptchaToken('')
+    return { bgUrl: challenge.bgUrl, puzzleUrl: challenge.puzzleUrl }
+  }, [])
+
+  const verifyRemoteCaptcha = useCallback(async (data: { x: number, y: number, duration: number, trail: Array<[number, number]> }) => {
+    if (!captchaIdRef.current)
+      return false
+
+    const result = await verifySliderCaptcha({ captchaId: captchaIdRef.current, username: captchaUsernameRef.current, ...data })
+    setCaptchaToken(result.captchaToken)
+    return true
+  }, [])
+
   const onFinish = async () => {
     try {
       const values = await form.validateFields()
+      const username = values.userName.trim()
+      const shouldVerifyCaptcha = await refreshCaptchaState(username)
+      if (shouldVerifyCaptcha && !captchaToken) {
+        message.warning('请先完成滑块验证')
+        return
+      }
+
       const success = await login({
-        username: values.userName.trim(),
+        username,
         password: values.password,
+        captchaToken: captchaToken || undefined,
       })
 
       if (!success) {
         message.error('用户名或密码错误，请重试')
+        await refreshCaptchaState(username)
+        setCaptchaToken('')
+        captchaActionRef.current?.refresh(true)
         return
       }
 
@@ -278,6 +327,18 @@ export default function Login() {
                 visible ? <EyeOutlined /> : <EyeInvisibleOutlined />}
             />
           </Form.Item>
+
+          {captchaRequired && (
+            <Form.Item>
+              <ZaSliderCaptcha
+                type="embed"
+                actionRef={captchaActionRef}
+                bgSize={{ width: 320, height: 160 }}
+                puzzleSize={{ width: 44 }}
+                remote={{ request: loadRemoteCaptcha, verify: verifyRemoteCaptcha }}
+              />
+            </Form.Item>
+          )}
 
           <div className={styles.bottom}>
             <Form.Item name="autoLogin" valuePropName="checked">
