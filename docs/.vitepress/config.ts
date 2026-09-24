@@ -42,6 +42,7 @@ export default defineConfig({
       { text: '主题', link: '/theme/' },
       { text: '工具函数', link: '/utils/' },
       { text: '表单设计器', link: '/form-designer/' },
+      { text: '设计规格', link: '/superpowers/' },
       { text: '🔗 在线演示', link: 'https://admin.zzzpupu.xin/' },
       {
         text: 'v1.0.0',
@@ -175,6 +176,14 @@ export default defineConfig({
             { text: '组件清单', link: '/form-designer/components' },
             { text: '设计器与渲染器', link: '/form-designer/designer' },
             { text: '数据落库与查询', link: '/form-designer/data' },
+          ],
+        },
+      ],
+      '/superpowers/': [
+        {
+          text: '改造记录',
+          items: [
+            { text: '索引', link: '/superpowers/' },
           ],
         },
       ],

@@ -1,4 +1,4 @@
-name: monitor-verify
+name: ci-verify
 
 on:
   push:
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -32,26 +32,34 @@ jobs:
       - name: 安装 Playwright 浏览器
         run: pnpm exec playwright install --with-deps chromium
 
-      # 全仓 lint/tsc 仍有历史遗留问题，CI 先只卡监控模块范围，避免新债混入
-      - name: lint（监控模块范围）
-        run: pnpm exec eslint e2e playwright.config.ts packages/monitor packages/monitor-sdk service/src/modules/monitor service/src/middleware src/pages/index/monitor
+      # 生产改造面强卡；文档示例与历史演示页清理完成前，全仓 lint 用 pnpm lint:all 手动追踪
+      - name: Lint
+        run: pnpm lint
 
-      - name: 后端类型检查
-        run: pnpm exec tsc --noEmit -p service/tsconfig.json
-
-      - name: 前端类型检查（含历史遗留错误，暂不卡）
-        continue-on-error: true
-        run: pnpm exec tsc --noEmit -p tsconfig.json
+      - name: 前后端类型检查
+        run: pnpm typecheck
 
       - name: 单元测试
-        run: pnpm run test
+        run: pnpm test
 
-      - name: E2E（渲染 + 交互 + 预警链路）
-        run: pnpm run test:e2e
+      - name: 前端构建
+        run: pnpm build
+
+      - name: 后端构建
+        run: pnpm --dir service build
+
+      - name: 文档同步校验
+        run: pnpm docs:verify
+
+      - name: 文档站构建
+        run: pnpm docs:build
+
+      - name: 全量 E2E
+        run: pnpm test:e2e
         env:
           CI: '1'
 
-      - name: 上传报告与截图
+      - name: 上传 Playwright 报告
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -10,8 +10,11 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "lint": "eslint",
-    "lint:fix": "eslint --fix",
+    "lint": "node scripts/lint-ci.mjs",
+    "lint:ci": "node scripts/lint-ci.mjs",
+    "lint:fix": "node scripts/lint-ci.mjs --fix",
+    "lint:all": "eslint",
+    "typecheck": "tsc --noEmit && pnpm --dir service exec tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "preview": "vite build && vite preview",
@@ -24,7 +27,9 @@
     "build:lib:theme": "vite build --config packages/theme/vite.config.ts && tsc -p ./packages/theme/tsconfig.lib.json",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "docs:verify": "node scripts/verify-docs-sync.mjs",
+    "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm --dir service build && pnpm docs:verify && pnpm docs:build && pnpm test:e2e"
   },
   "dependencies": {
     "@ant-design/colors": "catalog:",

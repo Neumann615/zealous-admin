@@ -18,6 +18,15 @@ export default antfu(
     },
   },
   {
+    files: [
+      'service/src/middleware/auth.ts',
+    ],
+    rules: {
+      // Express Request 类型扩展必须使用 declaration merging / namespace
+      'ts/no-namespace': 'off',
+    },
+  },
+  {
     // Playwright 的 fixture 用解构参数里的 use() 注入依赖，不是 React Hook；测试脚本也直接用 process 全局
     files: [
       'e2e/**',
