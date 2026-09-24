@@ -7,6 +7,7 @@ const packagePages: Record<string, PageLoader> = {
   'auth/admin': () => import('@zealous-admin/auth/pages/AdminManager'),
   'auth/role': () => import('@zealous-admin/auth/pages/RoleManager'),
   'auth/menu': () => import('@zealous-admin/auth/pages/MenuManager'),
+  'system/architecture': () => import('../pages/index/system/architecture'),
   'metadata/manager': () => import('@zealous-admin/metadata/index').then(m => ({ default: m.MetadataManager })),
   'monitor/workbench': () => import('@zealous-admin/monitor/index').then(m => ({ default: m.Workbench })),
   'monitor/log': () => import('@zealous-admin/monitor/index').then(m => ({ default: m.LogStream })),

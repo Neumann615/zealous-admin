@@ -35,6 +35,8 @@ export const UNPROTECTED_ROUTES: Array<{ method: string, path: string, reason: s
 ]
 
 export const ROUTE_PERMISSIONS: RoutePermissionRule[] = [
+  // 系统管理
+  { method: 'GET', path: '/system/architecture', permission: ['system:architecture:list'] },
   // 系统管理 · 用户
   { method: 'GET', path: '/admin/list', permission: ['system:user:list'] },
   { method: 'GET', path: '/admin/:id', permission: ['system:user:list'] },

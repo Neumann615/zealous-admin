@@ -158,7 +158,6 @@ export function initDb() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_form_data_form ON za_form_data (form_id, id)')
   db.exec('CREATE INDEX IF NOT EXISTS idx_form_version_form ON za_form_version (form_id, schema_version)')
   db.exec('CREATE INDEX IF NOT EXISTS idx_form_category_parent ON za_form_category (parent_id, sort_order)')
-  db.exec('CREATE INDEX IF NOT EXISTS idx_form_category_id ON za_form (category_id)')
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_version_draft ON za_form_version (form_id) WHERE status = 0')
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_version_current ON za_form_version (form_id) WHERE is_current = 1')
 
@@ -173,6 +172,7 @@ export function initDb() {
     db.exec('ALTER TABLE za_form ADD COLUMN deleted_at TEXT')
   if (!legacyFormColumnNames.has('category_id'))
     db.exec('ALTER TABLE za_form ADD COLUMN category_id INTEGER')
+  db.exec('CREATE INDEX IF NOT EXISTS idx_form_category_id ON za_form (category_id)')
   db.exec(`UPDATE za_form SET form_key = 'form_' || id WHERE form_key IS NULL OR form_key = ''`)
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_form_key ON za_form (form_key) WHERE deleted_at IS NULL')
 
@@ -367,6 +367,7 @@ export function initDb() {
           { title: '用户管理', name: 'admin', icon: 'ai:AiOutlineUser' },
           { title: '角色管理', name: 'role', icon: 'ai:AiOutlineTeam' },
           { title: '导航管理', name: 'menu', icon: 'ai:AiOutlineMenu' },
+          { title: '系统架构', name: 'architecture', icon: 'ai:AiOutlineCluster' },
         ],
       },
       {
@@ -484,6 +485,7 @@ export function initDb() {
     ['/system/admin', 'auth/admin'],
     ['/system/role', 'auth/role'],
     ['/system/menu', 'auth/menu'],
+    ['/system/architecture', 'system/architecture'],
     ['/metadata', 'metadata/manager'],
     ['/monitor/workbench', 'monitor/workbench'],
     ['/monitor/log', 'monitor/log'],
@@ -532,6 +534,8 @@ export function initDb() {
     for (const rel of parentRoleRows.all(parent.id) as { role_id: number }[])
       insertRoleMenu.run(rel.role_id, Number(inserted.lastInsertRowid))
   }
+
+  seedSystemArchitectureMenu(db)
 
   const metadataMenu = db.prepare('SELECT id, parent_id FROM za_menu WHERE path = ?').get('/metadata') as any
   const formMenu = db.prepare('SELECT id, sort FROM za_menu WHERE path = ? AND parent_id = 0').get('/form') as any
@@ -600,6 +604,25 @@ function seedMonitorMenu(db: DatabaseSync): void {
   }
 }
 
+/** 系统架构驾驶舱：老库补菜单并继承 /system 授权，新库 seed 后靠 path 判重直接跳过 */
+function seedSystemArchitectureMenu(db: DatabaseSync): void {
+  if (db.prepare('SELECT id FROM za_menu WHERE path = ?').get('/system/architecture'))
+    return
+
+  const parent = db.prepare('SELECT id, level FROM za_menu WHERE path = ?').get('/system') as { id: number, level: number } | undefined
+  if (!parent)
+    return
+
+  const maxSort = (db.prepare('SELECT MAX(sort) AS sort FROM za_menu WHERE parent_id = ?').get(parent.id) as { sort: number | null }).sort
+  const result = db.prepare(
+    'INSERT INTO za_menu (parent_id, title, level, sort, name, icon, hidden, path, component, type, create_time, active_icon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  ).run(parent.id, '系统架构', parent.level + 1, (maxSort ?? 0) + 1, 'architecture', 'ai:AiOutlineCluster', 0, '/system/architecture', 'system/architecture', 1, now(), null)
+
+  const relation = db.prepare('INSERT INTO za_role_menu_relation (role_id, menu_id) VALUES (?, ?)')
+  for (const rel of db.prepare('SELECT role_id FROM za_role_menu_relation WHERE menu_id = ?').all(parent.id) as Array<{ role_id: number }>)
+    relation.run(rel.role_id, Number(result.lastInsertRowid))
+}
+
 /**
  * 菜单权限种子：菜单行（type = 1）挂「查询」权限，按钮行（type = 2）挂「操作」权限。
  * 幂等：菜单权限只在 permission 为空时回填，按钮行按 (父菜单, permission) 判重。
@@ -607,6 +630,7 @@ function seedMonitorMenu(db: DatabaseSync): void {
  */
 function seedMenuPermissions(db: DatabaseSync): void {
   const menuPermissions: Array<[string, string]> = [
+    ['/system/architecture', 'system:architecture:list'],
     ['/system/admin', 'system:user:list'],
     ['/system/role', 'system:role:list'],
     ['/system/menu', 'system:menu:list'],

@@ -20,6 +20,26 @@ async function deleteMenu(api: APIRequestContext, token: string, id: number): Pr
 }
 
 test.describe('系统管理 · 数据库驱动路由', () => {
+  test('系统架构：单页驾驶舱展示实时数据库与权限矩阵', async ({ page, diag }) => {
+    await page.goto('/system/architecture')
+    await settle(page)
+
+    await expect(page.getByRole('heading', { name: '系统架构驾驶舱' })).toBeVisible()
+    await expect(page.getByText('前端模块分层')).toBeVisible()
+    await expect(page.getByText('核心请求链路')).toBeVisible()
+    await expect(page.getByText('后端模块分层')).toBeVisible()
+    await expect(page.getByText('数据库业务域设计')).toBeVisible()
+    await expect(page.getByText('接口权限矩阵')).toBeVisible()
+    await expect(page.locator('.ant-tabs')).toHaveCount(0)
+
+    await page.getByRole('button', { name: /za_form_version/ }).click()
+    const drawer = page.locator('.ant-drawer').filter({ hasText: 'za_form_version' })
+    await expect(drawer.locator('.ant-card-head-title').filter({ hasText: '字段' })).toBeVisible()
+    await expect(drawer.getByText('idx_form_version_draft')).toBeVisible()
+    await expect(drawer.getByText('za_form_version.form_id → za_form.id', { exact: false })).toBeVisible()
+    await expect(diag.pageErrors).toEqual([])
+  })
+
   test('用户管理：菜单配置的路由可渲染列表与弹窗', async ({ page, diag }) => {
     await page.goto('/system/admin')
     await settle(page)

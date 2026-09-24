@@ -7,6 +7,7 @@
 - [CI 与文档同步机制](./specs/2026-09-24-ci-and-docs-sync.md)
 - [表单生命周期与宽松契约改造](./specs/2026-09-24-form-lifecycle.md)
 - [登录加固与权限审计落地记录](./specs/2026-09-24-login-hardening-and-audit.md)
+- [系统架构驾驶舱设计记录](./specs/2026-09-24-system-architecture.md)
 
 ## 2026-09-23
 

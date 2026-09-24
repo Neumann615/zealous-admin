@@ -12,6 +12,7 @@ import formDataRoutes from './modules/form/formData.routes'
 import mcpRoutes from './modules/mcp/mcp.routes'
 import metadataRoutes from './modules/metadata'
 import monitorRoutes from './modules/monitor'
+import architectureRoutes from './modules/system/architecture.routes'
 
 const app = express()
 
@@ -43,6 +44,7 @@ app.use('/', menuRoutes)
 app.use('/metadata', metadataRoutes)
 app.use('/', formRoutes)
 app.use('/', formDataRoutes)
+app.use('/', architectureRoutes)
 
 app.get('/', (_req, res) => {
   res.json({ message: 'Zealous Admin Service is running!' })
